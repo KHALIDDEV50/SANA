@@ -47,7 +47,7 @@ public class ProjectNode {
     private Set<ProjectEdge> outgoingEdges;
 
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "targetNode")
-    private Set<ProjectNode> incomingEdges;
+    private Set<ProjectEdge> incomingEdges;
 
 
 }
