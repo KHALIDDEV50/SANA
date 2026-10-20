@@ -1,5 +1,6 @@
 package com.example.sana.Model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -49,6 +50,7 @@ public class Project {
     private User owner;
 
     @OneToOne(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private ProjectUnderstanding understanding;
 
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "project")
