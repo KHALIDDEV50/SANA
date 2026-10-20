@@ -1,0 +1,60 @@
+package com.example.sana.Model;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.LocalDate;
+
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Entity
+public class ProjectRecord {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    @NotEmpty(message = "title cannot be empty")
+    @Column(columnDefinition = "varchar(50) not null")
+    private String title;
+
+    @NotEmpty(message = "content cannot be empty")
+    @Column(columnDefinition = "varchar(50) not null")
+    private String content;
+
+    @NotEmpty(message = "type cannot be empty")
+    @Column(columnDefinition = "varchar(50) not null")
+    private String type;
+
+    @NotEmpty(message = "status cannot be empty")
+    @Column(columnDefinition = "varchar(50) not null")
+    private String status;
+
+    @NotEmpty(message = "source cannot be empty")
+    @Column(columnDefinition = "varchar(50) not null")
+    private String source;
+
+    @NotNull(message = "version cannot be null")
+    @Column(columnDefinition = "int not null")
+    private Integer version;
+
+    @Column(columnDefinition = "date")
+    private LocalDate createdAt;
+
+    @Column(columnDefinition = "date")
+    private LocalDate updatedAt;
+
+    @ManyToOne
+    @JoinColumn
+    @JsonIgnore
+    private Project project;
+
+}
