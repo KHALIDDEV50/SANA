@@ -1,6 +1,5 @@
 package com.example.sana.Model;
 
-import com.example.sana.Validation.ValidJson;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -33,11 +32,9 @@ public class ToolRun {
 
     @Column(columnDefinition = "LONGTEXT")
     @NotBlank(message = "Tool input JSON must not be blank")
-    @ValidJson(message = "Tool input must contain valid JSON")
     private String inputJson;
 
     @Column(columnDefinition = "LONGTEXT")
-    @ValidJson(message = "Tool output must contain valid JSON")
     private String outputJson;
 
     @NotBlank(message = "Tool run status must not be blank")

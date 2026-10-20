@@ -1,6 +1,5 @@
 package com.example.sana.Model;
 
-import com.example.sana.Validation.ValidJson;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -36,7 +35,6 @@ public class AIInteraction {
     private String promptSummary;
 
     @Column(columnDefinition = "LONGTEXT")
-    @ValidJson(message = "AI response must contain valid JSON")
     private String responseJson;
 
     @NotBlank(message = "AI model name must not be blank")

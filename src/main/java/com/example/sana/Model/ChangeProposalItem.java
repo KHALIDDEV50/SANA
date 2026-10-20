@@ -1,6 +1,5 @@
 package com.example.sana.Model;
 
-import com.example.sana.Validation.ValidJson;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -34,11 +33,9 @@ public class ChangeProposalItem {
     private Long targetId;
 
     @Column(columnDefinition = "LONGTEXT")
-    @ValidJson(message = "Before snapshot must contain valid JSON")
     private String beforeJson;
 
     @Column(columnDefinition = "LONGTEXT")
-    @ValidJson(message = "After snapshot must contain valid JSON")
     private String afterJson;
 
     @ManyToOne(optional = false)
