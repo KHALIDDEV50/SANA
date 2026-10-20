@@ -24,7 +24,7 @@ public class AIInteraction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Positive(message = "AI interaction ID must be greater than zero")
-    private Long id;
+    private Integer id;
 
     @NotBlank(message = "AI action type must not be blank")
     @Size(max = 255, message = "AI action type must not exceed 255 characters")

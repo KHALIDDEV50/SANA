@@ -27,7 +27,7 @@ public class ChangeProposal {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Positive(message = "Proposal ID must be greater than zero")
-    private Long id;
+    private Integer id;
 
     @NotBlank(message = "Proposal title must not be blank")
     @Size(max = 255, message = "Proposal title must not exceed 255 characters")

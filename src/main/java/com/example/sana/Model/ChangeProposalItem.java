@@ -19,7 +19,7 @@ public class ChangeProposalItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     @NotBlank(message = "Change operation must not be blank")
     @Size(max = 255, message = "Change operation must not exceed 255 characters")
@@ -30,7 +30,7 @@ public class ChangeProposalItem {
     private String targetType;
 
     @Positive(message = "Change target ID must be greater than zero")
-    private Long targetId;
+    private Integer targetId;
 
     @Column(columnDefinition = "LONGTEXT")
     private String beforeJson;

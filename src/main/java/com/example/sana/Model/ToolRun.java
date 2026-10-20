@@ -24,7 +24,7 @@ public class ToolRun {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Positive(message = "Tool run ID must be greater than zero")
-    private Long id;
+    private Integer id;
 
     @NotBlank(message = "Tool type must not be blank")
     @Size(max = 255, message = "Tool type must not exceed 255 characters")
