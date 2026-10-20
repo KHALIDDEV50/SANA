@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Entity
 @Table(name = "projects")
@@ -49,5 +50,14 @@ public class Project {
 
     @OneToOne(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private ProjectUnderstanding understanding;
+
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "project")
+    private Set<ProjectNode> nodes;
+
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "project")
+    private Set<ProjectEdge> edges;
+
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "project")
+    private Set<ProjectRecord> records;
 
 }
