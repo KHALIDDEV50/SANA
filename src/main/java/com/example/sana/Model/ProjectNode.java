@@ -28,10 +28,10 @@ public class ProjectNode {
 
     private String dataJson;
     @NotNull(message = "position X cannot be null")
-    @Column(columnDefinition = "double not empty")
+    @Column(columnDefinition = "double not null")
     private Double positionX;
     @NotNull(message = "positon Y cannot be empty")
-    @Column(columnDefinition = "double not empty")
+    @Column(columnDefinition = "double not null")
     private Double positionY;
     @Column(columnDefinition = "date")
     private LocalDate createdAt;
