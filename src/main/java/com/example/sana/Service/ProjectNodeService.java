@@ -1,10 +1,10 @@
 package com.example.sana.Service;
 
 import com.example.sana.API.ApiException;
-import com.example.sana.Model.Project;
+import com.example.sana.Model.ProjectOutput;
 import com.example.sana.Model.ProjectNode;
 import com.example.sana.Repository.ProjectNodeRepository;
-import com.example.sana.Repository.ProjectRepository;
+import com.example.sana.Repository.ProjectOutputRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -16,19 +16,23 @@ import java.util.List;
 public class ProjectNodeService {
 
     private final ProjectNodeRepository projectNodeRepository;
-    private final ProjectRepository projectRepository;
+    private final ProjectOutputRepository projectOutputRepository;
 
     public List<ProjectNode> getAllNodes(){
         return projectNodeRepository.findAll();
     }
 
-    public void addNode(Integer projectId, ProjectNode projectNode){
-        Project project = projectRepository.findProjectById(projectId);
-        if (project == null){
-            throw new ApiException("project not found");
+    public void addNode(Integer outputId, ProjectNode projectNode){
+        ProjectOutput output = projectOutputRepository.findProjectOutputById(outputId);
+        if (output == null){
+            throw new ApiException("Project output not found");
         }
-        projectNode.setProject(project);
+        projectNode.setId(null);
+        projectNode.setProjectOutput(output);
+        projectNode.setOutgoingEdges(null);
+        projectNode.setIncomingEdges(null);
         projectNode.setCreatedAt(LocalDate.now());
+        projectNode.setUpdatedAt(LocalDate.now());
         projectNodeRepository.save(projectNode);
     }
 

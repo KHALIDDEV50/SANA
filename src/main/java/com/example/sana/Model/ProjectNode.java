@@ -38,15 +38,17 @@ public class ProjectNode {
     @Column(columnDefinition = "date")
     private LocalDate updatedAt;
 
-    @ManyToOne
-    @JoinColumn
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "project_output_id", referencedColumnName = "id", nullable = false)
     @JsonIgnore
-    private Project project;
+    private ProjectOutput projectOutput;
 
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "sourceNode")
+    @JsonIgnore
     private Set<ProjectEdge> outgoingEdges;
 
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "targetNode")
+    @JsonIgnore
     private Set<ProjectEdge> incomingEdges;
 
 

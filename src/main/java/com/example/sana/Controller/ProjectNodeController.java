@@ -22,9 +22,9 @@ public class ProjectNodeController {
         return ResponseEntity.status(200).body(projectNodeService.getAllNodes());
     }
 
-    @PostMapping("/add/{projectId}")
-    public ResponseEntity<ApiResponse> addNode(@PathVariable Integer projectId, @Valid @RequestBody ProjectNode projectNode) {
-        projectNodeService.addNode(projectId, projectNode);
+    @PostMapping("/add/{outputId}")
+    public ResponseEntity<ApiResponse> addNode(@PathVariable Integer outputId, @Valid @RequestBody ProjectNode projectNode) {
+        projectNodeService.addNode(outputId, projectNode);
         return ResponseEntity.status(200).body(new ApiResponse("Node added successfully"));
     }
 

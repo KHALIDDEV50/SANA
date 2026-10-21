@@ -22,9 +22,10 @@ public class ProjectEdgeController {
         return ResponseEntity.status(200).body(projectEdgeService.getAllEdges());
     }
 
-    @PostMapping("/add/{projectId}")
-    public ResponseEntity<ApiResponse> addEdge(@PathVariable Integer projectId, @Valid @RequestBody ProjectEdge projectEdge) {
-        projectEdgeService.addEdge(projectId, projectEdge);
+    @PostMapping("/add/{outputId}/{sourceNodeId}/{targetNodeId}")
+    public ResponseEntity<ApiResponse> addEdge(@PathVariable Integer outputId, @PathVariable Integer sourceNodeId,
+                                             @PathVariable Integer targetNodeId, @Valid @RequestBody ProjectEdge projectEdge) {
+        projectEdgeService.addEdge(outputId, sourceNodeId, targetNodeId, projectEdge);
         return ResponseEntity.status(200).body(new ApiResponse("Edge added successfully"));
     }
 

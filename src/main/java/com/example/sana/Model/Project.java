@@ -62,10 +62,7 @@ public class Project {
     private ProjectUnderstanding understanding;
 
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "project")
-    private Set<ProjectNode> nodes;
-
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "project")
-    private Set<ProjectEdge> edges;
+    private Set<ProjectOutput> outputs;
 
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "project")
     private Set<ProjectRecord> records;
