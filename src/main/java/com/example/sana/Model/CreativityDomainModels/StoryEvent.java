@@ -40,7 +40,7 @@ public class StoryEvent {
     @Column(columnDefinition = "date")
     private LocalDate createdAt;
     @Column(columnDefinition = "date")
-    private LocalTime updatedAt;
+    private LocalDate updatedAt;
 
 
 
