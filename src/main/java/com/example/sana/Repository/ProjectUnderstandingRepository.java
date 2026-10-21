@@ -6,9 +6,9 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ProjectUnderstandingRepository
-        extends JpaRepository<ProjectUnderstanding, Long> {
+        extends JpaRepository<ProjectUnderstanding, Integer> {
 
-    ProjectUnderstanding findProjectUnderstandingById(Long id);
+    ProjectUnderstanding findProjectUnderstandingById(Integer id);
 
-    ProjectUnderstanding findProjectUnderstandingByProject_Id(Long projectId);
+    ProjectUnderstanding findProjectUnderstandingByProject_Id(Integer projectId);
 }

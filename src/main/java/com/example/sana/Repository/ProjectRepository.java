@@ -7,9 +7,9 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ProjectRepository extends JpaRepository<Project, Long> {
+public interface ProjectRepository extends JpaRepository<Project, Integer> {
 
-    Project findProjectById(Long id);
+    Project findProjectById(Integer id);
 
-    List<Project> findAllByOwner_Id(Long ownerId);
+    List<Project> findAllByOwner_Id(Integer ownerId);
 }

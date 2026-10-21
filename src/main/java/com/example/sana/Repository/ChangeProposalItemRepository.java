@@ -7,5 +7,7 @@ import java.util.List;
 
 public interface ChangeProposalItemRepository extends JpaRepository<ChangeProposalItem, Integer> {
 
+    ChangeProposalItem findChangeProposalItemById(Integer id);
+
     List<ChangeProposalItem> findByChangeProposalId(Integer proposalId);
 }
