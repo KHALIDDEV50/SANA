@@ -6,7 +6,7 @@ import com.example.sana.Model.ToolRun;
 import com.example.sana.Model.User;
 import com.example.sana.Repository.ProjectRepository;
 import com.example.sana.Repository.ToolRunRepository;
-import com.example.sana.Repository.AuthRepository;
+import com.example.sana.Repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,7 +17,7 @@ import java.util.List;
 public class ToolRunService {
 
     private final ToolRunRepository toolRunRepository;
-    private final AuthRepository authRepository;
+    private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
 
     public List<ToolRun> getAllToolRuns() {
@@ -29,8 +29,8 @@ public class ToolRunService {
                 .orElseThrow(() -> new ApiException("Tool run not found"));
     }
 
-    public void addToolRun(Long user_id, Long project_id, ToolRun toolRun) {
-        User user = authRepository.findById(user_id)
+    public void addToolRun(Integer user_id, Integer project_id, ToolRun toolRun) {
+        User user = userRepository.findById(user_id)
                 .orElseThrow(() -> new ApiException("User not found"));
         Project project = projectRepository.findById(project_id)
                 .orElseThrow(() -> new ApiException("Project not found"));

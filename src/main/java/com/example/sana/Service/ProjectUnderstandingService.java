@@ -24,7 +24,7 @@ public class ProjectUnderstandingService {
     }
 
     // Get project understanding by ID
-    public ProjectUnderstanding getProjectUnderstandingById(Long id) {
+    public ProjectUnderstanding getProjectUnderstandingById(Integer id) {
 
         ProjectUnderstanding understanding = projectUnderstandingRepository.findProjectUnderstandingById(id);
 
@@ -36,7 +36,7 @@ public class ProjectUnderstandingService {
     }
 
     // Get project understanding by project ID
-    public ProjectUnderstanding getProjectUnderstandingByProjectId(Long projectId) {
+    public ProjectUnderstanding getProjectUnderstandingByProjectId(Integer projectId) {
 
         ProjectUnderstanding understanding = projectUnderstandingRepository.findProjectUnderstandingByProject_Id(projectId);
 
@@ -48,7 +48,7 @@ public class ProjectUnderstandingService {
     }
 
     // Add project understanding to an existing project
-    public void addProjectUnderstanding(Long projectId, ProjectUnderstanding projectUnderstanding) {
+    public void addProjectUnderstanding(Integer projectId, ProjectUnderstanding projectUnderstanding) {
 
         // Check if project exists
         Project project = projectRepository.findProjectById(projectId);
@@ -73,7 +73,7 @@ public class ProjectUnderstandingService {
     }
 
     // Update an existing project understanding
-    public void updateProjectUnderstanding(Long id, ProjectUnderstanding projectUnderstanding) {
+    public void updateProjectUnderstanding(Integer id, ProjectUnderstanding projectUnderstanding) {
 
         // Check if project understanding exists
         ProjectUnderstanding oldUnderstanding = projectUnderstandingRepository.findProjectUnderstandingById(id);
@@ -93,7 +93,7 @@ public class ProjectUnderstandingService {
     }
 
     // Delete an existing project understanding
-    public void deleteProjectUnderstanding(Long id) {
+    public void deleteProjectUnderstanding(Integer id) {
 
         ProjectUnderstanding understanding = projectUnderstandingRepository.findProjectUnderstandingById(id);
 

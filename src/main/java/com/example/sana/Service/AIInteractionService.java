@@ -8,7 +8,7 @@ import com.example.sana.Model.User;
 import com.example.sana.Repository.AIInteractionRepository;
 import com.example.sana.Repository.ChangeProposalRepository;
 import com.example.sana.Repository.ProjectRepository;
-import com.example.sana.Repository.AuthRepository;
+import com.example.sana.Repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +20,7 @@ import java.util.List;
 public class AIInteractionService {
 
     private final AIInteractionRepository aiInteractionRepository;
-    private final AuthRepository authRepository;
+    private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
     private final ChangeProposalRepository changeProposalRepository;
 
@@ -33,8 +33,8 @@ public class AIInteractionService {
                 .orElseThrow(() -> new ApiException("AI interaction not found"));
     }
 
-    public void addAIInteraction(Long user_id, Long project_id, AIInteraction aiInteraction) {
-        User user = authRepository.findById(user_id)
+    public void addAIInteraction(Integer user_id, Integer project_id, AIInteraction aiInteraction) {
+        User user = userRepository.findById(user_id)
                 .orElseThrow(() -> new ApiException("User not found"));
         Project project = projectRepository.findById(project_id)
                 .orElseThrow(() -> new ApiException("Project not found"));

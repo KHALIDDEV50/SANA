@@ -9,39 +9,39 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/change-proposal-items")
+@RequestMapping("/api/v1/change-proposal-item")
 @RequiredArgsConstructor
 public class ChangeProposalItemController {
 
     private final ChangeProposalItemService changeProposalItemService;
 
-    @GetMapping
+    @GetMapping("/get")
     public ResponseEntity<?> getAllChangeProposalItems() {
         return ResponseEntity.status(200).body(changeProposalItemService.getAllChangeProposalItems());
     }
 
-    @GetMapping("/{item_id}")
-    public ResponseEntity<?> getChangeProposalItemById(@PathVariable Integer item_id) {
-        return ResponseEntity.status(200).body(changeProposalItemService.getChangeProposalItemById(item_id));
+    @GetMapping("/get/{itemId}")
+    public ResponseEntity<?> getChangeProposalItemById(@PathVariable Integer itemId) {
+        return ResponseEntity.status(200).body(changeProposalItemService.getChangeProposalItemById(itemId));
     }
 
-    @PostMapping
-    public ResponseEntity<?> addChangeProposalItem(@RequestParam Integer proposal_id,
+    @PostMapping("/add/{proposalId}")
+    public ResponseEntity<?> addChangeProposalItem(@PathVariable Integer proposalId,
                                                    @Valid @RequestBody ChangeProposalItem changeProposalItem) {
-        changeProposalItemService.addChangeProposalItem(proposal_id, changeProposalItem);
+        changeProposalItemService.addChangeProposalItem(proposalId, changeProposalItem);
         return ResponseEntity.status(200).body(new ApiResponse("Change proposal item added successfully"));
     }
 
-    @PutMapping("/{item_id}")
-    public ResponseEntity<?> updateChangeProposalItem(@PathVariable Integer item_id,
+    @PutMapping("/update/{itemId}")
+    public ResponseEntity<?> updateChangeProposalItem(@PathVariable Integer itemId,
                                                       @Valid @RequestBody ChangeProposalItem changeProposalItem) {
-        changeProposalItemService.updateChangeProposalItem(item_id, changeProposalItem);
+        changeProposalItemService.updateChangeProposalItem(itemId, changeProposalItem);
         return ResponseEntity.status(200).body(new ApiResponse("Change proposal item updated successfully"));
     }
 
-    @DeleteMapping("/{item_id}")
-    public ResponseEntity<?> deleteChangeProposalItem(@PathVariable Integer item_id) {
-        changeProposalItemService.deleteChangeProposalItem(item_id);
+    @DeleteMapping("/delete/{itemId}")
+    public ResponseEntity<?> deleteChangeProposalItem(@PathVariable Integer itemId) {
+        changeProposalItemService.deleteChangeProposalItem(itemId);
         return ResponseEntity.status(200).body(new ApiResponse("Change proposal item deleted successfully"));
     }
 }

@@ -34,7 +34,7 @@ public class UserController {
 
     // Update an existing user
     @PutMapping("/update/{userId}")
-    public ResponseEntity<ApiResponse> updateUser(@PathVariable Long userId, @Valid @RequestBody User user) {
+    public ResponseEntity<ApiResponse> updateUser(@PathVariable Integer userId, @Valid @RequestBody User user) {
 
         userService.updateUser(userId, user);
 
@@ -43,7 +43,7 @@ public class UserController {
 
     // Delete an existing user
     @DeleteMapping("/delete/{userId}")
-    public ResponseEntity<ApiResponse> deleteUser(@PathVariable Long userId) {
+    public ResponseEntity<ApiResponse> deleteUser(@PathVariable Integer userId) {
 
         userService.deleteUser(userId);
 

@@ -36,7 +36,7 @@ public class UserService {
     }
 
     // Update User
-    public void updateUser(Long userId, User user) {
+    public void updateUser(Integer userId, User user) {
 
         // Check if user exists
         User oldUser = userRepository.findUserById(userId);
@@ -61,7 +61,7 @@ public class UserService {
     }
 
     // Delete an existing user
-    public void deleteUser(Long userId) {
+    public void deleteUser(Integer userId) {
 
         // Check if user exists
         User user = userRepository.findUserById(userId);

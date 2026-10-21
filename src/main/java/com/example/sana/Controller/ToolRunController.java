@@ -9,38 +9,38 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/tool-runs")
+@RequestMapping("/api/v1/tool-run")
 @RequiredArgsConstructor
 public class ToolRunController {
 
     private final ToolRunService toolRunService;
 
-    @GetMapping
+    @GetMapping("/get")
     public ResponseEntity<?> getAllToolRuns() {
         return ResponseEntity.status(200).body(toolRunService.getAllToolRuns());
     }
 
-    @GetMapping("/{tool_run_id}")
-    public ResponseEntity<?> getToolRunById(@PathVariable Integer tool_run_id) {
-        return ResponseEntity.status(200).body(toolRunService.getToolRunById(tool_run_id));
+    @GetMapping("/get/{toolRunId}")
+    public ResponseEntity<?> getToolRunById(@PathVariable Integer toolRunId) {
+        return ResponseEntity.status(200).body(toolRunService.getToolRunById(toolRunId));
     }
 
-    @PostMapping
-    public ResponseEntity<?> addToolRun(@RequestParam Long user_id, @RequestParam Long project_id,
+    @PostMapping("/add/{userId}/{projectId}")
+    public ResponseEntity<?> addToolRun(@PathVariable Integer userId, @PathVariable Integer projectId,
                                        @Valid @RequestBody ToolRun toolRun) {
-        toolRunService.addToolRun(user_id, project_id, toolRun);
+        toolRunService.addToolRun(userId, projectId, toolRun);
         return ResponseEntity.status(200).body(new ApiResponse("Tool run added successfully"));
     }
 
-    @PutMapping("/{tool_run_id}")
-    public ResponseEntity<?> updateToolRun(@PathVariable Integer tool_run_id, @Valid @RequestBody ToolRun toolRun) {
-        toolRunService.updateToolRun(tool_run_id, toolRun);
+    @PutMapping("/update/{toolRunId}")
+    public ResponseEntity<?> updateToolRun(@PathVariable Integer toolRunId, @Valid @RequestBody ToolRun toolRun) {
+        toolRunService.updateToolRun(toolRunId, toolRun);
         return ResponseEntity.status(200).body(new ApiResponse("Tool run updated successfully"));
     }
 
-    @DeleteMapping("/{tool_run_id}")
-    public ResponseEntity<?> deleteToolRun(@PathVariable Integer tool_run_id) {
-        toolRunService.deleteToolRun(tool_run_id);
+    @DeleteMapping("/delete/{toolRunId}")
+    public ResponseEntity<?> deleteToolRun(@PathVariable Integer toolRunId) {
+        toolRunService.deleteToolRun(toolRunId);
         return ResponseEntity.status(200).body(new ApiResponse("Tool run deleted successfully"));
     }
 }

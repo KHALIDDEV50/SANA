@@ -34,7 +34,7 @@ public class ChangeProposalService {
                 .orElseThrow(() -> new ApiException("Change proposal not found"));
     }
 
-    public void addChangeProposal(Long project_id, Integer ai_interaction_id, ChangeProposal changeProposal) {
+    public void addChangeProposal(Integer project_id, Integer ai_interaction_id, ChangeProposal changeProposal) {
         Project project = projectRepository.findById(project_id)
                 .orElseThrow(() -> new ApiException("Project not found"));
 

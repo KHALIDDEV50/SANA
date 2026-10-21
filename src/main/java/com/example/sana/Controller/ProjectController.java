@@ -25,21 +25,21 @@ public class ProjectController {
 
     // Get a project by ID
     @GetMapping("/get/{projectId}")
-    public ResponseEntity<Project> getProjectById(@PathVariable Long projectId) {
+    public ResponseEntity<Project> getProjectById(@PathVariable Integer projectId) {
 
         return ResponseEntity.status(200).body(projectService.getProjectById(projectId));
     }
 
     // Get all projects for a specific user
     @GetMapping("/get/user/{userId}")
-    public ResponseEntity<List<Project>> getProjectsByUserId(@PathVariable Long userId) {
+    public ResponseEntity<List<Project>> getProjectsByUserId(@PathVariable Integer userId) {
 
         return ResponseEntity.status(200).body(projectService.getProjectsByUserId(userId));
     }
 
     // Add a new project
     @PostMapping("/add/{userId}")
-    public ResponseEntity<ApiResponse> addProject(@PathVariable Long userId, @Valid @RequestBody Project project) {
+    public ResponseEntity<ApiResponse> addProject(@PathVariable Integer userId, @Valid @RequestBody Project project) {
 
         projectService.addProject(userId, project);
 
@@ -48,7 +48,7 @@ public class ProjectController {
 
     // Update an existing project
     @PutMapping("/update/{projectId}")
-    public ResponseEntity<ApiResponse> updateProject(@PathVariable Long projectId, @Valid @RequestBody Project project) {
+    public ResponseEntity<ApiResponse> updateProject(@PathVariable Integer projectId, @Valid @RequestBody Project project) {
 
         projectService.updateProject(projectId, project);
 
@@ -57,7 +57,7 @@ public class ProjectController {
 
     // Delete an existing project
     @DeleteMapping("/delete/{projectId}")
-    public ResponseEntity<ApiResponse> deleteProject(@PathVariable Long projectId) {
+    public ResponseEntity<ApiResponse> deleteProject(@PathVariable Integer projectId) {
 
         projectService.deleteProject(projectId);
 

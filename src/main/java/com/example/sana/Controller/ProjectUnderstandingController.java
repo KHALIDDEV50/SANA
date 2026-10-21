@@ -25,21 +25,21 @@ public class ProjectUnderstandingController {
 
     // Get project understanding by ID
     @GetMapping("/get/{id}")
-    public ResponseEntity<ProjectUnderstanding> getProjectUnderstandingById(@PathVariable Long id) {
+    public ResponseEntity<ProjectUnderstanding> getProjectUnderstandingById(@PathVariable Integer id) {
 
         return ResponseEntity.status(200).body(projectUnderstandingService.getProjectUnderstandingById(id));
     }
 
     // Get project understanding by project ID
     @GetMapping("/get/project/{projectId}")
-    public ResponseEntity<ProjectUnderstanding> getProjectUnderstandingByProjectId(@PathVariable Long projectId) {
+    public ResponseEntity<ProjectUnderstanding> getProjectUnderstandingByProjectId(@PathVariable Integer projectId) {
 
         return ResponseEntity.status(200).body(projectUnderstandingService.getProjectUnderstandingByProjectId(projectId));
     }
 
     // Add project understanding
     @PostMapping("/add/{projectId}")
-    public ResponseEntity<ApiResponse> addProjectUnderstanding(@PathVariable Long projectId, @Valid @RequestBody ProjectUnderstanding projectUnderstanding) {
+    public ResponseEntity<ApiResponse> addProjectUnderstanding(@PathVariable Integer projectId, @Valid @RequestBody ProjectUnderstanding projectUnderstanding) {
 
         projectUnderstandingService.addProjectUnderstanding(projectId, projectUnderstanding);
 
@@ -48,7 +48,7 @@ public class ProjectUnderstandingController {
 
     // Update project understanding
     @PutMapping("/update/{id}")
-    public ResponseEntity<ApiResponse> updateProjectUnderstanding(@PathVariable Long id, @Valid @RequestBody ProjectUnderstanding projectUnderstanding) {
+    public ResponseEntity<ApiResponse> updateProjectUnderstanding(@PathVariable Integer id, @Valid @RequestBody ProjectUnderstanding projectUnderstanding) {
 
         projectUnderstandingService.updateProjectUnderstanding(id, projectUnderstanding);
 
@@ -57,7 +57,7 @@ public class ProjectUnderstandingController {
 
     // Delete project understanding
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<ApiResponse> deleteProjectUnderstanding(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse> deleteProjectUnderstanding(@PathVariable Integer id) {
 
         projectUnderstandingService.deleteProjectUnderstanding(id);
 

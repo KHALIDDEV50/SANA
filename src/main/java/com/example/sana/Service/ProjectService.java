@@ -24,7 +24,7 @@ public class ProjectService {
     }
 
     // Get a project by ID
-    public Project getProjectById(Long projectId) {
+    public Project getProjectById(Integer projectId) {
 
         Project project = projectRepository.findProjectById(projectId);
 
@@ -36,7 +36,7 @@ public class ProjectService {
     }
 
     // Get all projects owned by a specific user
-    public List<Project> getProjectsByUserId(Long userId) {
+    public List<Project> getProjectsByUserId(Integer userId) {
 
         User user = userRepository.findUserById(userId);
 
@@ -48,7 +48,7 @@ public class ProjectService {
     }
 
     // Add a new project for a specific user
-    public void addProject(Long userId, Project project) {
+    public void addProject(Integer userId, Project project) {
 
         // Check if the owner exists
         User owner = userRepository.findUserById(userId);
@@ -65,7 +65,7 @@ public class ProjectService {
     }
 
     // Update an existing project
-    public void updateProject(Long projectId, Project project) {
+    public void updateProject(Integer projectId, Project project) {
 
         // Check if the project exists
         Project oldProject = projectRepository.findProjectById(projectId);
@@ -85,7 +85,7 @@ public class ProjectService {
     }
 
     // Delete an existing project
-    public void deleteProject(Long projectId) {
+    public void deleteProject(Integer projectId) {
 
         // Check if the project exists
         Project project = projectRepository.findProjectById(projectId);
