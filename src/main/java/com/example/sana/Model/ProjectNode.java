@@ -54,23 +54,23 @@ public class ProjectNode {
 
 
     @OneToOne(cascade = CascadeType.ALL, mappedBy = "projectNode")
-    @PrimaryKeyJoinColumn
+    @JsonIgnore
     private CharacterProfile characterProfile;
 
     @OneToOne(cascade = CascadeType.ALL,mappedBy = "projectNode")
-    @PrimaryKeyJoinColumn
+    @JsonIgnore
     private World world;
 
     @OneToOne(cascade = CascadeType.ALL,mappedBy = "projectNode")
-    @PrimaryKeyJoinColumn
+    @JsonIgnore
     private Location location;
 
     @OneToOne(cascade = CascadeType.ALL,mappedBy = "projectNode")
-    @PrimaryKeyJoinColumn
+    @JsonIgnore
     private WorldRule worldRule;
 
     @OneToOne(cascade = CascadeType.ALL,mappedBy = "projectNode")
-    @PrimaryKeyJoinColumn
+    @JsonIgnore
     private StoryEvent storyEvent;
 
 
