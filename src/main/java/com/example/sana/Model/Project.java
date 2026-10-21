@@ -2,6 +2,8 @@ package com.example.sana.Model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,17 +20,23 @@ import java.util.Set;
 public class Project {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @Column(nullable = false, length = 200)
+    @NotEmpty(message = "Name is required")
+    @Size(max = 100, message = "Name must not exceed 100 characters")
+    @Column(nullable = false, length = 100)
     private String name;
 
+    @Size(max = 5000, message = "Description must not exceed 5000 characters")
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Size(max = 100, message = "Domain must not exceed 100 characters")
     @Column(length = 100)
     private String domain;
 
+    @NotEmpty(message = "Status is required")
+    @Size(max = 50, message = "Status must not exceed 50 characters")
     @Column(nullable = false, length = 50)
     private String status;
 
