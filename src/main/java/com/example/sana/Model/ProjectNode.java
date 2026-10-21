@@ -1,5 +1,6 @@
 package com.example.sana.Model;
 
+import com.example.sana.Model.CreativityDomainModels.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
@@ -50,6 +51,28 @@ public class ProjectNode {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "targetNode")
     @JsonIgnore
     private Set<ProjectEdge> incomingEdges;
+
+
+    @OneToOne(cascade = CascadeType.ALL, mappedBy = "projectNode")
+    @PrimaryKeyJoinColumn
+    private CharacterProfile characterProfile;
+
+    @OneToOne(cascade = CascadeType.ALL,mappedBy = "projectNode")
+    @PrimaryKeyJoinColumn
+    private World world;
+
+    @OneToOne(cascade = CascadeType.ALL,mappedBy = "projectNode")
+    @PrimaryKeyJoinColumn
+    private Location location;
+
+    @OneToOne(cascade = CascadeType.ALL,mappedBy = "projectNode")
+    @PrimaryKeyJoinColumn
+    private WorldRule worldRule;
+
+    @OneToOne(cascade = CascadeType.ALL,mappedBy = "projectNode")
+    @PrimaryKeyJoinColumn
+    private StoryEvent storyEvent;
+
 
 
 }
