@@ -1,8 +1,10 @@
 package com.example.sana.Model;
 
+import com.example.sana.Enums.ProjectStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -35,10 +37,10 @@ public class Project {
     @Column(length = 100)
     private String domain;
 
-    @NotEmpty(message = "Status is required")
-    @Size(max = 50, message = "Status must not exceed 50 characters")
-    @Column(nullable = false, length = 50)
-    private String status;
+    @NotNull(message = "Project status is required")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50, columnDefinition = "varchar(50)")
+    private ProjectStatus status;
 
     @Version
     @Column(nullable = false)

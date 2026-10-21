@@ -1,10 +1,11 @@
 package com.example.sana.Model;
 
+import com.example.sana.Enums.ChangeOperation;
+import com.example.sana.Enums.ChangeTargetType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,13 +22,15 @@ public class ChangeProposalItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @NotBlank(message = "Change operation must not be blank")
-    @Size(max = 255, message = "Change operation must not exceed 255 characters")
-    private String operation;
+    @NotNull(message = "Change operation is required")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 255, columnDefinition = "varchar(255)")
+    private ChangeOperation operation;
 
-    @NotBlank(message = "Change target type must not be blank")
-    @Size(max = 255, message = "Change target type must not exceed 255 characters")
-    private String targetType;
+    @NotNull(message = "Change target type is required")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 255, columnDefinition = "varchar(255)")
+    private ChangeTargetType targetType;
 
     @Positive(message = "Change target ID must be greater than zero")
     private Integer targetId;

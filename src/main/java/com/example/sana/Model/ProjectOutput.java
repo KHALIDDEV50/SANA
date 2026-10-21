@@ -1,9 +1,11 @@
 package com.example.sana.Model;
 
+import com.example.sana.Enums.RepresentationType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
@@ -38,10 +40,10 @@ public class ProjectOutput {
     @Column(nullable = false, length = 50)
     private String outputType;
 
-    @NotBlank(message = "Representation type cannot be blank")
-    @Size(max = 50, message = "Representation type must not exceed 50 characters")
-    @Column(nullable = false, length = 50)
-    private String representationType;
+    @NotNull(message = "Representation type is required")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50, columnDefinition = "varchar(50)")
+    private RepresentationType representationType;
 
     @Version
     @PositiveOrZero(message = "Output version cannot be negative")

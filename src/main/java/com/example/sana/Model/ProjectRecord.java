@@ -1,5 +1,6 @@
 package com.example.sana.Model;
 
+import com.example.sana.Enums.RecordStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
@@ -34,9 +35,10 @@ public class ProjectRecord {
     @Column(columnDefinition = "varchar(50) not null")
     private String type;
 
-    @NotEmpty(message = "status cannot be empty")
+    @NotNull(message = "Record status is required")
+    @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "varchar(50) not null")
-    private String status;
+    private RecordStatus status;
 
     @NotEmpty(message = "source cannot be empty")
     @Column(columnDefinition = "varchar(50) not null")

@@ -1,8 +1,10 @@
 package com.example.sana.Model;
 
+import com.example.sana.Enums.ExecutionStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -41,9 +43,10 @@ public class AIInteraction {
     @Size(max = 255, message = "AI model name must not exceed 255 characters")
     private String modelName;
 
-    @NotBlank(message = "AI interaction status must not be blank")
-    @Size(max = 255, message = "AI interaction status must not exceed 255 characters")
-    private String status;
+    @NotNull(message = "AI interaction status is required")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 255, columnDefinition = "varchar(255)")
+    private ExecutionStatus status;
 
     @CreationTimestamp
     @PastOrPresent(message = "AI interaction creation time must not be in the future")

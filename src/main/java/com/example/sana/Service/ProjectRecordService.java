@@ -40,6 +40,7 @@ public class ProjectRecordService {
         record.setUpdatedAt(LocalDate.now());
         record.setTitle(projectRecord.getTitle());
         record.setContent(projectRecord.getContent());
+        record.setStatus(projectRecord.getStatus());
         record.setSource(projectRecord.getSource());
         projectRecordRepository.save(record);
     }

@@ -5,9 +5,13 @@ import com.example.sana.API.ApiResponse;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import tools.jackson.databind.exc.InvalidFormatException;
+
+import java.util.Arrays;
 
 @RestControllerAdvice
 public class ControllerAdvice {
@@ -60,6 +64,23 @@ public class ControllerAdvice {
                 .body(new ApiResponse("Database error: " + e.getMessage()));
     }
 
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse> handleUnreadableRequest(HttpMessageNotReadableException e) {
+        Throwable cause = e.getCause();
+        while (cause != null) {
+            if (cause instanceof InvalidFormatException invalidFormat
+                    && invalidFormat.getTargetType() != null
+                    && invalidFormat.getTargetType().isEnum()) {
+                String message = "Invalid " + invalidFormat.getTargetType().getSimpleName()
+                        + ". Allowed values: " + Arrays.toString(invalidFormat.getTargetType().getEnumConstants());
+                return ResponseEntity.status(400).body(new ApiResponse(message));
+            }
+            cause = cause.getCause();
+        }
+        return ResponseEntity.status(400)
+                .body(new ApiResponse("Request body contains malformed JSON or an invalid value"));
+    }
 
     // General Exception
     @ExceptionHandler(Exception.class)

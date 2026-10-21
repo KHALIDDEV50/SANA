@@ -1,5 +1,6 @@
 package com.example.sana.Model;
 
+import com.example.sana.Enums.ProposalStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -37,9 +38,10 @@ public class ChangeProposal {
     @NotBlank(message = "Proposal description must not be blank")
     private String description;
 
-    @NotBlank(message = "Proposal status must not be blank")
-    @Size(max = 255, message = "Proposal status must not exceed 255 characters")
-    private String status;
+    @NotNull(message = "Proposal status is required")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 255, columnDefinition = "varchar(255)")
+    private ProposalStatus status;
 
     @NotNull(message = "Base version is required")
     @PositiveOrZero(message = "Base version must be zero or greater")
