@@ -4,6 +4,7 @@ import com.example.sana.API.ApiException;
 import com.example.sana.Model.Project;
 import com.example.sana.Model.ProjectRecord;
 import com.example.sana.Repository.ProjectRecordRepository;
+import com.example.sana.Repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,18 +16,18 @@ import java.util.List;
 public class ProjectRecordService {
 
     private final ProjectRecordRepository projectRecordRepository;
-    //private final ProjectRepository projectRepository;
+    private final ProjectRepository projectRepository;
 
     public List<ProjectRecord> getAllProjectRecord(){
         return projectRecordRepository.findAll();
     }
 
     public void addProjectRecord(Integer projectId, ProjectRecord projectRecord){
-//        Project project = projectRepository.findProjectById(projectId);
-//        if (project == null){
-//            throw new ApiException("project not found");
-//        }
-
+        Project project = projectRepository.findProjectById(projectId);
+        if (project == null){
+            throw new ApiException("project not found");
+        }
+        projectRecord.setProject(project);
         projectRecord.setCreatedAt(LocalDate.now());
         projectRecordRepository.save(projectRecord);
     }
