@@ -1,0 +1,54 @@
+package com.example.sana.Model.CreativityDomainModels;
+
+import com.example.sana.Model.ProjectNode;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotEmpty;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.LocalDate;
+
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Entity
+public class WorldRule {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+    @NotEmpty(message = "name cannot be empty")
+    @Column(columnDefinition = "varchar(50) not null")
+    private String name;
+    @NotEmpty(message = "description cannot be empty")
+    @Column(columnDefinition = "text not null")
+    private String description;
+    @Column(columnDefinition = "varchar(50)")
+    private String scope;
+    @Column(columnDefinition = "varchar(50)")
+    private String conditions;
+    @Column(columnDefinition = "varchar(50)")
+    private String exceptions;
+    @Column(columnDefinition = "varchar(50)")
+    private String consequences;
+    @Column(columnDefinition = "text")
+    private String notes;
+    @Column(columnDefinition = "date")
+    private LocalDate createdAt;
+    @Column(columnDefinition = "date")
+    private LocalDate updatedAt;
+
+
+
+    @OneToOne
+    @JoinColumn(name = "project_node_id")
+    private ProjectNode projectNode;
+
+    @ManyToOne
+    @JoinColumn(name = "world_id")
+    private World world;
+
+}
