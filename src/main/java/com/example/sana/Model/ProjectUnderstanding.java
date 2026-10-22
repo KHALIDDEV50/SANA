@@ -4,16 +4,17 @@ package com.example.sana.Model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "project_understandings")
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class ProjectUnderstanding {
@@ -39,11 +40,10 @@ public class ProjectUnderstanding {
     @Column(columnDefinition = "TEXT")
     private String constraintsJson;
 
-    @NotNull(message = "Creation date is required")
+    // No @NotNull here: the service sets the dates, not the client
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @NotNull(message = "Update date is required")
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
@@ -51,5 +51,6 @@ public class ProjectUnderstanding {
     // Relations
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "project_id", nullable = false, unique = true)
+    @JsonIgnore
     private Project project;
 }

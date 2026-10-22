@@ -28,6 +28,15 @@ public class ControllerAdvice {
         return ResponseEntity.status(400).body(new ApiResponse(e.getMessage()));
     }
 
+    // Handles invalid arguments supplied to application services.
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse> handleIllegalArgumentException(
+            IllegalArgumentException e) {
+
+        return ResponseEntity.badRequest().body(new ApiResponse(e.getMessage()));
+    }
+
+
 
     // Validation Exception
     @ExceptionHandler(MethodArgumentNotValidException.class)
