@@ -58,5 +58,29 @@ public class StoryEventController {
         storyEventService.deleteStoryEvent(id);
         return ResponseEntity.status(200).body(new ApiResponse("Story event deleted successfully"));
     }
+
+    // Get the Story Timeline in narrative order
+    // Events are sorted by presentationOrder
+    // outputId = ProjectOutput ID
+    @GetMapping("/timeline/presentation/{outputId}")
+    public ResponseEntity<?> getTimelineByPresentationOrder(@PathVariable Integer outputId) {
+        return ResponseEntity.status(200).body(storyEventService.getTimelineByPresentationOrder(outputId));
+    }
+
+
+    // Get the Story Timeline in chronological order
+    // Events are sorted by chronologicalOrder
+    // Events without chronologicalOrder appear last
+    // outputId = ProjectOutput ID
+    @GetMapping("/timeline/chronological/{outputId}")
+    public ResponseEntity<?> getTimelineByChronologicalOrder(@PathVariable Integer outputId) {
+        return ResponseEntity.status(200).body(storyEventService.getTimelineByChronologicalOrder(outputId));
+    }
+
+
+
+
+
+
 }
 

@@ -4,6 +4,7 @@ import com.example.sana.Model.ProjectNode;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,6 +34,11 @@ public class StoryEvent {
     @NotNull(message = "order cannot be empty")
     @Column(columnDefinition = "int not null")
     private Integer presentationOrder;
+    // Actual chronological sequence of events inside the story
+    // Optional because the writer may not know the order yet
+    @Positive(message = "Chronological order must be positive")
+    @Column(name = "chronological_order")
+    private Integer chronologicalOrder;
     @Column(columnDefinition = "varchar(50)")
     private String inWorldTime;
     @Column(columnDefinition = "text")
