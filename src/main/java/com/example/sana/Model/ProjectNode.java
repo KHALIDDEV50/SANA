@@ -27,6 +27,7 @@ public class ProjectNode {
     @Column(columnDefinition = "varchar(50) not null")
     private String type;
 
+    @Column(columnDefinition = "LONGTEXT")
     private String dataJson;
     @NotNull(message = "position X cannot be null")
     @Column(columnDefinition = "double not null")

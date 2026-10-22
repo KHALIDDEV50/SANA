@@ -26,6 +26,7 @@ public class ProjectEdge {
     @Column(columnDefinition = "varchar(50) not null")
     private String label;
 
+    @Column(columnDefinition = "LONGTEXT")
     private String dataJson;
     @Column(columnDefinition = "date")
     private LocalDate createdAt;
