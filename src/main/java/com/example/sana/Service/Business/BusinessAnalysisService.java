@@ -2,9 +2,9 @@
 package com.example.sana.Service.Business;
 
 import com.example.sana.Enums.BusinessToolType;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
@@ -72,7 +72,7 @@ public class BusinessAnalysisService {
             // Return the validated response as a normalized JSON string.
             return objectMapper.writeValueAsString(validatedResponse);
 
-        } catch (JsonProcessingException exception) {
+        } catch (JacksonException exception) {
             // Report an error if the validated response cannot be serialized.
             throw new IllegalStateException(
                     "Failed to serialize validated AI response.",
@@ -99,7 +99,7 @@ public class BusinessAnalysisService {
             // Serialize the parsed object to produce consistent JSON formatting.
             return objectMapper.writeValueAsString(inputNode);
 
-        } catch (JsonProcessingException exception) {
+        } catch (JacksonException exception) {
             // Reject malformed JSON and preserve the original parsing error.
             throw new IllegalArgumentException("Input must contain valid JSON.", exception);
         }
