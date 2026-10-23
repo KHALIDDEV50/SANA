@@ -1,7 +1,7 @@
 package com.example.sana.Controller.CreativityDomainController;
 
 import com.example.sana.API.ApiResponse;
-import com.example.sana.DTO.WorldRuleDTO;
+import com.example.sana.DTO.CreativityDomainDTOs.WorldRuleDTO;
 import com.example.sana.Service.CreativityDomainServise.WorldRuleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

@@ -1,7 +1,7 @@
 package com.example.sana.Controller.CreativityDomainController;
 
 import com.example.sana.API.ApiResponse;
-import com.example.sana.DTO.LocationDTO;
+import com.example.sana.DTO.CreativityDomainDTOs.LocationDTO;
 import com.example.sana.Service.CreativityDomainServise.LocationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

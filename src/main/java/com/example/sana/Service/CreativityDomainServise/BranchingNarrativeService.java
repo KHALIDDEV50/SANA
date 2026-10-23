@@ -1,8 +1,8 @@
 package com.example.sana.Service.CreativityDomainServise;
 
 import com.example.sana.API.ApiException;
-import com.example.sana.DTO.*;
-import com.example.sana.Enums.BranchingNodeType;
+import com.example.sana.DTO.CreativityDomainDTOs.*;
+import com.example.sana.Enums.CreativityDomainEnums.BranchingNodeType;
 import com.example.sana.Model.CreativityDomainModels.*;
 import com.example.sana.Model.ProjectEdge;
 import com.example.sana.Model.ProjectNode;

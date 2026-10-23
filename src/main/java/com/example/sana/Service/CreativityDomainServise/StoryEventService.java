@@ -1,8 +1,8 @@
 package com.example.sana.Service.CreativityDomainServise;
 
 import com.example.sana.API.ApiException;
-import com.example.sana.DTO.StoryEventDTO;
-import com.example.sana.DTO.StoryEventTimelineDTO;
+import com.example.sana.DTO.CreativityDomainDTOs.StoryEventDTO;
+import com.example.sana.DTO.CreativityDomainDTOs.StoryEventTimelineDTO;
 import com.example.sana.Model.CreativityDomainModels.StoryEvent;
 import com.example.sana.Model.ProjectNode;
 import com.example.sana.Model.ProjectOutput;
@@ -15,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor

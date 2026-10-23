@@ -1,7 +1,7 @@
 package com.example.sana.Controller.CreativityDomainController;
 
 import com.example.sana.API.ApiResponse;
-import com.example.sana.DTO.PlayableCharacterDTO;
+import com.example.sana.DTO.CreativityDomainDTOs.PlayableCharacterDTO;
 import com.example.sana.Service.CreativityDomainServise.CharacterBalanceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

@@ -1,7 +1,7 @@
 package com.example.sana.Service.CreativityDomainServise;
 
 import com.example.sana.API.ApiException;
-import com.example.sana.DTO.WorldDTO;
+import com.example.sana.DTO.CreativityDomainDTOs.WorldDTO;
 import com.example.sana.Model.CreativityDomainModels.World;
 import com.example.sana.Model.ProjectNode;
 import com.example.sana.Model.ProjectOutput;
@@ -40,8 +40,7 @@ public class WorldService {
     @Transactional
     public void addWorld(Integer outputId, WorldDTO dto) {
 
-        ProjectOutput output =
-                projectOutputRepository.findProjectOutputById(outputId);
+        ProjectOutput output = projectOutputRepository.findProjectOutputById(outputId);
 
         if (output == null) {
             throw new ApiException("Project output not found");

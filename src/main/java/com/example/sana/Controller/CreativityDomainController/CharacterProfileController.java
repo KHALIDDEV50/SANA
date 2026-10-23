@@ -1,15 +1,12 @@
 package com.example.sana.Controller.CreativityDomainController;
 
 import com.example.sana.API.ApiResponse;
-import com.example.sana.DTO.CharacterProfileDTO;
-import com.example.sana.Model.CreativityDomainModels.CharacterProfile;
+import com.example.sana.DTO.CreativityDomainDTOs.CharacterProfileDTO;
 import com.example.sana.Service.CreativityDomainServise.CharacterProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/character-profile")
