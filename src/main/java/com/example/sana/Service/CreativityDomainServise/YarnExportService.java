@@ -104,25 +104,25 @@ public class YarnExportService {
             choicesBySource.computeIfAbsent(sourceId, id -> new ArrayList<>()).add(choice);
         }
 
+
         // STEP 5: Generate Yarn source.
         StringBuilder yarn = new StringBuilder();
 
         yarn.append("// Exported from SANA Branching Narrative\n");
         yarn.append("// Starting scene: Scene_").append(selectedStart).append("\n\n");
 
-        // Yarn declarations define initial game state.
+        // Create the starting Yarn node.
+        yarn.append("title: Start\n");
+        yarn.append("---\n");
+
+
+        // Declare game variables only once, inside the starting node.
         for (Object[] variable : variables) {
             yarn.append("<<declare $").append(variable[0]).append(" = ")
                     .append(variable[1]).append(">>\n");
         }
 
-        if (!variables.isEmpty()) {
-            yarn.append("\n");
-        }
-
-        // The Start node jumps to the scene selected by the user.
-        yarn.append("title: Start\n");
-        yarn.append("---\n");
+        // Jump to the selected starting scene.
         yarn.append("<<jump Scene_").append(selectedStart).append(">>\n");
         yarn.append("===\n\n");
 
