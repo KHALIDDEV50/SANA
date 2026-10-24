@@ -1,7 +1,7 @@
 package com.example.sana.Service.CreativityDomainServise;
 
 import com.example.sana.API.ApiException;
-import com.example.sana.DTO.WorldRuleDTO;
+import com.example.sana.DTO.CreativityDomainDTOs.WorldRuleDTO;
 import com.example.sana.Model.CreativityDomainModels.World;
 import com.example.sana.Model.CreativityDomainModels.WorldRule;
 import com.example.sana.Model.ProjectNode;

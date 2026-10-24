@@ -6,6 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+import java.util.Optional;
 
 import java.util.List;
 
@@ -26,11 +29,17 @@ public interface WorldRepository extends JpaRepository<World, Integer> {
                   OR LOWER(w.history) LIKE LOWER(CONCAT('%', :keyword, '%'))
               )
             """)
-    List<World> searchInOutput(
-            @Param("outputId") Integer outputId,
-            @Param("keyword") String keyword);
+    List<World> searchInOutput(@Param("outputId") Integer outputId, @Param("keyword") String keyword);
 
 
+    // Lock a world while applying an approved AI update.
+    // This protects the World row during the approval transaction.
+    //
+    // The method must be called inside an active transaction.
+    // It does not replace normal read methods used elsewhere.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT w FROM World w WHERE w.id = :worldId")
+    Optional<World> findByIdForUpdate(@Param("worldId") Integer worldId);
 
 }
 

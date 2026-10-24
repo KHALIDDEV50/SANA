@@ -69,7 +69,7 @@ public class CharacterProfile {
     private LocalDate updatedAt;
 
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_node_id")
     private ProjectNode projectNode;
 

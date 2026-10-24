@@ -52,12 +52,12 @@ public class AIInteraction {
     @PastOrPresent(message = "AI interaction creation time must not be in the future")
     private LocalDateTime createdAt;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
     @JsonIgnore
     private User user;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "project_id", referencedColumnName = "id", nullable = false)
     @JsonIgnore
     private Project project;

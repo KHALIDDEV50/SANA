@@ -41,7 +41,7 @@ public class ChangeProposalItem {
     @Column(columnDefinition = "LONGTEXT")
     private String afterJson;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "change_proposal_id", referencedColumnName = "id", nullable = false)
     @JsonIgnore
     private ChangeProposal changeProposal;

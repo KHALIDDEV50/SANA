@@ -1,10 +1,10 @@
 package com.example.sana.Service.CreativityDomainServise;
 
 import com.example.sana.API.ApiException;
-import com.example.sana.DTO.CreativityDeletePreviewDTO;
-import com.example.sana.DTO.CreativityRelationCreateDTO;
-import com.example.sana.DTO.CreativityRelationDTO;
-import com.example.sana.Enums.CreativityRelationType;
+import com.example.sana.DTO.CreativityDomainDTOs.CreativityDeletePreviewDTO;
+import com.example.sana.DTO.CreativityDomainDTOs.CreativityRelationCreateDTO;
+import com.example.sana.DTO.CreativityDomainDTOs.CreativityRelationDTO;
+import com.example.sana.Enums.CreativityDomainEnums.CreativityRelationType;
 import com.example.sana.Model.ProjectEdge;
 import com.example.sana.Model.ProjectNode;
 import com.example.sana.Model.ProjectOutput;
@@ -35,8 +35,7 @@ public class CreativityRelationService {
     @Transactional(readOnly = true)
     public List<CreativityRelationDTO> getOutputRelations(Integer outputId) {
 
-        ProjectOutput output =
-                projectOutputRepository.findProjectOutputById(outputId);
+        ProjectOutput output = projectOutputRepository.findProjectOutputById(outputId);
 
         if (output == null) {
             throw new ApiException("Project output not found");
@@ -52,8 +51,7 @@ public class CreativityRelationService {
     public List<CreativityRelationDTO> getNodeRelations(
             Integer outputId, Integer nodeId) {
 
-        ProjectOutput output =
-                projectOutputRepository.findProjectOutputById(outputId);
+        ProjectOutput output = projectOutputRepository.findProjectOutputById(outputId);
 
         if (output == null) {
             throw new ApiException("Project output not found");
@@ -67,8 +65,7 @@ public class CreativityRelationService {
 
         // Make sure the Node belongs to the requested output
         if (!node.getProjectOutput().getId().equals(outputId)) {
-            throw new ApiException(
-                    "Project node does not belong to this output");
+            throw new ApiException("Project node does not belong to this output");
         }
 
         return buildResults(output, nodeId);
@@ -78,11 +75,9 @@ public class CreativityRelationService {
     // Convert ProjectEdges into results for the frontend
     // If nodeId is null, return all relationships in the output
     // Otherwise, return relationships connected to that Node
-    private List<CreativityRelationDTO> buildResults(
-            ProjectOutput output, Integer nodeId) {
+    private List<CreativityRelationDTO> buildResults(ProjectOutput output, Integer nodeId) {
 
         return output.getEdges().stream()
-
                 .filter(edge ->
                         nodeId == null
                                 || edge.getSourceNode().getId().equals(nodeId)
@@ -155,8 +150,7 @@ public class CreativityRelationService {
 
         // Check business rules for the selected relationship
         if (!type.isAllowed(source.getType(), target.getType())) {
-            throw new ApiException(
-                    "Relationship type is not allowed between these nodes");
+            throw new ApiException("Relationship type is not allowed between these nodes");
         }
 
         // Use the custom label when provided
@@ -172,13 +166,11 @@ public class CreativityRelationService {
                 && (dto.getLabel() == null
                 || dto.getLabel().isBlank())) {
 
-            throw new ApiException(
-                    "Custom relationship label is required");
+            throw new ApiException("Custom relationship label is required");
         }
 
         if (label.length() > 50) {
-            throw new ApiException(
-                    "Relationship label cannot exceed 50 characters");
+            throw new ApiException("Relationship label cannot exceed 50 characters");
         }
 
         // Prepare ProjectEdge
@@ -201,11 +193,9 @@ public class CreativityRelationService {
             throw new ApiException("Project node not found");
         }
 
-        if (node.getProjectOutput() == null
-                || !node.getProjectOutput().getId().equals(outputId)) {
+        if (node.getProjectOutput() == null || !node.getProjectOutput().getId().equals(outputId)) {
 
-            throw new ApiException(
-                    "Project node does not belong to this output");
+            throw new ApiException("Project node does not belong to this output");
         }
 
         return node;
@@ -216,12 +206,9 @@ public class CreativityRelationService {
     // Update an existing relationship type and label
     // Validates the relationship against the existing Node types
     @Transactional
-    public void updateCreativityRelation(
-            Integer edgeId,
-            CreativityRelationCreateDTO dto) {
+    public void updateCreativityRelation(Integer edgeId, CreativityRelationCreateDTO dto) {
 
-        ProjectEdge edge =
-                projectEdgeRepository.findProjectEdgeById(edgeId);
+        ProjectEdge edge = projectEdgeRepository.findProjectEdgeById(edgeId);
 
         if (edge == null) {
             throw new ApiException("Project edge not found");
@@ -238,8 +225,7 @@ public class CreativityRelationService {
         String targetType = edge.getTargetNode().getType();
 
         if (!type.isAllowed(sourceType, targetType)) {
-            throw new ApiException(
-                    "Relationship type is not allowed between these nodes");
+            throw new ApiException("Relationship type is not allowed between these nodes");
         }
 
         // Use the provided label or the default Enum label
@@ -247,16 +233,14 @@ public class CreativityRelationService {
 
         if (label == null || label.isBlank()) {
             if (type == CreativityRelationType.CUSTOM) {
-                throw new ApiException(
-                        "Custom relationship label is required");
+                throw new ApiException("Custom relationship label is required");
             }
 
             label = type.getDefaultLabel();
         }
 
         if (label.length() > 50) {
-            throw new ApiException(
-                    "Relationship label cannot exceed 50 characters");
+            throw new ApiException("Relationship label cannot exceed 50 characters");
         }
 
         edge.setType(type.name());
@@ -270,36 +254,30 @@ public class CreativityRelationService {
     // Preview the impact of deleting a creativity Node
     // This method does NOT delete or modify any data
     @Transactional(readOnly = true)
-    public CreativityDeletePreviewDTO previewNodeDeletion(
-            Integer outputId, Integer nodeId) {
+    public CreativityDeletePreviewDTO previewNodeDeletion(Integer outputId, Integer nodeId) {
 
         // Check if ProjectOutput exists
-        ProjectOutput output =
-                projectOutputRepository.findProjectOutputById(outputId);
+        ProjectOutput output = projectOutputRepository.findProjectOutputById(outputId);
 
         if (output == null) {
             throw new ApiException("Project output not found");
         }
 
         // Check if ProjectNode exists
-        ProjectNode node =
-                projectNodeRepository.findProjectNodeById(nodeId);
+        ProjectNode node = projectNodeRepository.findProjectNodeById(nodeId);
 
         if (node == null) {
             throw new ApiException("Project node not found");
         }
 
         // Make sure the Node belongs to the selected output
-        if (node.getProjectOutput() == null
-                || !node.getProjectOutput().getId().equals(outputId)) {
-            throw new ApiException(
-                    "Project node does not belong to this output");
+        if (node.getProjectOutput() == null || !node.getProjectOutput().getId().equals(outputId)) {
+            throw new ApiException("Project node does not belong to this output");
         }
 
         // Get incoming and outgoing ProjectEdges
         // Reuse the method we already implemented
-        List<CreativityRelationDTO> relations =
-                getNodeRelations(outputId, nodeId);
+        List<CreativityRelationDTO> relations = getNodeRelations(outputId, nodeId);
 
         // Collect structural relationships that may block deletion
         List<String> blockingReasons = new ArrayList<>();
@@ -307,24 +285,16 @@ public class CreativityRelationService {
         // A World may be referenced by Locations and WorldRules
         if (node.getWorld() != null) {
 
-            int locationCount =
-                    node.getWorld().getLocations() == null
-                            ? 0 : node.getWorld().getLocations().size();
+            int locationCount = node.getWorld().getLocations() == null ? 0 : node.getWorld().getLocations().size();
 
-            int ruleCount =
-                    node.getWorld().getRules() == null
-                            ? 0 : node.getWorld().getRules().size();
+            int ruleCount = node.getWorld().getRules() == null ? 0 : node.getWorld().getRules().size();
 
             if (locationCount > 0) {
-                blockingReasons.add(
-                        "World has " + locationCount
-                                + " linked locations");
+                blockingReasons.add("World has " + locationCount + " linked locations");
             }
 
             if (ruleCount > 0) {
-                blockingReasons.add(
-                        "World has " + ruleCount
-                                + " linked world rules");
+                blockingReasons.add("World has " + ruleCount + " linked world rules");
             }
         }
 
@@ -332,16 +302,10 @@ public class CreativityRelationService {
         // according to our current LocationService
         if (node.getLocation() != null) {
 
-            int childCount =
-                    node.getLocation().getChildLocations() == null
-                            ? 0
-                            : node.getLocation()
-                            .getChildLocations().size();
+            int childCount = node.getLocation().getChildLocations() == null ? 0 : node.getLocation().getChildLocations().size();
 
             if (childCount > 0) {
-                blockingReasons.add(
-                        "Location has " + childCount
-                                + " child locations");
+                blockingReasons.add("Location has " + childCount + " child locations");
             }
         }
 
@@ -349,19 +313,8 @@ public class CreativityRelationService {
         boolean canDelete = blockingReasons.isEmpty();
 
         // Return preview information without deleting anything
-        return new CreativityDeletePreviewDTO(
-                node.getId(),
-                node.getType(),
-                relations.size(),
-                relations,
-                canDelete,
-                blockingReasons
-        );
+        return new CreativityDeletePreviewDTO(node.getId(), node.getType(), relations.size(), relations, canDelete, blockingReasons);
     }
-
-
-
-
 
 
 }

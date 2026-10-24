@@ -1,7 +1,7 @@
 package com.example.sana.Model.CreativityDomainModels;
 
-import com.example.sana.Enums.BranchingComparisonOperator;
-import com.example.sana.Enums.BranchingEffectOperator;
+import com.example.sana.Enums.CreativityDomainEnums.BranchingComparisonOperator;
+import com.example.sana.Enums.CreativityDomainEnums.BranchingEffectOperator;
 import com.example.sana.Model.ProjectEdge;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;

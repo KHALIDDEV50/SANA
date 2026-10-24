@@ -5,6 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+import java.util.Optional;
 
 import java.util.List;
 
@@ -25,9 +28,15 @@ public interface LocationRepository extends JpaRepository<Location, Integer> {
                   OR LOWER(l.narrativeSignificance) LIKE LOWER(CONCAT('%', :keyword, '%'))
               )
             """)
-    List<Location> searchInOutput(
-            @Param("outputId") Integer outputId,
-            @Param("keyword") String keyword);
+    List<Location> searchInOutput(@Param("outputId") Integer outputId, @Param("keyword") String keyword);
+
+
+    // Lock the location during an approved AI update.
+    // The lock remains active until the surrounding transaction ends.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT l FROM Location l WHERE l.id = :locationId")
+    Optional<Location> findByIdForUpdate(@Param("locationId") Integer locationId);
+
 
 
 }

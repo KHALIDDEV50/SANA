@@ -6,6 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+import java.util.Optional;
 
 import java.util.List;
 
@@ -59,6 +62,18 @@ public interface StoryEventRepository extends JpaRepository<StoryEvent, Integer>
     List<StoryEvent> searchInOutput(
             @Param("outputId") Integer outputId,
             @Param("keyword") String keyword);
+
+
+    // Lock the StoryEvent row while applying an approved AI update.
+    //
+    // The calling service must already have an active transaction.
+    // This coordinates concurrent AI approval requests for the
+    // same story event and helps protect the saved snapshot check.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT e FROM StoryEvent e WHERE e.id = :eventId")
+    Optional<StoryEvent> findByIdForUpdate(
+            @Param("eventId") Integer eventId);
+
 
 
 }

@@ -2,6 +2,7 @@ package com.example.sana.Model.CreativityDomainModels;
 
 import com.example.sana.Model.ProjectNode;
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -36,15 +37,19 @@ public class Location {
     private LocalDate updateAt;
 
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_node_id")
     private ProjectNode projectNode;
 
-    @ManyToOne
+    // Keep world metadata in JSON, but avoid recursively expanding all its locations and rules.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"locations", "rules"})
     @JoinColumn(name = "world_id")
     private World world;
 
-    @ManyToOne
+    // Parent can be shown, but do not expand its children back into this location.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JsonIgnoreProperties("childLocations")
     @JoinColumn(name = "parent_location_id")
     private Location parentLocation;
 

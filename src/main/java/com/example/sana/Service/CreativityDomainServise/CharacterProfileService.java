@@ -1,7 +1,7 @@
 package com.example.sana.Service.CreativityDomainServise;
 
 import com.example.sana.API.ApiException;
-import com.example.sana.DTO.CharacterProfileDTO;
+import com.example.sana.DTO.CreativityDomainDTOs.CharacterProfileDTO;
 import com.example.sana.Model.CreativityDomainModels.CharacterProfile;
 import com.example.sana.Model.ProjectNode;
 import com.example.sana.Model.ProjectOutput;
@@ -41,8 +41,7 @@ public class CharacterProfileService {
     @Transactional
     public void addCharacterProfile(Integer outputId, CharacterProfileDTO dto) {
 
-        ProjectOutput output =
-                projectOutputRepository.findProjectOutputById(outputId);
+        ProjectOutput output = projectOutputRepository.findProjectOutputById(outputId);
 
         if (output == null) {
             throw new ApiException("Project output not found");
@@ -92,8 +91,7 @@ public class CharacterProfileService {
 
     public void updateCharacterProfile(Integer id, CharacterProfileDTO dto) {
 
-        CharacterProfile characterProfile =
-                characterProfileRepository.findCharacterProfileById(id);
+        CharacterProfile characterProfile = characterProfileRepository.findCharacterProfileById(id);
 
         if (characterProfile == null) {
             throw new ApiException("Character profile not found");

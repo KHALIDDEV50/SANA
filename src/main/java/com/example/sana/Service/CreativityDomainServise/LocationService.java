@@ -1,7 +1,7 @@
 package com.example.sana.Service.CreativityDomainServise;
 
 import com.example.sana.API.ApiException;
-import com.example.sana.DTO.LocationDTO;
+import com.example.sana.DTO.CreativityDomainDTOs.LocationDTO;
 import com.example.sana.Model.CreativityDomainModels.Location;
 import com.example.sana.Model.CreativityDomainModels.World;
 import com.example.sana.Model.ProjectNode;
@@ -42,8 +42,7 @@ public class LocationService {
 
 
     @Transactional
-    public void addLocation(Integer outputId, Integer worldId,
-                            Integer parentLocationId, LocationDTO dto) {
+    public void addLocation(Integer outputId, Integer worldId, Integer parentLocationId, LocationDTO dto) {
 
         ProjectOutput output = projectOutputRepository.findProjectOutputById(outputId);
 
@@ -77,15 +76,12 @@ public class LocationService {
 
             if (!parentLocation.getProjectNode()
                     .getProjectOutput().getId().equals(outputId)) {
-                throw new ApiException(
-                        "Parent location does not belong to this project output");
+                throw new ApiException("Parent location does not belong to this project output");
             }
 
             if (world != null) {
-                if (parentLocation.getWorld() == null
-                        || !parentLocation.getWorld().getId().equals(world.getId())) {
-                    throw new ApiException(
-                            "Parent location does not belong to this world");
+                if (parentLocation.getWorld() == null || !parentLocation.getWorld().getId().equals(world.getId())) {
+                    throw new ApiException("Parent location does not belong to this world");
                 }
             } else {
                 world = parentLocation.getWorld();
@@ -139,8 +135,7 @@ public class LocationService {
         // Update Location
         location.setName(dto.getName());
         location.setLocationType(dto.getLocationType());
-        location.setNarrativeSignificance(
-                dto.getNarrativeSignificance());
+        location.setNarrativeSignificance(dto.getNarrativeSignificance());
         location.setNotes(dto.getNotes());
         location.setUpdateAt(LocalDate.now());
 
@@ -168,26 +163,18 @@ public class LocationService {
             throw new ApiException("World not found");
         }
 
-        if (!location.getProjectNode().getProjectOutput().getId()
-                .equals(world.getProjectNode().getProjectOutput().getId())) {
-            throw new ApiException(
-                    "Location and world must belong to the same output");
+        if (!location.getProjectNode().getProjectOutput().getId().equals(world.getProjectNode().getProjectOutput().getId())) {
+            throw new ApiException("Location and world must belong to the same output");
         }
 
-        if (location.getParentLocation() != null
-                && (location.getParentLocation().getWorld() == null
-                || !location.getParentLocation().getWorld().getId()
-                .equals(worldId))) {
-            throw new ApiException(
-                    "Parent location belongs to a different world");
+        if (location.getParentLocation() != null && (location.getParentLocation().getWorld() == null || !location.getParentLocation().getWorld().getId().equals(worldId))) {
+            throw new ApiException("Parent location belongs to a different world");
         }
 
         if (location.getChildLocations() != null) {
             for (Location child : location.getChildLocations()) {
-                if (child.getWorld() == null
-                        || !child.getWorld().getId().equals(worldId)) {
-                    throw new ApiException(
-                            "Child locations belong to a different world");
+                if (child.getWorld() == null || !child.getWorld().getId().equals(worldId)) {
+                    throw new ApiException("Child locations belong to a different world");
                 }
             }
         }
@@ -198,8 +185,7 @@ public class LocationService {
     }
 
     @Transactional
-    public void updateParentLocation(Integer locationId,
-                                     Integer parentLocationId) {
+    public void updateParentLocation(Integer locationId, Integer parentLocationId) {
 
         Location location = locationRepository.findLocationById(locationId);
 
@@ -207,8 +193,7 @@ public class LocationService {
             throw new ApiException("Location not found");
         }
 
-        Location parentLocation =
-                locationRepository.findLocationById(parentLocationId);
+        Location parentLocation = locationRepository.findLocationById(parentLocationId);
 
         if (parentLocation == null) {
             throw new ApiException("Parent location not found");
@@ -218,11 +203,8 @@ public class LocationService {
             throw new ApiException("Location cannot be its own parent");
         }
 
-        if (!location.getProjectNode().getProjectOutput().getId()
-                .equals(parentLocation.getProjectNode()
-                        .getProjectOutput().getId())) {
-            throw new ApiException(
-                    "Locations must belong to the same project output");
+        if (!location.getProjectNode().getProjectOutput().getId().equals(parentLocation.getProjectNode().getProjectOutput().getId())) {
+            throw new ApiException("Locations must belong to the same project output");
         }
 
         // Prevent circular relationships
@@ -230,30 +212,20 @@ public class LocationService {
 
         while (current != null) {
             if (current.getId().equals(locationId)) {
-                throw new ApiException(
-                        "Circular parent location is not allowed");
+                throw new ApiException("Circular parent location is not allowed");
             }
             current = current.getParentLocation();
         }
 
-        if (location.getWorld() != null
-                && (parentLocation.getWorld() == null
-                || !location.getWorld().getId()
-                .equals(parentLocation.getWorld().getId()))) {
-            throw new ApiException(
-                    "Location and parent must belong to the same world");
+        if (location.getWorld() != null && (parentLocation.getWorld() == null || !location.getWorld().getId().equals(parentLocation.getWorld().getId()))) {
+            throw new ApiException("Location and parent must belong to the same world");
         }
 
         if (location.getWorld() == null) {
-            if (location.getChildLocations() != null
-                    && !location.getChildLocations().isEmpty()) {
+            if (location.getChildLocations() != null && !location.getChildLocations().isEmpty()) {
                 for (Location child : location.getChildLocations()) {
-                    if (child.getWorld() != null
-                            && (parentLocation.getWorld() == null
-                            || !child.getWorld().getId()
-                            .equals(parentLocation.getWorld().getId()))) {
-                        throw new ApiException(
-                                "Child location belongs to a different world");
+                    if (child.getWorld() != null && (parentLocation.getWorld() == null || !child.getWorld().getId().equals(parentLocation.getWorld().getId()))) {
+                        throw new ApiException("Child location belongs to a different world");
                     }
                 }
             }
@@ -276,10 +248,8 @@ public class LocationService {
             throw new ApiException("Location not found");
         }
 
-        if (location.getChildLocations() != null
-                && !location.getChildLocations().isEmpty()) {
-            throw new ApiException(
-                    "Cannot delete a location that has child locations");
+        if (location.getChildLocations() != null && !location.getChildLocations().isEmpty()) {
+            throw new ApiException("Cannot delete a location that has child locations");
         }
 
         ProjectNode node = location.getProjectNode();

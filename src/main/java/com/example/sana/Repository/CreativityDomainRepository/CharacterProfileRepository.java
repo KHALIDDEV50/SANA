@@ -6,6 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+import java.util.Optional;
 
 import java.util.List;
 
@@ -31,6 +34,17 @@ public interface CharacterProfileRepository extends JpaRepository<CharacterProfi
     List<CharacterProfile> searchInOutput(
             @Param("outputId") Integer outputId,
             @Param("keyword") String keyword);
+
+
+    // Lock the character while an approved AI proposal is being applied.
+    // This helps prevent concurrent AI approvals from modifying
+    // the same CharacterProfile at the same time.
+    //
+    // The lock must be acquired inside an active transaction.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM CharacterProfile c WHERE c.id = :characterId")
+    Optional<CharacterProfile> findByIdForUpdate(@Param("characterId") Integer characterId);
+
 
 
 

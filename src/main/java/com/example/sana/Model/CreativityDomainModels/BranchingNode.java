@@ -1,6 +1,6 @@
 package com.example.sana.Model.CreativityDomainModels;
 
-import com.example.sana.Enums.BranchingNodeType;
+import com.example.sana.Enums.CreativityDomainEnums.BranchingNodeType;
 import com.example.sana.Model.ProjectNode;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;

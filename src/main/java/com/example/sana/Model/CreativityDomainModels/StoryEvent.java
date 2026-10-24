@@ -50,7 +50,7 @@ public class StoryEvent {
 
 
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_node_id")
     private ProjectNode projectNode;
 

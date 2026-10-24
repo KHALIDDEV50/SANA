@@ -1,8 +1,8 @@
 package com.example.sana.Service.CreativityDomainServise;
 
 import com.example.sana.API.ApiException;
-import com.example.sana.DTO.CreativitySearchResultDTO;
-import com.example.sana.Enums.CreativitySearchType;
+import com.example.sana.DTO.CreativityDomainDTOs.CreativitySearchResultDTO;
+import com.example.sana.Enums.CreativityDomainEnums.CreativitySearchType;
 import com.example.sana.Model.ProjectNode;
 import com.example.sana.Repository.ProjectOutputRepository;
 import com.example.sana.Repository.CreativityDomainRepository.CharacterProfileRepository;
@@ -34,8 +34,7 @@ public class CreativitySearchService {
     // Search all creativity elements inside a specific ProjectOutput
     // keyword and type are optional
     @Transactional(readOnly = true)
-    public List<CreativitySearchResultDTO> search(
-            Integer outputId, String keyword, String type) {
+    public List<CreativitySearchResultDTO> search(Integer outputId, String keyword, String type) {
 
         // Check if ProjectOutput exists
         if (projectOutputRepository.findProjectOutputById(outputId) == null) {
@@ -51,10 +50,7 @@ public class CreativitySearchService {
         CreativitySearchType selectedType;
 
         try {
-            selectedType = (type == null || type.isBlank())
-                    ? CreativitySearchType.ALL
-                    : CreativitySearchType.valueOf(
-                    type.trim().toUpperCase(Locale.ROOT));
+            selectedType = (type == null || type.isBlank()) ? CreativitySearchType.ALL : CreativitySearchType.valueOf(type.trim().toUpperCase(Locale.ROOT));
 
         } catch (IllegalArgumentException e) {
             throw new ApiException("Invalid creativity type");
@@ -66,12 +62,9 @@ public class CreativitySearchService {
 
         // Search CharacterProfiles
         // Runs when type is ALL or CHARACTER
-        if (selectedType == CreativitySearchType.ALL
-                || selectedType == CreativitySearchType.CHARACTER) {
+        if (selectedType == CreativitySearchType.ALL || selectedType == CreativitySearchType.CHARACTER) {
 
-            characterProfileRepository
-                    .searchInOutput(outputId, searchText)
-                    .forEach(character -> results.add(result(
+            characterProfileRepository.searchInOutput(outputId, searchText).forEach(character -> results.add(result(
                             character.getId(),
                             character.getProjectNode(),
                             CreativitySearchType.CHARACTER,
@@ -83,12 +76,9 @@ public class CreativitySearchService {
 
         // Search Worlds
         // Runs when type is ALL or WORLD
-        if (selectedType == CreativitySearchType.ALL
-                || selectedType == CreativitySearchType.WORLD) {
+        if (selectedType == CreativitySearchType.ALL || selectedType == CreativitySearchType.WORLD) {
 
-            worldRepository
-                    .searchInOutput(outputId, searchText)
-                    .forEach(world -> results.add(result(
+            worldRepository.searchInOutput(outputId, searchText).forEach(world -> results.add(result(
                             world.getId(),
                             world.getProjectNode(),
                             CreativitySearchType.WORLD,
@@ -100,12 +90,9 @@ public class CreativitySearchService {
 
         // Search Locations
         // Runs when type is ALL or LOCATION
-        if (selectedType == CreativitySearchType.ALL
-                || selectedType == CreativitySearchType.LOCATION) {
+        if (selectedType == CreativitySearchType.ALL || selectedType == CreativitySearchType.LOCATION) {
 
-            locationRepository
-                    .searchInOutput(outputId, searchText)
-                    .forEach(location -> results.add(result(
+            locationRepository.searchInOutput(outputId, searchText).forEach(location -> results.add(result(
                             location.getId(),
                             location.getProjectNode(),
                             CreativitySearchType.LOCATION,
@@ -117,11 +104,9 @@ public class CreativitySearchService {
 
         // Search WorldRules
         // Runs when type is ALL or WORLD_RULE
-        if (selectedType == CreativitySearchType.ALL
-                || selectedType == CreativitySearchType.WORLD_RULE) {
+        if (selectedType == CreativitySearchType.ALL || selectedType == CreativitySearchType.WORLD_RULE) {
 
-            worldRuleRepository
-                    .searchInOutput(outputId, searchText)
+            worldRuleRepository.searchInOutput(outputId, searchText)
                     .forEach(rule -> results.add(result(
                             rule.getId(),
                             rule.getProjectNode(),
@@ -134,12 +119,9 @@ public class CreativitySearchService {
 
         // Search StoryEvents
         // Runs when type is ALL or STORY_EVENT
-        if (selectedType == CreativitySearchType.ALL
-                || selectedType == CreativitySearchType.STORY_EVENT) {
+        if (selectedType == CreativitySearchType.ALL || selectedType == CreativitySearchType.STORY_EVENT) {
 
-            storyEventRepository
-                    .searchInOutput(outputId, searchText)
-                    .forEach(event -> results.add(result(
+            storyEventRepository.searchInOutput(outputId, searchText).forEach(event -> results.add(result(
                             event.getId(),
                             event.getProjectNode(),
                             CreativitySearchType.STORY_EVENT,
@@ -151,13 +133,9 @@ public class CreativitySearchService {
 
         // Sort results alphabetically by title
         // Then sort by type and ID when titles are identical
-        results.sort(
-                Comparator.comparing(
-                                CreativitySearchResultDTO::getTitle,
-                                String.CASE_INSENSITIVE_ORDER)
+        results.sort(Comparator.comparing(CreativitySearchResultDTO::getTitle, String.CASE_INSENSITIVE_ORDER)
                         .thenComparing(CreativitySearchResultDTO::getType)
-                        .thenComparing(CreativitySearchResultDTO::getId)
-        );
+                        .thenComparing(CreativitySearchResultDTO::getId));
 
         // Return one unified list to the frontend
         return results;
@@ -167,21 +145,8 @@ public class CreativitySearchService {
     // Convert a creativity entity into a unified search result
     // The frontend uses nodeId to select the Node on the canvas
     // The entity ID is used to fetch the element's full details
-    private CreativitySearchResultDTO result(
-            Integer id,
-            ProjectNode node,
-            CreativitySearchType type,
-            String title,
-            String description) {
+    private CreativitySearchResultDTO result(Integer id, ProjectNode node, CreativitySearchType type, String title, String description) {
 
-        return new CreativitySearchResultDTO(
-                id,
-                node.getId(),
-                type.name(),
-                title,
-                description,
-                node.getPositionX(),
-                node.getPositionY()
-        );
+        return new CreativitySearchResultDTO(id, node.getId(), type.name(), title, description, node.getPositionX(), node.getPositionY());
     }
 }
