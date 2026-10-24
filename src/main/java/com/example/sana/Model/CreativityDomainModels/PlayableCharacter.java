@@ -64,7 +64,7 @@ public class PlayableCharacter {
     private LocalDate updatedAt;
 
     // Every playable character belongs to one output
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "project_output_id", nullable = false)
     @JsonIgnore
     private ProjectOutput projectOutput;

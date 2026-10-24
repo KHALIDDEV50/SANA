@@ -31,16 +31,16 @@ public class ProjectEdge {
     @Column(columnDefinition = "date")
     private LocalDate createdAt;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "project_output_id", referencedColumnName = "id", nullable = false)
     @JsonIgnore
     private ProjectOutput projectOutput;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "source_node_id", referencedColumnName = "id", nullable = false)
     private ProjectNode sourceNode;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "target_node_id", referencedColumnName = "id", nullable = false)
     private ProjectNode targetNode;
 }

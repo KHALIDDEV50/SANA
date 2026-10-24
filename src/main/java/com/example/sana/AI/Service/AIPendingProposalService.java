@@ -36,6 +36,8 @@ public class AIPendingProposalService {
     private final AILocationProposalService aiLocationProposalService;
     private final AIWorldRuleProposalService aiWorldRuleProposalService;
     private final AIStoryEventProposalService aiStoryEventProposalService;
+    private final AIGameProposalService aiGameProposalService;
+    private final AIProposalDecisionService aiProposalDecisionService;
 
     private final ProjectRepository projectRepository;
     private final AIInteractionRepository aiInteractionRepository;
@@ -134,6 +136,9 @@ public class AIPendingProposalService {
                         createAfterSnapshot(draftItem));
             }
 
+            // Validate the stored snapshot and DTO values BEFORE showing approval.
+            // Invalid AI responses must never become actionable PENDING proposals.
+            aiProposalDecisionService.validateSavedItem(projectId, item);
             item.setChangeProposal(savedProposal);
             changeProposalItemRepository.save(item);
         }
@@ -219,6 +224,9 @@ public class AIPendingProposalService {
         Map<String, Object> data = new LinkedHashMap<>();
 
         Integer targetId = item.targetId();
+
+        // Game records use specialized snapshots, including choice endpoints and stats.
+        if (aiGameProposalService.supports(item.elementType())) return aiGameProposalService.createBeforeSnapshot(projectId, item);
 
         switch (item.targetType()) {
 

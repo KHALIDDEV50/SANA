@@ -13,7 +13,6 @@ import java.util.Set;
 
 @Entity
 @Table(name = "projects")
-@Data
 @Getter
 @Setter
 @AllArgsConstructor
@@ -58,7 +57,7 @@ public class Project {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
-    @OneToOne(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(fetch = FetchType.LAZY, mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private ProjectUnderstanding understanding;
 

@@ -2,6 +2,7 @@ package com.example.sana.Model.CreativityDomainModels;
 
 import com.example.sana.Model.ProjectNode;
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -43,11 +44,13 @@ public class WorldRule {
 
 
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_node_id")
     private ProjectNode projectNode;
 
-    @ManyToOne
+    // Include linked world metadata without recursively returning its rules/locations.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"locations", "rules"})
     @JoinColumn(name = "world_id")
     private World world;
 

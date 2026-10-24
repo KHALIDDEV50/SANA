@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
+import com.example.sana.AI.Enums.*;
 
 @Service
 @RequiredArgsConstructor
@@ -33,14 +34,14 @@ public class AIProposalPreparationService {
     private final ProjectNodeRepository projectNodeRepository;
     private final ProjectEdgeRepository projectEdgeRepository;
     private final ProjectRecordRepository projectRecordRepository;
+    private final AIGameProposalService aiGameProposalService;
 
     private static final Set<String> NODE_TYPES = Set.of(
             "CHARACTER",
             "WORLD",
             "LOCATION",
             "WORLD_RULE",
-            "STORY_EVENT",
-            "BRANCHING"
+            "STORY_EVENT"
     );
 
 
@@ -74,9 +75,15 @@ public class AIProposalPreparationService {
     // Validate operation, target type and project ownership
     private void validateItem(Integer projectId, AIProposalDraftDTO.ProposedItem item) {
 
-        if (item == null || item.operation() == null || item.targetType() == null) {
+        if (item == null || item.operation() == null || item.targetType() == null) throw new ApiException("Invalid AI proposal item");
 
-            throw new ApiException("Invalid AI proposal item");
+        // Reject unsupported operations before creating a PENDING proposal.
+        if (item.operation() == ChangeOperation.DELETE) throw new ApiException("AI DELETE is not supported yet");
+
+        // Game elements use their own target mappings and repository checks.
+        if (aiGameProposalService.supports(item.elementType())) {
+            aiGameProposalService.validateDraft(projectId, item);
+            return;
         }
 
         if (item.operation() == ChangeOperation.CREATE) {
@@ -133,11 +140,9 @@ public class AIProposalPreparationService {
     // Validate the output and element type for new elements
     private void validateCreateTarget(Integer projectId, AIProposalDraftDTO.ProposedItem item) {
 
-        if (item.targetType() == ChangeTargetType.RECORD) {
-            if (item.outputId() != null) {
-                throw new ApiException("Record creation must not specify an output");
-            }
-            return;
+        // Generic record and edge creation do not have AI approval handlers.
+        if (item.targetType() != ChangeTargetType.NODE || !NODE_TYPES.contains(item.elementType())) {
+            throw new ApiException("Unsupported AI CREATE target");
         }
 
         if (item.outputId() == null) {
@@ -194,9 +199,15 @@ public class AIProposalPreparationService {
             throw new ApiException("Proposed target belongs to another project");
         }
 
-        if (item.outputId() != null && !item.outputId().equals(targetOutputId)) {
+        if (item.outputId() != null && !item.outputId().equals(targetOutputId)) throw new ApiException("Proposal output does not match the target");
 
-            throw new ApiException("Proposal output does not match the target");
+        // A creative entity must use its exact specialized handler.
+        if (item.targetType() == ChangeTargetType.NODE) {
+            if (item.elementType() == null) throw new ApiException("AI elementType is required");
+            ProjectNode node = projectNodeRepository.findById(targetId).orElseThrow(() -> new ApiException("Node not found"));
+            if (!item.elementType().equals(node.getType())) throw new ApiException("AI elementType does not match the actual node");
         }
+        if (item.targetType() == ChangeTargetType.EDGE && !"EDGE".equals(item.elementType())) throw new ApiException("Only generic EDGE metadata updates are allowed here");
+        if (item.targetType() == ChangeTargetType.RECORD && !"RECORD".equals(item.elementType())) throw new ApiException("Only ProjectRecord updates are allowed here");
     }
 }

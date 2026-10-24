@@ -40,7 +40,7 @@ public class ProjectNode {
     @Column(columnDefinition = "date")
     private LocalDate updatedAt;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "project_output_id", referencedColumnName = "id", nullable = false)
     @JsonIgnore
     private ProjectOutput projectOutput;
@@ -54,23 +54,23 @@ public class ProjectNode {
     private Set<ProjectEdge> incomingEdges;
 
 
-    @OneToOne(cascade = CascadeType.ALL, mappedBy = "projectNode")
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, mappedBy = "projectNode")
     @JsonIgnore
     private CharacterProfile characterProfile;
 
-    @OneToOne(cascade = CascadeType.ALL,mappedBy = "projectNode")
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL,mappedBy = "projectNode")
     @JsonIgnore
     private World world;
 
-    @OneToOne(cascade = CascadeType.ALL,mappedBy = "projectNode")
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL,mappedBy = "projectNode")
     @JsonIgnore
     private Location location;
 
-    @OneToOne(cascade = CascadeType.ALL,mappedBy = "projectNode")
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL,mappedBy = "projectNode")
     @JsonIgnore
     private WorldRule worldRule;
 
-    @OneToOne(cascade = CascadeType.ALL,mappedBy = "projectNode")
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL,mappedBy = "projectNode")
     @JsonIgnore
     private StoryEvent storyEvent;
 

@@ -73,7 +73,7 @@ public class GameContextService {
 
                 BranchingVariable effectVariable = choice.getEffectVariable();
 
-                choices.add(new GameContextDTO.ChoiceInfo(choice.getId(), outputId, sceneIdsByProjectNode.get(sourceProjectNodeId), sceneIdsByProjectNode.get(targetProjectNodeId), choice.getText(), choice.getDisplayOrder(),
+                choices.add(new GameContextDTO.ChoiceInfo(choice.getId(), edge.getId(), outputId, sceneIdsByProjectNode.get(sourceProjectNodeId), sceneIdsByProjectNode.get(targetProjectNodeId), choice.getText(), choice.getDisplayOrder(),
 
                                 // Optional condition
                                 conditionVariable == null ? null : conditionVariable.getName(),

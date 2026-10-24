@@ -3,6 +3,8 @@ package com.example.sana.AI.Service;
 import com.example.sana.AI.DTO.*;
 import com.example.sana.AI.Enums.AIContextScope;
 import com.example.sana.API.ApiException;
+import com.example.sana.Repository.ProjectOutputRepository;
+import com.example.sana.Model.ProjectOutput;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,10 +16,11 @@ import java.util.*;
 public class AIContextSelectionService {
 
     private final ProjectContextService projectContextService;
+    private final ProjectOutputRepository projectOutputRepository;
 
 
     // Select only the project information required for an AI task
-    public ProjectContextDTO selectContext(Integer projectId, AIContextScope scope, Integer selectedNodeId) {
+    public ProjectContextDTO selectContext(Integer projectId, Integer outputId, AIContextScope scope, Integer selectedNodeId) {
 
         if (projectId == null || scope == null) {
             throw new ApiException("Project ID and AI context scope are required");
@@ -28,46 +31,53 @@ public class AIContextSelectionService {
 
         CreativityContextDTO creativity = full.creativity();
         GameContextDTO game = full.game();
+        List<ProjectContextDTO.OutputInfo> outputInfo = full.outputs();
+
+        // Restrict all project context categories to a selected output.
+        // Node IDs are used for creativity because these DTOs do not contain output IDs.
+        if (outputId != null) {
+            ProjectOutput selectedOutput = projectOutputRepository.findProjectOutputById(outputId);
+            if (selectedOutput == null || !projectId.equals(selectedOutput.getProject().getId())) throw new ApiException("Invalid selected output");
+            Set<Integer> outputNodeIds = new HashSet<>();
+            selectedOutput.getNodes().forEach(node -> outputNodeIds.add(node.getId()));
+            creativity = filterCreativity(creativity, outputNodeIds);
+            game = new GameContextDTO(
+                    game.scenes().stream().filter(x -> outputId.equals(x.outputId())).toList(),
+                    game.choices().stream().filter(x -> outputId.equals(x.outputId())).toList(),
+                    game.variables().stream().filter(x -> outputId.equals(x.outputId())).toList(),
+                    game.playableCharacters().stream().filter(x -> outputId.equals(x.outputId())).toList());
+            outputInfo = outputInfo.stream().filter(x -> outputId.equals(x.outputId())).toList();
+        }
 
         // Select the relevant data based on the requested AI task
         switch (scope) {
-
-            case OVERVIEW -> {
+            case OVERVIEW:
                 creativity = emptyCreativity();
                 game = emptyGame();
-            }
-
-            case CHARACTER -> {
+                break;
+            case CHARACTER:
                 creativity = new CreativityContextDTO(creativity.characters(), List.of(), List.of(), List.of(), creativity.storyEvents(), creativity.relations());
                 game = emptyGame();
-            }
-
-            case WORLD_BUILDING -> {
+                break;
+            case WORLD_BUILDING:
                 creativity = new CreativityContextDTO(List.of(), creativity.worlds(), creativity.locations(), creativity.worldRules(), List.of(), creativity.relations());
                 game = emptyGame();
-            }
-
-            case STORY_PLOT -> {
-                // Keep all story and world-building information
+                break;
+            case STORY_PLOT:
                 game = emptyGame();
-            }
-
-            case GAME_NARRATIVE -> {
+                break;
+            case GAME_NARRATIVE:
                 creativity = new CreativityContextDTO(creativity.characters(), List.of(), List.of(), creativity.worldRules(), creativity.storyEvents(), creativity.relations());
-
-                // Exclude combat statistics unless requested
                 game = new GameContextDTO(game.scenes(), game.choices(), game.variables(), List.of());
-            }
-
-            case CHARACTER_BALANCE -> {
+                break;
+            case CHARACTER_BALANCE:
                 creativity = new CreativityContextDTO(creativity.characters(), List.of(), List.of(), List.of(), List.of(), List.of());
-
                 game = new GameContextDTO(List.of(), List.of(), List.of(), game.playableCharacters());
-            }
-
-            case FULL_PROJECT -> {
-                // Keep both contexts without removing categories
-            }
+                break;
+            case FULL_PROJECT:
+                break;
+            default:
+                throw new ApiException("Unsupported AI context scope");
         }
 
         // Remove relationships whose elements were excluded
@@ -94,7 +104,7 @@ public class AIContextSelectionService {
         }
 
         // Return a new DTO without changing any database entity
-        return new ProjectContextDTO(full.projectId(), full.projectName(), full.description(), full.domain(), full.projectStatus(), full.projectGoal(), full.outputs(), creativity, game);
+        return new ProjectContextDTO(full.projectId(), full.projectName(), full.description(), full.domain(), full.projectStatus(), full.projectGoal(), outputInfo, creativity, game);
     }
 
 
@@ -236,6 +246,8 @@ public class AIContextSelectionService {
         List<GameContextDTO.VariableInfo> variables = game.variables().stream().filter(variable -> choices.stream().anyMatch(choice -> variable.outputId().equals(choice.outputId()) && (
                 variable.name().equals(choice.conditionVariable()) || variable.name().equals(choice.effectVariable())))).toList();
 
-        return new GameContextDTO(scenes, choices, variables, game.playableCharacters());
+        Set<Integer> selectedOutputIds = new HashSet<>();
+        scenes.forEach(scene -> selectedOutputIds.add(scene.outputId()));
+        return new GameContextDTO(scenes, choices, variables, game.playableCharacters().stream().filter(x -> selectedOutputIds.contains(x.outputId())).toList());
     }
 }

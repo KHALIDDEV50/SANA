@@ -54,12 +54,12 @@ public class ChangeProposal {
     @PastOrPresent(message = "Proposal review time must not be in the future")
     private LocalDateTime reviewedAt;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "project_id", referencedColumnName = "id", nullable = false)
     @JsonIgnore
     private Project project;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ai_interaction_id", referencedColumnName = "id")
     @JsonIgnore
     private AIInteraction aiInteraction;

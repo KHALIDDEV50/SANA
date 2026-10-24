@@ -27,6 +27,8 @@ public record GameContextDTO(
     // A player choice connecting two scenes
     public record ChoiceInfo(
             Integer id,
+            // Target ID to use for ChangeTargetType.EDGE updates
+            Integer projectEdgeId,
             Integer outputId,
             Integer sourceSceneId,
             Integer targetSceneId,

@@ -58,7 +58,7 @@ public class SanaAIRequestService {
         }
 
         // Build the relevant context using the existing service
-        ProjectContextDTO context = aiContextSelectionService.selectContext(projectId, scope, selectedNodeId);
+        ProjectContextDTO context = aiContextSelectionService.selectContext(projectId, outputId, scope, selectedNodeId);
 
         // Return the prepared request without calling n8n or saving
         return new SanaAIPreparedRequestDTO(projectId, request.getMode(), request.getTask(), request.getMessage().trim(), outputId, selectedNodeId, scope, context);
@@ -133,31 +133,16 @@ public class SanaAIRequestService {
     // Choose the appropriate project context for each AI task
     private AIContextScope resolveContextScope(AITaskType task) {
 
-        return switch (task) {
-
-            case IDEA_BLUEPRINT ->
-                    AIContextScope.OVERVIEW;
-
-            case GENERAL_ASSISTANCE ->
-                    AIContextScope.FULL_PROJECT;
-
-            case CHARACTER_DEVELOPMENT ->
-                    AIContextScope.CHARACTER;
-
-            case WORLD_BUILDING ->
-                    AIContextScope.WORLD_BUILDING;
-
-            case PLOT_DEVELOPMENT ->
-                    AIContextScope.STORY_PLOT;
-
-            case GAME_NARRATIVE ->
-                    AIContextScope.GAME_NARRATIVE;
-
-            case CHARACTER_BALANCE ->
-                    AIContextScope.CHARACTER_BALANCE;
-
-            case CONSISTENCY_CHECK ->
-                    AIContextScope.FULL_PROJECT;
-        };
+        switch (task) {
+            case IDEA_BLUEPRINT: return AIContextScope.OVERVIEW;
+            case GENERAL_ASSISTANCE: return AIContextScope.FULL_PROJECT;
+            case CHARACTER_DEVELOPMENT: return AIContextScope.CHARACTER;
+            case WORLD_BUILDING: return AIContextScope.WORLD_BUILDING;
+            case PLOT_DEVELOPMENT: return AIContextScope.STORY_PLOT;
+            case GAME_NARRATIVE: return AIContextScope.GAME_NARRATIVE;
+            case CHARACTER_BALANCE: return AIContextScope.CHARACTER_BALANCE;
+            case CONSISTENCY_CHECK: return AIContextScope.FULL_PROJECT;
+            default: throw new ApiException("Unsupported AI task");
+        }
     }
 }

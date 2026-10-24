@@ -54,7 +54,7 @@ public class ProjectRecord {
     @Column(columnDefinition = "date")
     private LocalDate updatedAt;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn
     @JsonIgnore
     private Project project;

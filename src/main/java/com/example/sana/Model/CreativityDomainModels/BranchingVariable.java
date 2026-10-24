@@ -35,7 +35,7 @@ public class BranchingVariable {
     private Integer initialValue;
 
     // A variable belongs to one branching ProjectOutput
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "project_output_id", nullable = false)
     @JsonIgnore
     private ProjectOutput projectOutput;

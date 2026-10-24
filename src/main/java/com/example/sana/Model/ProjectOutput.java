@@ -61,7 +61,7 @@ public class ProjectOutput {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private LocalDateTime updatedAt;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "project_id", referencedColumnName = "id", nullable = false)
     @JsonIgnore
     private Project project;

@@ -29,6 +29,7 @@ public class AIProposalDecisionService {
     private final AILocationProposalService aiLocationProposalService;
     private final AIWorldRuleProposalService aiWorldRuleProposalService;
     private final AIStoryEventProposalService aiStoryEventProposalService;
+    private final AIGameProposalService aiGameProposalService;
     private final ChangeProposalRepository changeProposalRepository;
     private final ChangeProposalItemRepository changeProposalItemRepository;
     private final ProjectRepository projectRepository;
@@ -107,87 +108,8 @@ public class AIProposalDecisionService {
         }
 
 
-        // STEP 5: Validate every proposed operation.
-        // Check all items before starting the application phase.
-        for (ChangeProposalItem item : items) {
-
-            // Every item must have a valid operation and target type.
-            if (item.getOperation() == null || item.getTargetType() == null) {
-
-                throw new ApiException("Invalid proposal operation");
-            }
-
-
-            // CASE 1: CREATE
-            if (item.getOperation() == ChangeOperation.CREATE) {
-
-                // Validate the requested creative element through its handler.
-                validateCreate(projectId, item);
-
-                // CASE 2: UPDATE
-            } else if (item.getOperation() == ChangeOperation.UPDATE) {
-
-                // An UPDATE must reference an existing database target.
-                if (item.getTargetId() == null || item.getTargetId() <= 0) {
-
-                    throw new ApiException("UPDATE requires a valid target ID");
-                }
-
-
-                // Creative NODE updates require specialized validation.
-                // The actual handler also verifies the target's
-                // real entity type, project and saved snapshot.
-                if (item.getTargetType() == ChangeTargetType.NODE) {
-
-                    Map<String, Object> after =
-                            readJsonMap(item.getAfterJson());
-
-                    Object elementType = after.get("elementType");
-
-                    if ("CHARACTER".equals(elementType)) {
-
-                        // Verify the full CharacterProfile snapshot
-                        // and validate proposed character fields.
-                        aiCharacterUpdateService.validateCharacterUpdate(
-                                projectId,
-                                item
-                        );
-
-                    } else if ("WORLD".equals(elementType)) {
-
-                        // Verify the full World snapshot and ensure
-                        // the world has not changed since proposal creation.
-                        aiWorldUpdateService.validateWorldUpdate(
-                                projectId,
-                                item
-                        );
-                    }
-                    // Validate Location details and its saved snapshot.
-                    else if ("LOCATION".equals(elementType)) {
-
-                        aiLocationProposalService.validateUpdate(
-                                projectId, item
-                        );
-                    }
-                    // Validate WorldRule data and its complete saved snapshot.
-                    else if ("WORLD_RULE".equals(elementType)) {
-
-                        aiWorldRuleProposalService.validateUpdate(
-                                projectId,
-                                item
-                        );
-                    }
-                }
-
-            // CASE 3: DELETE
-            } else {
-
-                // Deletion requires dedicated logic because
-                // creative entities can have related data.
-                // Do not allow deleting them until that logic exists.
-                throw new ApiException("DELETE is not supported yet");
-            }
-        }
+        // STEP 5: Validate each saved item, including game snapshots and creative DTOs.
+        for (ChangeProposalItem item : items) validateSavedItem(projectId, item);
 
 
         // STEP 6: Apply the approved changes.
@@ -198,17 +120,24 @@ public class AIProposalDecisionService {
             switch (item.getOperation()) {
 
                 // Apply the approved creation using its specialized handler.
-                case CREATE -> applyCreate(projectId, item);
+                case CREATE:
+                    applyCreate(projectId, item);
+                    break;
 
                 // Apply an update.
                 // The applyUpdate() method routes character changes
                 // to AICharacterUpdateService and handles supported
                 // general NODE, EDGE, and RECORD updates.
-                case UPDATE -> applyUpdate(projectId, item);
+                case UPDATE:
+                    applyUpdate(projectId, item);
+                    break;
 
 
                 // Safety check: never execute unsupported deletion.
-                case DELETE -> throw new ApiException("DELETE is not supported yet");
+                case DELETE:
+                    throw new ApiException("DELETE is not supported yet");
+                default:
+                    throw new ApiException("Unsupported proposal operation");
             }
         }
 
@@ -237,6 +166,71 @@ public class AIProposalDecisionService {
 
 
 
+
+    // Shared validation used both when a proposal is saved and approved.
+    // Game proposals verify their own target IDs, fields and full snapshots.
+    public void validateSavedItem(Integer projectId, ChangeProposalItem item) {
+        if (item == null || item.getOperation() == null || item.getTargetType() == null) throw new ApiException("Invalid AI proposal item");
+        if (item.getOperation() == ChangeOperation.DELETE) throw new ApiException("AI DELETE is not supported");
+        Map<String, Object> after = readJsonMap(item.getAfterJson());
+        if (!after.keySet().equals(Set.of("outputId", "elementType", "fields"))) throw new ApiException("Invalid AI proposal structure");
+        if (!(after.get("elementType") instanceof String type)) throw new ApiException("AI elementType is required");
+        if (aiGameProposalService.supports(type)) {
+            aiGameProposalService.validateSaved(projectId, item);
+            return;
+        }
+        switch (item.getOperation()) {
+            case CREATE:
+                validateCreate(projectId, item);
+                break;
+            case UPDATE:
+                if (item.getTargetId() == null || item.getTargetId() <= 0) throw new ApiException("UPDATE requires target ID");
+                if (item.getTargetType() == ChangeTargetType.NODE) {
+                    switch (type) {
+                        case "CHARACTER": aiCharacterUpdateService.validateCharacterUpdate(projectId, item); break;
+                        case "WORLD": aiWorldUpdateService.validateWorldUpdate(projectId, item); break;
+                        case "LOCATION": aiLocationProposalService.validateUpdate(projectId, item); break;
+                        case "WORLD_RULE": aiWorldRuleProposalService.validateUpdate(projectId, item); break;
+                        case "STORY_EVENT": aiStoryEventProposalService.validateUpdate(projectId, item); break;
+                        case "NODE": validateGenericUpdate(projectId, item); break;
+                        default: throw new ApiException("Unsupported NODE update element type");
+                    }
+                } else if ((item.getTargetType() == ChangeTargetType.EDGE && "EDGE".equals(type)) || (item.getTargetType() == ChangeTargetType.RECORD && "RECORD".equals(type))) {
+                    validateGenericUpdate(projectId, item);
+                } else throw new ApiException("Unsupported AI update target");
+                break;
+            default:
+                throw new ApiException("Unsupported operation");
+        }
+    }
+
+    // Generic metadata updates have explicit field whitelists and snapshots.
+    private void validateGenericUpdate(Integer projectId, ChangeProposalItem item) {
+        Map<String, Object> before = readJsonMap(item.getBeforeJson());
+        Map<String, Object> after = readJsonMap(item.getAfterJson());
+        Map<String, Object> fields = extractFields(after.get("fields"));
+        switch (item.getTargetType()) {
+            case NODE:
+                ProjectNode node = projectNodeRepository.findById(item.getTargetId()).orElseThrow(() -> new ApiException("Node not found"));
+                if (!projectId.equals(node.getProjectOutput().getProject().getId()) || !"NODE".equals(node.getType())) throw new ApiException("Only ordinary NODE metadata can be updated generically");
+                requireOutput(after, node.getProjectOutput().getId());
+                requireAllowedFields(fields, NODE_FIELDS);
+                break;
+            case EDGE:
+                ProjectEdge edge = projectEdgeRepository.findById(item.getTargetId()).orElseThrow(() -> new ApiException("Edge not found"));
+                if (!projectId.equals(edge.getProjectOutput().getProject().getId()) || "BRANCH_CHOICE".equals(edge.getType())) throw new ApiException("Invalid generic EDGE target");
+                requireOutput(after, edge.getProjectOutput().getId());
+                requireAllowedFields(fields, EDGE_FIELDS);
+                break;
+            case RECORD:
+                ProjectRecord record = projectRecordRepository.findById(item.getTargetId()).orElseThrow(() -> new ApiException("Record not found"));
+                if (!projectId.equals(record.getProject().getId()) || after.get("outputId") != null) throw new ApiException("Invalid generic RECORD target");
+                requireAllowedFields(fields, RECORD_FIELDS);
+                break;
+            default: throw new ApiException("Unsupported generic update target");
+        }
+        if (before.isEmpty()) throw new ApiException("Original snapshot is required");
+    }
 
     // Load and lock the proposal before any decision
     private ChangeProposal loadAuthorizedProposal(Integer projectId, Integer authenticatedUserId, Integer proposalId) {
@@ -282,6 +276,12 @@ public class AIProposalDecisionService {
     // Creative entities must never be modified through
     // generic ProjectNode metadata updates.
     private void applyUpdate(Integer projectId, ChangeProposalItem item) {
+
+        Map<String, Object> gameAfter = readJsonMap(item.getAfterJson());
+        if (aiGameProposalService.supports((String) gameAfter.get("elementType"))) {
+            aiGameProposalService.applySaved(projectId, item);
+            return;
+        }
 
         // Validate the proposal target type.
         if (item.getTargetType() == null) {
@@ -611,6 +611,12 @@ public class AIProposalDecisionService {
             Integer projectId,
             ChangeProposalItem item) {
 
+        Map<String, Object> gameAfter = readJsonMap(item.getAfterJson());
+        if (aiGameProposalService.supports((String) gameAfter.get("elementType"))) {
+            aiGameProposalService.validateSaved(projectId, item);
+            return;
+        }
+
         // Creative CREATE operations currently target ProjectNode.
         if (item.getTargetType() != ChangeTargetType.NODE) {
             throw new ApiException("Unsupported CREATE target type");
@@ -665,6 +671,10 @@ public class AIProposalDecisionService {
     private void applyCreate(Integer projectId, ChangeProposalItem item) {
 
         Map<String, Object> after = readJsonMap(item.getAfterJson());
+        if (aiGameProposalService.supports((String) after.get("elementType"))) {
+            aiGameProposalService.applySaved(projectId, item);
+            return;
+        }
 
         // Validate metadata again before applying changes.
         if (!after.keySet().equals(Set.of("outputId", "elementType", "fields"))) {

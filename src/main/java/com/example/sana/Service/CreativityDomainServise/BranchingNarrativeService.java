@@ -61,29 +61,40 @@ public class BranchingNarrativeService {
     }
 
 
-    // Get the complete branching map for the frontend
+
     // Includes scenes, positions and player choices
+    // Get the branching canvas using lightweight database projections.
+    // This avoids Hibernate's large eager-fetch joins.
     @Transactional(readOnly = true)
     public BranchingMapDTO getBranchingMap(Integer outputId) {
 
-        getValidOutput(outputId);
+        // Verify that the selected ProjectOutput exists.
+        if (!projectOutputRepository.existsById(outputId)) {
+            throw new ApiException("Project output not found");
+        }
 
-        List<BranchingMapDTO.NodeItem> nodes =
-                branchingNodeRepository
-                        .findByProjectNode_ProjectOutput_IdOrderByIdAsc(outputId)
-                        .stream()
-                        .map(this::toNodeItem)
-                        .toList();
+        // Convert scalar scene rows directly into frontend DTOs.
+        List<BranchingMapDTO.NodeItem> nodes = branchingNodeRepository.findMapNodes(outputId).stream().map(row -> new BranchingMapDTO.NodeItem(
+                        (Integer) row[0],
+                        (Integer) row[1],
+                        (String) row[2],
+                        (String) row[3],
+                        (BranchingNodeType) row[4],
+                        (Double) row[5],
+                        (Double) row[6])).toList();
 
-        List<BranchingMapDTO.ChoiceItem> choices =
-                branchingChoiceRepository
-                        .findByProjectEdge_ProjectOutput_IdOrderByIdAsc(outputId)
-                        .stream()
-                        .map(this::toChoiceItem)
-                        .toList();
+        // Convert scalar choice rows without fetching ProjectEdge objects.
+        List<BranchingMapDTO.ChoiceItem> choices = branchingChoiceRepository.findMapChoices(outputId).stream().map(row -> new BranchingMapDTO.ChoiceItem(
+                        (Integer) row[0],
+                        (Integer) row[1],
+                        (Integer) row[2],
+                        (Integer) row[3],
+                        (String) row[4],
+                        (Integer) row[5])).toList();
 
         return new BranchingMapDTO(nodes, choices);
     }
+
 
 
     // Create a ProjectNode and BranchingNode together
