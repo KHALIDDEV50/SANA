@@ -1,14 +1,22 @@
 package com.example.sana.Advice;
 
 import com.example.sana.API.ApiException;
+import com.example.sana.API.ApiConflictException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import com.example.sana.API.ApiResponse;
 import jakarta.validation.ConstraintViolationException;
+import jakarta.persistence.LockTimeoutException;
+import jakarta.persistence.OptimisticLockException;
+import jakarta.persistence.PessimisticLockException;
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.exc.InvalidFormatException;
 
 import java.util.Arrays;
@@ -17,13 +25,34 @@ import java.util.Arrays;
 public class ControllerAdvice {
 
 
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiResponse> handleStatusException(ResponseStatusException e) {
+        return ResponseEntity.status(e.getStatusCode()).body(new ApiResponse(e.getReason()));
+    }
+
+    @ExceptionHandler(ApiConflictException.class)
+    public ResponseEntity<ApiResponse> handleConflict(ApiConflictException e) {
+        return ResponseEntity.status(409).body(new ApiResponse(e.getMessage()));
+    }
+
+    @ExceptionHandler({ConcurrencyFailureException.class, PessimisticLockException.class,
+            LockTimeoutException.class, OptimisticLockException.class})
+    public ResponseEntity<ApiResponse> handleConcurrentWrite(Exception e) {
+        return ResponseEntity.status(409).body(new ApiResponse("Concurrent change detected. Reload the graph and retry"));
+    }
+
+    @ExceptionHandler({MissingServletRequestParameterException.class, MethodArgumentTypeMismatchException.class})
+    public ResponseEntity<ApiResponse> handleRequestParameter(Exception e) {
+        return ResponseEntity.badRequest().body(new ApiResponse("A required request parameter is missing or invalid"));
+    }
+
     // Api Exception
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiResponse> handleApiException(
             ApiException e) {
 
         // Print real error in console
-        e.printStackTrace();
+        // Do not log raw payload/provider exception content.
 
         return ResponseEntity.status(400).body(new ApiResponse(e.getMessage()));
     }
@@ -56,7 +85,7 @@ public class ControllerAdvice {
     public ResponseEntity<ApiResponse> handleConstraintViolationException(
             ConstraintViolationException e) {
 
-        e.printStackTrace();
+        // Do not log raw payload/provider exception content.
 
         return ResponseEntity.status(400).body(new ApiResponse(e.getMessage()));
     }
@@ -67,10 +96,10 @@ public class ControllerAdvice {
     public ResponseEntity<ApiResponse> handleDataIntegrityViolationException(
             DataIntegrityViolationException e) {
 
-        e.printStackTrace();
+        // Do not log raw payload/provider exception content.
 
         return ResponseEntity.status(400)
-                .body(new ApiResponse("Database error: " + e.getMessage()));
+                .body(new ApiResponse("Stored data conflicts with this operation"));
     }
 
 
@@ -97,8 +126,8 @@ public class ControllerAdvice {
             Exception e) {
 
         // Print full error in console
-        e.printStackTrace();
+        // Do not log raw payload/provider exception content.
 
-        return ResponseEntity.status(500).body(new ApiResponse("Error: " + e.getMessage()));
+        return ResponseEntity.status(500).body(new ApiResponse("The operation could not be completed"));
     }
 }

@@ -1,6 +1,7 @@
 package com.example.sana.Service.CreativityDomainServise;
 
 import com.example.sana.API.ApiException;
+import com.example.sana.Service.TechDomainServices.ArchitectureWriteGuard;
 import com.example.sana.DTO.CreativityDomainDTOs.*;
 import com.example.sana.Enums.CreativityDomainEnums.BranchingNodeType;
 import com.example.sana.Model.CreativityDomainModels.*;
@@ -328,6 +329,7 @@ public class BranchingNarrativeService {
             throw new ApiException("Project output not found");
         }
 
+        ArchitectureWriteGuard.rejectUnversionedWrite(output);
         return output;
     }
 
@@ -345,6 +347,7 @@ public class BranchingNarrativeService {
                     "Branching node not found in this output");
         }
 
+        ArchitectureWriteGuard.rejectUnversionedWrite(node.getProjectNode().getProjectOutput());
         return node;
     }
 
@@ -362,6 +365,7 @@ public class BranchingNarrativeService {
                     "Branching scene not found for ProjectNode");
         }
 
+        ArchitectureWriteGuard.rejectUnversionedWrite(node.getProjectNode().getProjectOutput());
         return node;
     }
 
@@ -380,6 +384,7 @@ public class BranchingNarrativeService {
                     "Branching choice not found in this output");
         }
 
+        ArchitectureWriteGuard.rejectUnversionedWrite(choice.getProjectEdge().getProjectOutput());
         return choice;
     }
 
@@ -696,6 +701,7 @@ public class BranchingNarrativeService {
                     "Game variable not found in this output");
         }
 
+        ArchitectureWriteGuard.rejectUnversionedWrite(variable.getProjectOutput());
         return variable;
     }
 

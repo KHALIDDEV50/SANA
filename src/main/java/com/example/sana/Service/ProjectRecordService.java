@@ -27,6 +27,7 @@ public class ProjectRecordService {
         if (project == null){
             throw new ApiException("project not found");
         }
+        projectRecord.setId(null);
         projectRecord.setProject(project);
         projectRecord.setCreatedAt(LocalDate.now());
         projectRecordRepository.save(projectRecord);

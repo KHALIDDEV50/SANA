@@ -1,6 +1,7 @@
 package com.example.sana.Service.CreativityDomainServise;
 
 import com.example.sana.API.ApiException;
+import com.example.sana.Service.TechDomainServices.ArchitectureWriteGuard;
 import com.example.sana.DTO.CreativityDomainDTOs.CharacterProfileDTO;
 import com.example.sana.Model.CreativityDomainModels.CharacterProfile;
 import com.example.sana.Model.ProjectNode;
@@ -42,6 +43,7 @@ public class CharacterProfileService {
     public void addCharacterProfile(Integer outputId, CharacterProfileDTO dto) {
 
         ProjectOutput output = projectOutputRepository.findProjectOutputById(outputId);
+        ArchitectureWriteGuard.rejectUnversionedWrite(output);
 
         if (output == null) {
             throw new ApiException("Project output not found");
@@ -92,6 +94,7 @@ public class CharacterProfileService {
     public void updateCharacterProfile(Integer id, CharacterProfileDTO dto) {
 
         CharacterProfile characterProfile = characterProfileRepository.findCharacterProfileById(id);
+        ArchitectureWriteGuard.rejectUnversionedWrite(characterProfile == null || characterProfile.getProjectNode() == null ? null : characterProfile.getProjectNode().getProjectOutput());
 
         if (characterProfile == null) {
             throw new ApiException("Character profile not found");
@@ -139,6 +142,7 @@ public class CharacterProfileService {
 
         CharacterProfile characterProfile =
                 characterProfileRepository.findCharacterProfileById(id);
+        ArchitectureWriteGuard.rejectUnversionedWrite(characterProfile == null || characterProfile.getProjectNode() == null ? null : characterProfile.getProjectNode().getProjectOutput());
 
         if (characterProfile == null) {
             throw new ApiException("Character profile not found");

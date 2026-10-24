@@ -1,6 +1,7 @@
 package com.example.sana.Service.CreativityDomainServise;
 
 import com.example.sana.API.ApiException;
+import com.example.sana.Service.TechDomainServices.ArchitectureWriteGuard;
 import com.example.sana.DTO.CreativityDomainDTOs.LocationDTO;
 import com.example.sana.Model.CreativityDomainModels.Location;
 import com.example.sana.Model.CreativityDomainModels.World;
@@ -45,6 +46,7 @@ public class LocationService {
     public void addLocation(Integer outputId, Integer worldId, Integer parentLocationId, LocationDTO dto) {
 
         ProjectOutput output = projectOutputRepository.findProjectOutputById(outputId);
+        ArchitectureWriteGuard.rejectUnversionedWrite(output);
 
         if (output == null) {
             throw new ApiException("Project output not found");
@@ -121,6 +123,7 @@ public class LocationService {
     public void updateLocation(Integer id, LocationDTO dto) {
 
         Location location = locationRepository.findLocationById(id);
+        ArchitectureWriteGuard.rejectUnversionedWrite(location == null || location.getProjectNode() == null ? null : location.getProjectNode().getProjectOutput());
 
         if (location == null) {
             throw new ApiException("Location not found");
@@ -152,6 +155,7 @@ public class LocationService {
     public void updateLocationWorld(Integer locationId, Integer worldId) {
 
         Location location = locationRepository.findLocationById(locationId);
+        ArchitectureWriteGuard.rejectUnversionedWrite(location == null || location.getProjectNode() == null ? null : location.getProjectNode().getProjectOutput());
 
         if (location == null) {
             throw new ApiException("Location not found");
@@ -188,6 +192,7 @@ public class LocationService {
     public void updateParentLocation(Integer locationId, Integer parentLocationId) {
 
         Location location = locationRepository.findLocationById(locationId);
+        ArchitectureWriteGuard.rejectUnversionedWrite(location == null || location.getProjectNode() == null ? null : location.getProjectNode().getProjectOutput());
 
         if (location == null) {
             throw new ApiException("Location not found");
@@ -243,6 +248,7 @@ public class LocationService {
     public void deleteLocation(Integer id) {
 
         Location location = locationRepository.findLocationById(id);
+        ArchitectureWriteGuard.rejectUnversionedWrite(location == null || location.getProjectNode() == null ? null : location.getProjectNode().getProjectOutput());
 
         if (location == null) {
             throw new ApiException("Location not found");

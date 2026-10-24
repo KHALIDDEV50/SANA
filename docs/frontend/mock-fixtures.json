@@ -1,0 +1,1340 @@
+{
+  "_meta": {
+    "purpose": "Frontend-only mock fixtures; top-level names are selectors, not API envelopes.",
+    "snapshotDate": "2026-10-24",
+    "provenance": "Authored from Java source contracts. Not captured HTTP responses or verified runtime output.",
+    "usage": "Use each scenario independently. IDs, timestamps and versions are illustrative. Do not send fixtures to a live backend.",
+    "provisionalOutputTypes": [
+      "WORLD_BUILDING",
+      "BRANCHING_STORY",
+      "CHARACTER_BALANCE",
+      "SWOT_ANALYZER"
+    ],
+    "outputTypeNote": "Non-Architecture outputType labels in these fixtures are provisional strings, not a finalized backend registry or supported renderer list.",
+    "unsupportedDomains": "Education-specific features and non-TECH AI need provisional frontend mocks; no live endpoints are invented here.",
+    "identityNote": "Domain entity IDs differ from ProjectNode IDs. Never use array positions as IDs."
+  },
+  "users": [
+    {
+      "id": 1,
+      "name": "Demo User",
+      "email": "demo@example.com",
+      "createdAt": "2026-10-24T12:00:00"
+    }
+  ],
+  "projects": [
+    {
+      "id": 10,
+      "name": "Online Store",
+      "description": "بيانات تجريبية لبناء واجهة سنا",
+      "domain": "TECH",
+      "status": "DRAFT",
+      "version": 0,
+      "createdAt": "2026-10-24T12:00:00",
+      "updatedAt": "2026-10-24T12:00:00",
+      "owner": {
+        "id": 1,
+        "name": "Demo User",
+        "email": "demo@example.com",
+        "createdAt": "2026-10-24T12:00:00"
+      },
+      "outputs": [
+        {
+          "id": 20,
+          "title": "Store Architecture",
+          "outputType": "ARCHITECTURE",
+          "representationType": "GRAPH",
+          "graphRevision": 3,
+          "version": 0,
+          "createdAt": "2026-10-24T12:00:00",
+          "updatedAt": "2026-10-24T12:00:00",
+          "nodes": [
+            {
+              "id": 101,
+              "type": "APPLICATION",
+              "dataJson": "{\"label\": \"Web frontend\"}",
+              "positionX": 100,
+              "positionY": 100,
+              "createdAt": "2026-10-24",
+              "updatedAt": "2026-10-24"
+            },
+            {
+              "id": 102,
+              "type": "SERVICE",
+              "dataJson": "{\"label\": \"Store API\", \"technology\": \"Spring Boot\"}",
+              "positionX": 400,
+              "positionY": 100,
+              "createdAt": "2026-10-24",
+              "updatedAt": "2026-10-24"
+            },
+            {
+              "id": 103,
+              "type": "DATABASE",
+              "dataJson": "{\"label\": \"Store database\", \"technology\": \"MySQL\"}",
+              "positionX": 700,
+              "positionY": 100,
+              "createdAt": "2026-10-24",
+              "updatedAt": "2026-10-24"
+            }
+          ],
+          "edges": [
+            {
+              "id": 201,
+              "type": "CONNECTS_TO",
+              "label": "calls",
+              "dataJson": "{\"protocol\": \"HTTPS\"}",
+              "createdAt": "2026-10-24",
+              "sourceNode": {
+                "id": 101,
+                "type": "APPLICATION",
+                "dataJson": "{\"label\": \"Web frontend\"}",
+                "positionX": 100,
+                "positionY": 100,
+                "createdAt": "2026-10-24",
+                "updatedAt": "2026-10-24"
+              },
+              "targetNode": {
+                "id": 102,
+                "type": "SERVICE",
+                "dataJson": "{\"label\": \"Store API\", \"technology\": \"Spring Boot\"}",
+                "positionX": 400,
+                "positionY": 100,
+                "createdAt": "2026-10-24",
+                "updatedAt": "2026-10-24"
+              }
+            },
+            {
+              "id": 202,
+              "type": "CONNECTS_TO",
+              "label": "reads/writes",
+              "dataJson": "{}",
+              "createdAt": "2026-10-24",
+              "sourceNode": {
+                "id": 102,
+                "type": "SERVICE",
+                "dataJson": "{\"label\": \"Store API\", \"technology\": \"Spring Boot\"}",
+                "positionX": 400,
+                "positionY": 100,
+                "createdAt": "2026-10-24",
+                "updatedAt": "2026-10-24"
+              },
+              "targetNode": {
+                "id": 103,
+                "type": "DATABASE",
+                "dataJson": "{\"label\": \"Store database\", \"technology\": \"MySQL\"}",
+                "positionX": 700,
+                "positionY": 100,
+                "createdAt": "2026-10-24",
+                "updatedAt": "2026-10-24"
+              }
+            }
+          ]
+        }
+      ],
+      "records": []
+    },
+    {
+      "id": 11,
+      "name": "Tutoring Business",
+      "description": "بيانات تجريبية لبناء واجهة سنا",
+      "domain": "BUSINESS",
+      "status": "DRAFT",
+      "version": 0,
+      "createdAt": "2026-10-24T12:00:00",
+      "updatedAt": "2026-10-24T12:00:00",
+      "owner": {
+        "id": 1,
+        "name": "Demo User",
+        "email": "demo@example.com",
+        "createdAt": "2026-10-24T12:00:00"
+      },
+      "outputs": [
+        {
+          "id": 22,
+          "title": "Tutoring SWOT",
+          "outputType": "SWOT_ANALYZER",
+          "representationType": "GRAPH",
+          "graphRevision": 0,
+          "version": 0,
+          "createdAt": "2026-10-24T12:00:00",
+          "updatedAt": "2026-10-24T12:00:00",
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "records": []
+    },
+    {
+      "id": 12,
+      "name": "The Lost City",
+      "description": "بيانات تجريبية لبناء واجهة سنا",
+      "domain": "CREATIVITY",
+      "status": "DRAFT",
+      "version": 0,
+      "createdAt": "2026-10-24T12:00:00",
+      "updatedAt": "2026-10-24T12:00:00",
+      "owner": {
+        "id": 1,
+        "name": "Demo User",
+        "email": "demo@example.com",
+        "createdAt": "2026-10-24T12:00:00"
+      },
+      "outputs": [
+        {
+          "id": 21,
+          "title": "Story World",
+          "outputType": "WORLD_BUILDING",
+          "representationType": "GRAPH",
+          "graphRevision": 0,
+          "version": 0,
+          "createdAt": "2026-10-24T12:00:00",
+          "updatedAt": "2026-10-24T12:00:00",
+          "nodes": [
+            {
+              "id": 301,
+              "type": "CHARACTER",
+              "dataJson": null,
+              "positionX": 100,
+              "positionY": 150,
+              "createdAt": "2026-10-24",
+              "updatedAt": "2026-10-24"
+            },
+            {
+              "id": 302,
+              "type": "WORLD",
+              "dataJson": null,
+              "positionX": 450,
+              "positionY": 150,
+              "createdAt": "2026-10-24",
+              "updatedAt": "2026-10-24"
+            },
+            {
+              "id": 303,
+              "type": "LOCATION",
+              "dataJson": null,
+              "positionX": 250,
+              "positionY": 350,
+              "createdAt": "2026-10-24",
+              "updatedAt": "2026-10-24"
+            }
+          ],
+          "edges": [
+            {
+              "id": 501,
+              "type": "LIVES_IN",
+              "label": "Lives in",
+              "dataJson": null,
+              "createdAt": "2026-10-24",
+              "sourceNode": {
+                "id": 301,
+                "type": "CHARACTER",
+                "dataJson": null,
+                "positionX": 100,
+                "positionY": 150,
+                "createdAt": "2026-10-24",
+                "updatedAt": "2026-10-24"
+              },
+              "targetNode": {
+                "id": 303,
+                "type": "LOCATION",
+                "dataJson": null,
+                "positionX": 250,
+                "positionY": 350,
+                "createdAt": "2026-10-24",
+                "updatedAt": "2026-10-24"
+              }
+            }
+          ]
+        },
+        {
+          "id": 23,
+          "title": "At the gate",
+          "outputType": "BRANCHING_STORY",
+          "representationType": "GRAPH",
+          "graphRevision": 0,
+          "version": 0,
+          "createdAt": "2026-10-24T12:00:00",
+          "updatedAt": "2026-10-24T12:00:00",
+          "nodes": [
+            {
+              "id": 401,
+              "type": "BRANCHING",
+              "dataJson": null,
+              "positionX": 100,
+              "positionY": 100,
+              "createdAt": "2026-10-24",
+              "updatedAt": "2026-10-24"
+            },
+            {
+              "id": 402,
+              "type": "BRANCHING",
+              "dataJson": null,
+              "positionX": 450,
+              "positionY": 100,
+              "createdAt": "2026-10-24",
+              "updatedAt": "2026-10-24"
+            }
+          ],
+          "edges": [
+            {
+              "id": 801,
+              "type": "BRANCH_CHOICE",
+              "label": "اطلب الدخول",
+              "dataJson": null,
+              "createdAt": "2026-10-24",
+              "sourceNode": {
+                "id": 401,
+                "type": "BRANCHING",
+                "dataJson": null,
+                "positionX": 100,
+                "positionY": 100,
+                "createdAt": "2026-10-24",
+                "updatedAt": "2026-10-24"
+              },
+              "targetNode": {
+                "id": 402,
+                "type": "BRANCHING",
+                "dataJson": null,
+                "positionX": 450,
+                "positionY": 100,
+                "createdAt": "2026-10-24",
+                "updatedAt": "2026-10-24"
+              }
+            }
+          ]
+        },
+        {
+          "id": 24,
+          "title": "Party roster",
+          "outputType": "CHARACTER_BALANCE",
+          "representationType": "GRAPH",
+          "graphRevision": 0,
+          "version": 0,
+          "createdAt": "2026-10-24T12:00:00",
+          "updatedAt": "2026-10-24T12:00:00",
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "records": []
+    },
+    {
+      "id": 13,
+      "name": "خطة تعلّم",
+      "description": "بيانات تجريبية لبناء واجهة سنا",
+      "domain": "EDUCATION",
+      "status": "DRAFT",
+      "version": 0,
+      "createdAt": "2026-10-24T12:00:00",
+      "updatedAt": "2026-10-24T12:00:00",
+      "owner": {
+        "id": 1,
+        "name": "Demo User",
+        "email": "demo@example.com",
+        "createdAt": "2026-10-24T12:00:00"
+      },
+      "outputs": [],
+      "records": []
+    }
+  ],
+  "emptyProjects": [],
+  "techProjectOutputs": [
+    {
+      "id": 20,
+      "title": "Store Architecture",
+      "outputType": "ARCHITECTURE",
+      "representationType": "GRAPH",
+      "graphRevision": 3,
+      "version": 0,
+      "createdAt": "2026-10-24T12:00:00",
+      "updatedAt": "2026-10-24T12:00:00",
+      "nodes": [
+        {
+          "id": 101,
+          "type": "APPLICATION",
+          "dataJson": "{\"label\": \"Web frontend\"}",
+          "positionX": 100,
+          "positionY": 100,
+          "createdAt": "2026-10-24",
+          "updatedAt": "2026-10-24"
+        },
+        {
+          "id": 102,
+          "type": "SERVICE",
+          "dataJson": "{\"label\": \"Store API\", \"technology\": \"Spring Boot\"}",
+          "positionX": 400,
+          "positionY": 100,
+          "createdAt": "2026-10-24",
+          "updatedAt": "2026-10-24"
+        },
+        {
+          "id": 103,
+          "type": "DATABASE",
+          "dataJson": "{\"label\": \"Store database\", \"technology\": \"MySQL\"}",
+          "positionX": 700,
+          "positionY": 100,
+          "createdAt": "2026-10-24",
+          "updatedAt": "2026-10-24"
+        }
+      ],
+      "edges": [
+        {
+          "id": 201,
+          "type": "CONNECTS_TO",
+          "label": "calls",
+          "dataJson": "{\"protocol\": \"HTTPS\"}",
+          "createdAt": "2026-10-24",
+          "sourceNode": {
+            "id": 101,
+            "type": "APPLICATION",
+            "dataJson": "{\"label\": \"Web frontend\"}",
+            "positionX": 100,
+            "positionY": 100,
+            "createdAt": "2026-10-24",
+            "updatedAt": "2026-10-24"
+          },
+          "targetNode": {
+            "id": 102,
+            "type": "SERVICE",
+            "dataJson": "{\"label\": \"Store API\", \"technology\": \"Spring Boot\"}",
+            "positionX": 400,
+            "positionY": 100,
+            "createdAt": "2026-10-24",
+            "updatedAt": "2026-10-24"
+          }
+        },
+        {
+          "id": 202,
+          "type": "CONNECTS_TO",
+          "label": "reads/writes",
+          "dataJson": "{}",
+          "createdAt": "2026-10-24",
+          "sourceNode": {
+            "id": 102,
+            "type": "SERVICE",
+            "dataJson": "{\"label\": \"Store API\", \"technology\": \"Spring Boot\"}",
+            "positionX": 400,
+            "positionY": 100,
+            "createdAt": "2026-10-24",
+            "updatedAt": "2026-10-24"
+          },
+          "targetNode": {
+            "id": 103,
+            "type": "DATABASE",
+            "dataJson": "{\"label\": \"Store database\", \"technology\": \"MySQL\"}",
+            "positionX": 700,
+            "positionY": 100,
+            "createdAt": "2026-10-24",
+            "updatedAt": "2026-10-24"
+          }
+        }
+      ]
+    }
+  ],
+  "emptyOutputs": [],
+  "projectCreateBody": {
+    "name": "Online Store",
+    "description": "Plan the store and supporting services.",
+    "domain": "TECH",
+    "status": "DRAFT"
+  },
+  "architectureCreateBody": {
+    "title": "Store Architecture"
+  },
+  "architectureNodeWriteBody": {
+    "type": "SERVICE",
+    "label": "Store API",
+    "positionX": 400,
+    "positionY": 100,
+    "data": {
+      "technology": "Spring Boot"
+    }
+  },
+  "architectureEdgeWriteBody": {
+    "type": "CONNECTS_TO",
+    "label": "calls",
+    "sourceNodeId": 101,
+    "targetNodeId": 102,
+    "data": {
+      "protocol": "HTTPS"
+    }
+  },
+  "architectureGraphResponse": {
+    "outputId": 20,
+    "graphRevision": 3,
+    "graph": {
+      "nodes": [
+        {
+          "key": "node:101",
+          "id": 101,
+          "type": "APPLICATION",
+          "properties": {
+            "label": "Web frontend"
+          },
+          "positionX": 100,
+          "positionY": 100
+        },
+        {
+          "key": "node:102",
+          "id": 102,
+          "type": "SERVICE",
+          "properties": {
+            "label": "Store API",
+            "technology": "Spring Boot"
+          },
+          "positionX": 400,
+          "positionY": 100
+        },
+        {
+          "key": "node:103",
+          "id": 103,
+          "type": "DATABASE",
+          "properties": {
+            "label": "Store database",
+            "technology": "MySQL"
+          },
+          "positionX": 700,
+          "positionY": 100
+        }
+      ],
+      "edges": [
+        {
+          "key": "edge:201",
+          "id": 201,
+          "type": "CONNECTS_TO",
+          "label": "calls",
+          "sourceKey": "node:101",
+          "targetKey": "node:102",
+          "properties": {
+            "protocol": "HTTPS"
+          }
+        },
+        {
+          "key": "edge:202",
+          "id": 202,
+          "type": "CONNECTS_TO",
+          "label": "reads/writes",
+          "sourceKey": "node:102",
+          "targetKey": "node:103",
+          "properties": {}
+        }
+      ],
+      "properties": {
+        "title": "Store Architecture"
+      }
+    }
+  },
+  "architectureEmptyGraphResponse": {
+    "outputId": 25,
+    "graphRevision": 0,
+    "graph": {
+      "nodes": [],
+      "edges": [],
+      "properties": {
+        "title": "Empty Architecture"
+      }
+    }
+  },
+  "aiCreateBody": {
+    "task": "CREATE",
+    "diagramType": "ARCHITECTURE",
+    "prompt": "Create an online store architecture"
+  },
+  "aiEditBody": {
+    "task": "EDIT",
+    "outputId": 20,
+    "baseRevision": 3,
+    "prompt": "Add a notification service",
+    "selectedElementIds": [
+      "node:102"
+    ]
+  },
+  "aiCreateQueued": {
+    "interactionId": 7,
+    "requestId": "59a08f7b-8a09-423c-a154-66045db113b9",
+    "projectId": 10,
+    "outputId": null,
+    "baseRevision": null,
+    "task": "CREATE",
+    "status": "PENDING",
+    "modelName": null,
+    "createdAt": "2026-10-24T12:00:00",
+    "statusUrl": "/api/projects/10/ai/requests/59a08f7b-8a09-423c-a154-66045db113b9",
+    "executionId": null,
+    "dispatchStatus": "QUEUED",
+    "acceptedAt": null,
+    "completedAt": null,
+    "deadlineAt": "2026-10-24T12:03:00",
+    "proposalId": null,
+    "proposalReviewStatus": null,
+    "result": null,
+    "error": null
+  },
+  "aiEditQueued": {
+    "interactionId": 7,
+    "requestId": "59a08f7b-8a09-423c-a154-66045db113b9",
+    "projectId": 10,
+    "outputId": 20,
+    "baseRevision": 3,
+    "task": "EDIT",
+    "status": "PENDING",
+    "modelName": null,
+    "createdAt": "2026-10-24T12:00:00",
+    "statusUrl": "/api/projects/10/ai/requests/59a08f7b-8a09-423c-a154-66045db113b9",
+    "executionId": null,
+    "dispatchStatus": "QUEUED",
+    "acceptedAt": null,
+    "completedAt": null,
+    "deadlineAt": "2026-10-24T12:03:00",
+    "proposalId": null,
+    "proposalReviewStatus": null,
+    "result": null,
+    "error": null
+  },
+  "aiRunning": {
+    "interactionId": 7,
+    "requestId": "59a08f7b-8a09-423c-a154-66045db113b9",
+    "projectId": 10,
+    "outputId": 20,
+    "baseRevision": 3,
+    "task": "EDIT",
+    "status": "RUNNING",
+    "modelName": null,
+    "createdAt": "2026-10-24T12:00:00",
+    "statusUrl": "/api/projects/10/ai/requests/59a08f7b-8a09-423c-a154-66045db113b9",
+    "executionId": "mock-execution-7",
+    "dispatchStatus": "ACKNOWLEDGED",
+    "acceptedAt": "2026-10-24T12:00:01",
+    "completedAt": null,
+    "deadlineAt": "2026-10-24T12:03:00",
+    "proposalId": null,
+    "proposalReviewStatus": null,
+    "result": null,
+    "error": null
+  },
+  "aiAdviceCompleted": {
+    "interactionId": 7,
+    "requestId": "59a08f7b-8a09-423c-a154-66045db113ba",
+    "projectId": 10,
+    "outputId": 20,
+    "baseRevision": 3,
+    "task": "ADVISE",
+    "status": "COMPLETED",
+    "modelName": "example-model",
+    "createdAt": "2026-10-24T12:00:00",
+    "statusUrl": "/api/projects/10/ai/requests/59a08f7b-8a09-423c-a154-66045db113ba",
+    "executionId": "mock-execution-7",
+    "dispatchStatus": "TERMINAL",
+    "acceptedAt": "2026-10-24T12:00:01",
+    "completedAt": "2026-10-24T12:00:15",
+    "deadlineAt": "2026-10-24T12:03:00",
+    "proposalId": null,
+    "proposalReviewStatus": null,
+    "result": {
+      "type": "ADVICE",
+      "message": "افصل خدمة الإشعارات عن معالجة الطلبات حتى يسهل تطويرهما بشكل مستقل.",
+      "modelName": "example-model",
+      "clarification": null,
+      "proposal": null
+    },
+    "error": null
+  },
+  "aiClarificationCompleted": {
+    "interactionId": 7,
+    "requestId": "59a08f7b-8a09-423c-a154-66045db113bb",
+    "projectId": 10,
+    "outputId": 20,
+    "baseRevision": 3,
+    "task": "EDIT",
+    "status": "COMPLETED",
+    "modelName": "example-model",
+    "createdAt": "2026-10-24T12:00:00",
+    "statusUrl": "/api/projects/10/ai/requests/59a08f7b-8a09-423c-a154-66045db113bb",
+    "executionId": "mock-execution-7",
+    "dispatchStatus": "TERMINAL",
+    "acceptedAt": "2026-10-24T12:00:01",
+    "completedAt": "2026-10-24T12:00:15",
+    "deadlineAt": "2026-10-24T12:03:00",
+    "proposalId": null,
+    "proposalReviewStatus": null,
+    "result": {
+      "type": "CLARIFICATION",
+      "message": "أحتاج إلى تحديد قناة الإشعار.",
+      "modelName": "example-model",
+      "clarification": {
+        "question": "هل تريد البريد الإلكتروني أم الرسائل النصية؟",
+        "suggestedAnswers": [
+          "البريد الإلكتروني",
+          "الرسائل النصية"
+        ]
+      },
+      "proposal": null
+    },
+    "error": null
+  },
+  "aiProposalCompleted": {
+    "interactionId": 7,
+    "requestId": "59a08f7b-8a09-423c-a154-66045db113b9",
+    "projectId": 10,
+    "outputId": 20,
+    "baseRevision": 3,
+    "task": "EDIT",
+    "status": "COMPLETED",
+    "modelName": "example-model",
+    "createdAt": "2026-10-24T12:00:00",
+    "statusUrl": "/api/projects/10/ai/requests/59a08f7b-8a09-423c-a154-66045db113b9",
+    "executionId": "mock-execution-7",
+    "dispatchStatus": "TERMINAL",
+    "acceptedAt": "2026-10-24T12:00:01",
+    "completedAt": "2026-10-24T12:00:15",
+    "deadlineAt": "2026-10-24T12:03:00",
+    "proposalId": 30,
+    "proposalReviewStatus": "PENDING",
+    "result": {
+      "type": "PROPOSAL",
+      "message": "Proposed a separate notification service.",
+      "modelName": "example-model",
+      "clarification": null,
+      "proposal": {
+        "title": "Add notifications",
+        "description": "Adds a notification service and its connection.",
+        "proposedGraph": {
+          "nodes": [
+            {
+              "key": "node:101",
+              "id": 101,
+              "type": "APPLICATION",
+              "properties": {
+                "label": "Web frontend"
+              },
+              "positionX": 100,
+              "positionY": 100
+            },
+            {
+              "key": "node:102",
+              "id": 102,
+              "type": "SERVICE",
+              "properties": {
+                "label": "Store API",
+                "technology": "Spring Boot"
+              },
+              "positionX": 400,
+              "positionY": 100
+            },
+            {
+              "key": "node:103",
+              "id": 103,
+              "type": "DATABASE",
+              "properties": {
+                "label": "Store database",
+                "technology": "MySQL"
+              },
+              "positionX": 700,
+              "positionY": 100
+            },
+            {
+              "key": "new:notifications",
+              "id": null,
+              "type": "SERVICE",
+              "properties": {
+                "label": "Notification service"
+              },
+              "positionX": 400,
+              "positionY": 350
+            }
+          ],
+          "edges": [
+            {
+              "key": "edge:201",
+              "id": 201,
+              "type": "CONNECTS_TO",
+              "label": "calls",
+              "sourceKey": "node:101",
+              "targetKey": "node:102",
+              "properties": {
+                "protocol": "HTTPS"
+              }
+            },
+            {
+              "key": "edge:202",
+              "id": 202,
+              "type": "CONNECTS_TO",
+              "label": "reads/writes",
+              "sourceKey": "node:102",
+              "targetKey": "node:103",
+              "properties": {}
+            },
+            {
+              "key": "new:notification-call",
+              "id": null,
+              "type": "CONNECTS_TO",
+              "label": "sends notifications",
+              "sourceKey": "node:102",
+              "targetKey": "new:notifications",
+              "properties": {}
+            }
+          ],
+          "properties": {
+            "title": "Store Architecture"
+          }
+        }
+      }
+    },
+    "error": null
+  },
+  "aiFailed": {
+    "interactionId": 7,
+    "requestId": "59a08f7b-8a09-423c-a154-66045db113b9",
+    "projectId": 10,
+    "outputId": 20,
+    "baseRevision": 3,
+    "task": "EDIT",
+    "status": "FAILED",
+    "modelName": null,
+    "createdAt": "2026-10-24T12:00:00",
+    "statusUrl": "/api/projects/10/ai/requests/59a08f7b-8a09-423c-a154-66045db113b9",
+    "executionId": "mock-execution-7",
+    "dispatchStatus": "TERMINAL",
+    "acceptedAt": "2026-10-24T12:00:01",
+    "completedAt": "2026-10-24T12:00:15",
+    "deadlineAt": "2026-10-24T12:03:00",
+    "proposalId": null,
+    "proposalReviewStatus": null,
+    "result": null,
+    "error": {
+      "code": "WORKFLOW_FAILED",
+      "message": "AI workflow failed. Submit a new request to retry.",
+      "details": []
+    }
+  },
+  "aiTimedOut": {
+    "interactionId": 7,
+    "requestId": "59a08f7b-8a09-423c-a154-66045db113b9",
+    "projectId": 10,
+    "outputId": 20,
+    "baseRevision": 3,
+    "task": "EDIT",
+    "status": "TIMED_OUT",
+    "modelName": null,
+    "createdAt": "2026-10-24T12:00:00",
+    "statusUrl": "/api/projects/10/ai/requests/59a08f7b-8a09-423c-a154-66045db113b9",
+    "executionId": "mock-execution-7",
+    "dispatchStatus": "TERMINAL",
+    "acceptedAt": "2026-10-24T12:00:01",
+    "completedAt": "2026-10-24T12:03:00",
+    "deadlineAt": "2026-10-24T12:03:00",
+    "proposalId": null,
+    "proposalReviewStatus": null,
+    "result": null,
+    "error": {
+      "code": "CALLBACK_TIMEOUT",
+      "message": "AI request timed out. Submit a new request to retry.",
+      "details": []
+    }
+  },
+  "proposalPreview": {
+    "proposalId": 30,
+    "requestId": "59a08f7b-8a09-423c-a154-66045db113b9",
+    "title": "Add notifications",
+    "description": "Adds a notification service and its connection.",
+    "outputId": 20,
+    "baseRevision": 3,
+    "reviewStatus": "PENDING",
+    "appliedOutputId": null,
+    "proposedGraph": {
+      "nodes": [
+        {
+          "key": "node:101",
+          "id": 101,
+          "type": "APPLICATION",
+          "properties": {
+            "label": "Web frontend"
+          },
+          "positionX": 100,
+          "positionY": 100
+        },
+        {
+          "key": "node:102",
+          "id": 102,
+          "type": "SERVICE",
+          "properties": {
+            "label": "Store API",
+            "technology": "Spring Boot"
+          },
+          "positionX": 400,
+          "positionY": 100
+        },
+        {
+          "key": "node:103",
+          "id": 103,
+          "type": "DATABASE",
+          "properties": {
+            "label": "Store database",
+            "technology": "MySQL"
+          },
+          "positionX": 700,
+          "positionY": 100
+        },
+        {
+          "key": "new:notifications",
+          "id": null,
+          "type": "SERVICE",
+          "properties": {
+            "label": "Notification service"
+          },
+          "positionX": 400,
+          "positionY": 350
+        }
+      ],
+      "edges": [
+        {
+          "key": "edge:201",
+          "id": 201,
+          "type": "CONNECTS_TO",
+          "label": "calls",
+          "sourceKey": "node:101",
+          "targetKey": "node:102",
+          "properties": {
+            "protocol": "HTTPS"
+          }
+        },
+        {
+          "key": "edge:202",
+          "id": 202,
+          "type": "CONNECTS_TO",
+          "label": "reads/writes",
+          "sourceKey": "node:102",
+          "targetKey": "node:103",
+          "properties": {}
+        },
+        {
+          "key": "new:notification-call",
+          "id": null,
+          "type": "CONNECTS_TO",
+          "label": "sends notifications",
+          "sourceKey": "node:102",
+          "targetKey": "new:notifications",
+          "properties": {}
+        }
+      ],
+      "properties": {
+        "title": "Store Architecture"
+      }
+    },
+    "changes": [
+      {
+        "operation": "CREATE",
+        "targetType": "NODE",
+        "targetId": null,
+        "before": null,
+        "after": {
+          "key": "new:notifications",
+          "id": null,
+          "type": "SERVICE",
+          "properties": {
+            "label": "Notification service"
+          },
+          "positionX": 400,
+          "positionY": 350
+        }
+      },
+      {
+        "operation": "CREATE",
+        "targetType": "EDGE",
+        "targetId": null,
+        "before": null,
+        "after": {
+          "key": "new:notification-call",
+          "id": null,
+          "type": "CONNECTS_TO",
+          "label": "sends notifications",
+          "sourceKey": "node:102",
+          "targetKey": "new:notifications",
+          "properties": {}
+        }
+      }
+    ],
+    "createdAt": "2026-10-24T12:00:15",
+    "reviewedAt": null
+  },
+  "proposalRejected": {
+    "proposalId": 30,
+    "requestId": "59a08f7b-8a09-423c-a154-66045db113b9",
+    "title": "Add notifications",
+    "description": "Adds a notification service and its connection.",
+    "outputId": 20,
+    "baseRevision": 3,
+    "reviewStatus": "REJECTED",
+    "appliedOutputId": null,
+    "proposedGraph": {
+      "nodes": [
+        {
+          "key": "node:101",
+          "id": 101,
+          "type": "APPLICATION",
+          "properties": {
+            "label": "Web frontend"
+          },
+          "positionX": 100,
+          "positionY": 100
+        },
+        {
+          "key": "node:102",
+          "id": 102,
+          "type": "SERVICE",
+          "properties": {
+            "label": "Store API",
+            "technology": "Spring Boot"
+          },
+          "positionX": 400,
+          "positionY": 100
+        },
+        {
+          "key": "node:103",
+          "id": 103,
+          "type": "DATABASE",
+          "properties": {
+            "label": "Store database",
+            "technology": "MySQL"
+          },
+          "positionX": 700,
+          "positionY": 100
+        },
+        {
+          "key": "new:notifications",
+          "id": null,
+          "type": "SERVICE",
+          "properties": {
+            "label": "Notification service"
+          },
+          "positionX": 400,
+          "positionY": 350
+        }
+      ],
+      "edges": [
+        {
+          "key": "edge:201",
+          "id": 201,
+          "type": "CONNECTS_TO",
+          "label": "calls",
+          "sourceKey": "node:101",
+          "targetKey": "node:102",
+          "properties": {
+            "protocol": "HTTPS"
+          }
+        },
+        {
+          "key": "edge:202",
+          "id": 202,
+          "type": "CONNECTS_TO",
+          "label": "reads/writes",
+          "sourceKey": "node:102",
+          "targetKey": "node:103",
+          "properties": {}
+        },
+        {
+          "key": "new:notification-call",
+          "id": null,
+          "type": "CONNECTS_TO",
+          "label": "sends notifications",
+          "sourceKey": "node:102",
+          "targetKey": "new:notifications",
+          "properties": {}
+        }
+      ],
+      "properties": {
+        "title": "Store Architecture"
+      }
+    },
+    "changes": [
+      {
+        "operation": "CREATE",
+        "targetType": "NODE",
+        "targetId": null,
+        "before": null,
+        "after": {
+          "key": "new:notifications",
+          "id": null,
+          "type": "SERVICE",
+          "properties": {
+            "label": "Notification service"
+          },
+          "positionX": 400,
+          "positionY": 350
+        }
+      },
+      {
+        "operation": "CREATE",
+        "targetType": "EDGE",
+        "targetId": null,
+        "before": null,
+        "after": {
+          "key": "new:notification-call",
+          "id": null,
+          "type": "CONNECTS_TO",
+          "label": "sends notifications",
+          "sourceKey": "node:102",
+          "targetKey": "new:notifications",
+          "properties": {}
+        }
+      }
+    ],
+    "createdAt": "2026-10-24T12:00:15",
+    "reviewedAt": "2026-10-24T12:01:00"
+  },
+  "proposalAcceptanceResponse": {
+    "proposalId": 30,
+    "status": "ACCEPTED",
+    "outputId": 20,
+    "graphRevision": 4,
+    "elementIds": {
+      "node:101": 101,
+      "node:102": 102,
+      "node:103": 103,
+      "new:notifications": 104,
+      "edge:201": 201,
+      "edge:202": 202,
+      "new:notification-call": 203
+    }
+  },
+  "architectureGraphAfterAcceptance": {
+    "outputId": 20,
+    "graphRevision": 4,
+    "graph": {
+      "nodes": [
+        {
+          "key": "node:101",
+          "id": 101,
+          "type": "APPLICATION",
+          "properties": {
+            "label": "Web frontend"
+          },
+          "positionX": 100,
+          "positionY": 100
+        },
+        {
+          "key": "node:102",
+          "id": 102,
+          "type": "SERVICE",
+          "properties": {
+            "label": "Store API",
+            "technology": "Spring Boot"
+          },
+          "positionX": 400,
+          "positionY": 100
+        },
+        {
+          "key": "node:103",
+          "id": 103,
+          "type": "DATABASE",
+          "properties": {
+            "label": "Store database",
+            "technology": "MySQL"
+          },
+          "positionX": 700,
+          "positionY": 100
+        },
+        {
+          "key": "node:104",
+          "id": 104,
+          "type": "SERVICE",
+          "properties": {
+            "label": "Notification service"
+          },
+          "positionX": 400,
+          "positionY": 350
+        }
+      ],
+      "edges": [
+        {
+          "key": "edge:201",
+          "id": 201,
+          "type": "CONNECTS_TO",
+          "label": "calls",
+          "sourceKey": "node:101",
+          "targetKey": "node:102",
+          "properties": {
+            "protocol": "HTTPS"
+          }
+        },
+        {
+          "key": "edge:202",
+          "id": 202,
+          "type": "CONNECTS_TO",
+          "label": "reads/writes",
+          "sourceKey": "node:102",
+          "targetKey": "node:103",
+          "properties": {}
+        },
+        {
+          "key": "edge:203",
+          "id": 203,
+          "type": "CONNECTS_TO",
+          "label": "sends notifications",
+          "sourceKey": "node:102",
+          "targetKey": "node:104",
+          "properties": {}
+        }
+      ],
+      "properties": {
+        "title": "Store Architecture"
+      }
+    }
+  },
+  "creativitySearchResults": [
+    {
+      "id": 501,
+      "nodeId": 301,
+      "type": "CHARACTER",
+      "title": "ليلى",
+      "description": "مستكشفة تبحث عن المدينة المفقودة",
+      "positionX": 100,
+      "positionY": 150
+    },
+    {
+      "id": 502,
+      "nodeId": 302,
+      "type": "WORLD",
+      "title": "مدينة الرمال",
+      "description": "مدينة تخفي أسرار الماضي",
+      "positionX": 450,
+      "positionY": 150
+    },
+    {
+      "id": 503,
+      "nodeId": 303,
+      "type": "LOCATION",
+      "title": "البوابة الشرقية",
+      "description": "مدخل المدينة القديم",
+      "positionX": 250,
+      "positionY": 350
+    }
+  ],
+  "creativityCharacterWriteBody": {
+    "positionX": 100,
+    "positionY": 150,
+    "name": "ليلى",
+    "shortDescription": "مستكشفة تبحث عن المدينة المفقودة",
+    "role": "Protagonist",
+    "age": 24,
+    "goals": "Find the lost city"
+  },
+  "creativityRelations": [
+    {
+      "edgeId": 501,
+      "sourceNodeId": 301,
+      "targetNodeId": 303,
+      "type": "LIVES_IN",
+      "label": "Lives in"
+    }
+  ],
+  "branchingMap": {
+    "nodes": [
+      {
+        "branchingNodeId": 601,
+        "projectNodeId": 401,
+        "title": "عند البوابة",
+        "content": "يقترب الحارس منك.",
+        "type": "DECISION",
+        "positionX": 100,
+        "positionY": 100
+      },
+      {
+        "branchingNodeId": 602,
+        "projectNodeId": 402,
+        "title": "دخول المدينة",
+        "content": "يسمح لك الحارس بالدخول.",
+        "type": "ENDING",
+        "positionX": 450,
+        "positionY": 100
+      }
+    ],
+    "choices": [
+      {
+        "choiceId": 701,
+        "edgeId": 801,
+        "sourceBranchingNodeId": 601,
+        "targetBranchingNodeId": 602,
+        "text": "اطلب الدخول",
+        "displayOrder": 0
+      }
+    ]
+  },
+  "branchingPreview": {
+    "scene": {
+      "branchingNodeId": 601,
+      "projectNodeId": 401,
+      "title": "عند البوابة",
+      "content": "يقترب الحارس منك.",
+      "type": "DECISION",
+      "ending": false,
+      "deadEnd": false,
+      "choices": [
+        {
+          "choiceId": 701,
+          "text": "اطلب الدخول",
+          "targetBranchingNodeId": 602,
+          "targetProjectNodeId": 402
+        }
+      ]
+    },
+    "variables": {
+      "reputation": 1
+    },
+    "blocked": false
+  },
+  "playableCharacters": [
+    {
+      "id": 901,
+      "name": "Layla",
+      "role": "Explorer",
+      "weaponName": null,
+      "weaponType": null,
+      "strengths": "Agile",
+      "weaknesses": "Low defense",
+      "attack": 5,
+      "defense": 3,
+      "speed": 8,
+      "rangeStat": 4,
+      "stamina": 7,
+      "special": 6,
+      "characterProfileId": 501,
+      "characterProfileName": "ليلى"
+    }
+  ],
+  "balanceReport": {
+    "outputId": 24,
+    "totalCharacters": 1,
+    "analyzedCharacters": 1,
+    "averagePoints": 33.0,
+    "notes": [],
+    "characters": [
+      {
+        "characterId": 901,
+        "name": "Layla",
+        "totalPoints": 33,
+        "differenceFromAverage": 0.0,
+        "warnings": []
+      }
+    ]
+  },
+  "businessToolBody": {
+    "projectId": 11,
+    "toolType": "SWOT_ANALYZER",
+    "inputJson": "{\"idea\":\"A local tutoring service\"}",
+    "outputId": 22,
+    "baseRevision": 0
+  },
+  "businessUnavailableResponse": {
+    "message": "Business n8n workflow is not enabled yet"
+  },
+  "manualSaveResponse": {
+    "message": "Architecture node updated successfully"
+  },
+  "revisionConflictResponse": {
+    "message": "Architecture diagram changed. Reload the graph and retry with its current revision"
+  },
+  "genericErrorResponse": {
+    "message": "The operation could not be completed"
+  }
+}

@@ -30,6 +30,7 @@ public class UserService {
             throw new ApiException("Email already exists");
         }
 
+        user.setId(null);
         user.setCreatedAt(LocalDateTime.now());
 
         userRepository.save(user);

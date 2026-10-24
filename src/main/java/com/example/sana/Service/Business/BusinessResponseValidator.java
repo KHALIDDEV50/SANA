@@ -19,10 +19,6 @@ public class BusinessResponseValidator {
 
     private final ObjectMapper objectMapper;
 
-   /* public BusinessResponseValidator(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }*/
-
     public JsonNode validate(String responseJson, BusinessToolType expectedToolType) {
 
         List<String> errors = new ArrayList<>();

@@ -1,6 +1,7 @@
 package com.example.sana.Service.CreativityDomainServise;
 
 import com.example.sana.API.ApiException;
+import com.example.sana.Service.TechDomainServices.ArchitectureWriteGuard;
 import com.example.sana.DTO.CreativityDomainDTOs.CreativityDeletePreviewDTO;
 import com.example.sana.DTO.CreativityDomainDTOs.CreativityRelationCreateDTO;
 import com.example.sana.DTO.CreativityDomainDTOs.CreativityRelationDTO;
@@ -198,6 +199,7 @@ public class CreativityRelationService {
             throw new ApiException("Project node does not belong to this output");
         }
 
+        ArchitectureWriteGuard.rejectUnversionedWrite(node.getProjectOutput());
         return node;
     }
 
@@ -221,6 +223,7 @@ public class CreativityRelationService {
         }
 
         // Validate the existing Source and Target
+        ArchitectureWriteGuard.rejectUnversionedWrite(edge.getProjectOutput());
         String sourceType = edge.getSourceNode().getType();
         String targetType = edge.getTargetNode().getType();
 

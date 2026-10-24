@@ -1,6 +1,7 @@
 package com.example.sana.AI.Service;
 
 import com.example.sana.API.ApiException;
+import com.example.sana.Service.TechDomainServices.ArchitectureWriteGuard;
 import com.example.sana.Enums.*;
 import com.example.sana.Model.*;
 
@@ -213,12 +214,14 @@ public class AIProposalDecisionService {
             case NODE:
                 ProjectNode node = projectNodeRepository.findById(item.getTargetId()).orElseThrow(() -> new ApiException("Node not found"));
                 if (!projectId.equals(node.getProjectOutput().getProject().getId()) || !"NODE".equals(node.getType())) throw new ApiException("Only ordinary NODE metadata can be updated generically");
+                ArchitectureWriteGuard.rejectUnversionedWrite(node.getProjectOutput());
                 requireOutput(after, node.getProjectOutput().getId());
                 requireAllowedFields(fields, NODE_FIELDS);
                 break;
             case EDGE:
                 ProjectEdge edge = projectEdgeRepository.findById(item.getTargetId()).orElseThrow(() -> new ApiException("Edge not found"));
                 if (!projectId.equals(edge.getProjectOutput().getProject().getId()) || "BRANCH_CHOICE".equals(edge.getType())) throw new ApiException("Invalid generic EDGE target");
+                ArchitectureWriteGuard.rejectUnversionedWrite(edge.getProjectOutput());
                 requireOutput(after, edge.getProjectOutput().getId());
                 requireAllowedFields(fields, EDGE_FIELDS);
                 break;
@@ -372,6 +375,7 @@ public class AIProposalDecisionService {
             throw new ApiException("Node does not belong to this project");
         }
 
+        ArchitectureWriteGuard.rejectUnversionedWrite(node.getProjectOutput());
         requireOutput(after, node.getProjectOutput().getId());
         requireAllowedFields(fields, NODE_FIELDS);
 
@@ -410,6 +414,7 @@ public class AIProposalDecisionService {
             throw new ApiException("Edge does not belong to this project");
         }
 
+        ArchitectureWriteGuard.rejectUnversionedWrite(edge.getProjectOutput());
         requireOutput(after, edge.getProjectOutput().getId());
         requireAllowedFields(fields, EDGE_FIELDS);
 
