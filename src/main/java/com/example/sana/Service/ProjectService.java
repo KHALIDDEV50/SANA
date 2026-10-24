@@ -7,6 +7,8 @@ import com.example.sana.Repository.ProjectRepository;
 import com.example.sana.Repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.HashSet;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -57,6 +59,7 @@ public class ProjectService {
             throw new ApiException("User not found");
         }
 
+        project.setId(null); project.setVersion(0); project.setOutputs(new HashSet<>()); project.setRecords(new HashSet<>()); project.setUnderstanding(null);
         project.setOwner(owner);
         project.setCreatedAt(LocalDateTime.now());
         project.setUpdatedAt(LocalDateTime.now());
@@ -65,10 +68,11 @@ public class ProjectService {
     }
 
     // Update an existing project
+    @Transactional
     public void updateProject(Integer projectId, Project project) {
 
         // Check if the project exists
-        Project oldProject = projectRepository.findProjectById(projectId);
+        Project oldProject = projectRepository.findByIdForUpdate(projectId).orElse(null);
 
         if (oldProject == null) {
             throw new ApiException("Project not found");

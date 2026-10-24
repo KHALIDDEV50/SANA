@@ -45,6 +45,15 @@ public class ProjectOutput {
     @Column(nullable = false, length = 50, columnDefinition = "varchar(50)")
     private RepresentationType representationType;
 
+    @PositiveOrZero(message = "Graph revision cannot be negative")
+    @Column(name = "graph_revision", nullable = false, columnDefinition = "integer default 0")
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private Integer graphRevision = 0;
+
+    @Column(name = "properties_json", columnDefinition = "LONGTEXT")
+    @JsonIgnore
+    private String propertiesJson;
+
     @Version
     @PositiveOrZero(message = "Output version cannot be negative")
     @Column(nullable = false)

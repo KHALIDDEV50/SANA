@@ -1,6 +1,7 @@
 package com.example.sana.Service;
 
 import com.example.sana.API.ApiException;
+import com.example.sana.Service.TechDomainServices.ArchitectureWriteGuard;
 import com.example.sana.Model.Project;
 import com.example.sana.Model.ProjectOutput;
 import com.example.sana.Repository.ProjectOutputRepository;
@@ -45,8 +46,12 @@ public class ProjectOutputService {
             throw new ApiException("Project not found");
         }
 
+        if ("ARCHITECTURE".equals(projectOutput.getOutputType()) && (!"TECH".equals(project.getDomain())
+                || projectOutput.getRepresentationType() != com.example.sana.Enums.RepresentationType.GRAPH))
+            throw new ApiException("Architecture outputs require a TECH project and GRAPH representation");
         projectOutput.setId(null);
         projectOutput.setVersion(null);
+        projectOutput.setGraphRevision(0);
         projectOutput.setProject(project);
         projectOutput.setCreatedAt(LocalDateTime.now());
         projectOutput.setUpdatedAt(projectOutput.getCreatedAt());
@@ -58,6 +63,8 @@ public class ProjectOutputService {
     @Transactional
     public void updateProjectOutput(Integer outputId, ProjectOutput projectOutput) {
         ProjectOutput output = getProjectOutputById(outputId);
+        ArchitectureWriteGuard.rejectUnversionedWrite(output);
+        ArchitectureWriteGuard.rejectUnversionedWrite(projectOutput);
         output.setTitle(projectOutput.getTitle());
         output.setOutputType(projectOutput.getOutputType());
         output.setRepresentationType(projectOutput.getRepresentationType());
@@ -68,6 +75,7 @@ public class ProjectOutputService {
     @Transactional
     public void deleteProjectOutput(Integer outputId) {
         ProjectOutput output = getProjectOutputById(outputId);
+        ArchitectureWriteGuard.rejectUnversionedWrite(output);
         projectOutputRepository.delete(output);
     }
 }

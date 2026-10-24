@@ -7,6 +7,7 @@ import com.example.sana.Repository.ProjectRepository;
 import com.example.sana.Repository.ProjectUnderstandingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -48,10 +49,11 @@ public class ProjectUnderstandingService {
     }
 
     // Add project understanding to an existing project
+    @Transactional
     public void addProjectUnderstanding(Integer projectId, ProjectUnderstanding projectUnderstanding) {
 
         // Check if project exists
-        Project project = projectRepository.findProjectById(projectId);
+        Project project = projectRepository.findByIdForUpdate(projectId).orElse(null);
 
         if (project == null) {
             throw new ApiException("Project not found");
@@ -65,6 +67,7 @@ public class ProjectUnderstandingService {
         }
 
 
+        projectUnderstanding.setId(null);
         projectUnderstanding.setProject(project);
         projectUnderstanding.setCreatedAt(LocalDateTime.now());
         projectUnderstanding.setUpdatedAt(LocalDateTime.now());
@@ -73,6 +76,7 @@ public class ProjectUnderstandingService {
     }
 
     // Update an existing project understanding
+    @Transactional
     public void updateProjectUnderstanding(Integer id, ProjectUnderstanding projectUnderstanding) {
 
         // Check if project understanding exists
@@ -83,6 +87,7 @@ public class ProjectUnderstandingService {
         }
 
 
+        projectRepository.findByIdForUpdate(oldUnderstanding.getProject().getId()).orElseThrow(() -> new ApiException("Project not found"));
         oldUnderstanding.setProjectGoal(projectUnderstanding.getProjectGoal());
         oldUnderstanding.setActorsJson(projectUnderstanding.getActorsJson());
         oldUnderstanding.setComponentsJson(projectUnderstanding.getComponentsJson());
@@ -93,6 +98,7 @@ public class ProjectUnderstandingService {
     }
 
     // Delete an existing project understanding
+    @Transactional
     public void deleteProjectUnderstanding(Integer id) {
 
         ProjectUnderstanding understanding = projectUnderstandingRepository.findProjectUnderstandingById(id);
@@ -101,6 +107,7 @@ public class ProjectUnderstandingService {
             throw new ApiException("Project understanding not found");
         }
 
+        projectRepository.findByIdForUpdate(understanding.getProject().getId()).orElseThrow(() -> new ApiException("Project not found"));
         projectUnderstandingRepository.delete(understanding);
     }
 }

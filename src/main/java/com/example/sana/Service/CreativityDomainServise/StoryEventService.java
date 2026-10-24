@@ -1,6 +1,7 @@
 package com.example.sana.Service.CreativityDomainServise;
 
 import com.example.sana.API.ApiException;
+import com.example.sana.Service.TechDomainServices.ArchitectureWriteGuard;
 import com.example.sana.DTO.CreativityDomainDTOs.StoryEventDTO;
 import com.example.sana.DTO.CreativityDomainDTOs.StoryEventTimelineDTO;
 import com.example.sana.Model.CreativityDomainModels.StoryEvent;
@@ -49,6 +50,7 @@ public class StoryEventService {
     public void addStoryEvent(Integer outputId, StoryEventDTO dto) {
 
         ProjectOutput output = projectOutputRepository.findProjectOutputById(outputId);
+        ArchitectureWriteGuard.rejectUnversionedWrite(output);
 
         if (output == null) {
             throw new ApiException("Project output not found");
@@ -94,6 +96,7 @@ public class StoryEventService {
     public void updateStoryEvent(Integer id, StoryEventDTO dto) {
 
         StoryEvent storyEvent = storyEventRepository.findStoryEventById(id);
+        ArchitectureWriteGuard.rejectUnversionedWrite(storyEvent == null || storyEvent.getProjectNode() == null ? null : storyEvent.getProjectNode().getProjectOutput());
 
         if (storyEvent == null) {
             throw new ApiException("Story event not found");
@@ -191,6 +194,7 @@ public class StoryEventService {
     public void deleteStoryEvent(Integer id) {
 
         StoryEvent storyEvent = storyEventRepository.findStoryEventById(id);
+        ArchitectureWriteGuard.rejectUnversionedWrite(storyEvent == null || storyEvent.getProjectNode() == null ? null : storyEvent.getProjectNode().getProjectOutput());
 
         if (storyEvent == null) {
             throw new ApiException("Story event not found");

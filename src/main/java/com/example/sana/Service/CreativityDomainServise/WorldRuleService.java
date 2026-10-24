@@ -1,6 +1,7 @@
 package com.example.sana.Service.CreativityDomainServise;
 
 import com.example.sana.API.ApiException;
+import com.example.sana.Service.TechDomainServices.ArchitectureWriteGuard;
 import com.example.sana.DTO.CreativityDomainDTOs.WorldRuleDTO;
 import com.example.sana.Model.CreativityDomainModels.World;
 import com.example.sana.Model.CreativityDomainModels.WorldRule;
@@ -48,6 +49,7 @@ public class WorldRuleService {
     @Transactional
     public void addWorldRule(Integer outputId, Integer worldId, WorldRuleDTO dto) {
         ProjectOutput output = projectOutputRepository.findProjectOutputById(outputId);
+        ArchitectureWriteGuard.rejectUnversionedWrite(output);
 
         if (output == null) {
             throw new ApiException("Project output not found");
@@ -108,6 +110,7 @@ public class WorldRuleService {
     public void updateWorldRule(Integer id, WorldRuleDTO dto) {
 
         WorldRule worldRule = worldRuleRepository.findWorldRuleById(id);
+        ArchitectureWriteGuard.rejectUnversionedWrite(worldRule == null || worldRule.getProjectNode() == null ? null : worldRule.getProjectNode().getProjectOutput());
 
         if (worldRule == null) {
             throw new ApiException("World rule not found");
@@ -143,6 +146,7 @@ public class WorldRuleService {
     public void updateWorldRuleWorld(Integer ruleId, Integer worldId) {
 
         WorldRule worldRule = worldRuleRepository.findWorldRuleById(ruleId);
+        ArchitectureWriteGuard.rejectUnversionedWrite(worldRule == null || worldRule.getProjectNode() == null ? null : worldRule.getProjectNode().getProjectOutput());
 
         if (worldRule == null) {
             throw new ApiException("World rule not found");
@@ -172,6 +176,7 @@ public class WorldRuleService {
     public void deleteWorldRule(Integer id) {
 
         WorldRule worldRule = worldRuleRepository.findWorldRuleById(id);
+        ArchitectureWriteGuard.rejectUnversionedWrite(worldRule == null || worldRule.getProjectNode() == null ? null : worldRule.getProjectNode().getProjectOutput());
 
         if (worldRule == null) {
             throw new ApiException("World rule not found");

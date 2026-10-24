@@ -2,6 +2,7 @@ package com.example.sana.Controller.TechDomainControllers;
 
 import com.example.sana.API.ApiResponse;
 import com.example.sana.DTO.TechDomainDTOs.ArchitectureDiagramRequestDTO;
+import com.example.sana.DTO.TechDomainDTOs.ArchitectureGraphResponseDTO;
 import com.example.sana.DTO.TechDomainDTOs.ArchitectureEdgeRequestDTO;
 import com.example.sana.DTO.TechDomainDTOs.ArchitectureNodeRequestDTO;
 import com.example.sana.Model.ProjectEdge;
@@ -21,6 +22,11 @@ import java.util.List;
 public class ArchitectureDiagramController {
 
     private final ArchitectureDiagramService architectureDiagramService;
+
+    @GetMapping("/graph/get/{outputId}")
+    public ResponseEntity<ArchitectureGraphResponseDTO> getArchitectureGraph(@PathVariable Integer outputId) {
+        return ResponseEntity.ok(architectureDiagramService.getArchitectureGraph(outputId));
+    }
 
     @GetMapping("/get")
     public ResponseEntity<List<ProjectOutput>> getAllArchitectureDiagrams() {
@@ -46,14 +52,14 @@ public class ArchitectureDiagramController {
 
     @PutMapping("/update/{outputId}")
     public ResponseEntity<ApiResponse> updateArchitectureDiagram(@PathVariable Integer outputId,
-                                                               @Valid @RequestBody ArchitectureDiagramRequestDTO dto) {
-        architectureDiagramService.updateArchitectureDiagram(outputId, dto);
+                                                               @Valid @RequestBody ArchitectureDiagramRequestDTO dto, @RequestParam Integer expectedRevision) {
+        architectureDiagramService.updateArchitectureDiagram(outputId, dto, expectedRevision);
         return ResponseEntity.status(200).body(new ApiResponse("Architecture diagram updated successfully"));
     }
 
     @DeleteMapping("/delete/{outputId}")
-    public ResponseEntity<ApiResponse> deleteArchitectureDiagram(@PathVariable Integer outputId) {
-        architectureDiagramService.deleteArchitectureDiagram(outputId);
+    public ResponseEntity<ApiResponse> deleteArchitectureDiagram(@PathVariable Integer outputId, @RequestParam Integer expectedRevision) {
+        architectureDiagramService.deleteArchitectureDiagram(outputId, expectedRevision);
         return ResponseEntity.status(200).body(new ApiResponse("Architecture diagram deleted successfully"));
     }
 
@@ -64,21 +70,21 @@ public class ArchitectureDiagramController {
 
     @PostMapping("/node/add/{outputId}")
     public ResponseEntity<ApiResponse> addArchitectureNode(@PathVariable Integer outputId,
-                                                         @Valid @RequestBody ArchitectureNodeRequestDTO dto) {
-        architectureDiagramService.addArchitectureNode(outputId, dto);
+                                                         @Valid @RequestBody ArchitectureNodeRequestDTO dto, @RequestParam Integer expectedRevision) {
+        architectureDiagramService.addArchitectureNode(outputId, dto, expectedRevision);
         return ResponseEntity.status(200).body(new ApiResponse("Architecture node added successfully"));
     }
 
     @PutMapping("/node/update/{outputId}/{nodeId}")
     public ResponseEntity<ApiResponse> updateArchitectureNode(@PathVariable Integer outputId, @PathVariable Integer nodeId,
-                                                            @Valid @RequestBody ArchitectureNodeRequestDTO dto) {
-        architectureDiagramService.updateArchitectureNode(outputId, nodeId, dto);
+                                                            @Valid @RequestBody ArchitectureNodeRequestDTO dto, @RequestParam Integer expectedRevision) {
+        architectureDiagramService.updateArchitectureNode(outputId, nodeId, dto, expectedRevision);
         return ResponseEntity.status(200).body(new ApiResponse("Architecture node updated successfully"));
     }
 
     @DeleteMapping("/node/delete/{outputId}/{nodeId}")
-    public ResponseEntity<ApiResponse> deleteArchitectureNode(@PathVariable Integer outputId, @PathVariable Integer nodeId) {
-        architectureDiagramService.deleteArchitectureNode(outputId, nodeId);
+    public ResponseEntity<ApiResponse> deleteArchitectureNode(@PathVariable Integer outputId, @PathVariable Integer nodeId, @RequestParam Integer expectedRevision) {
+        architectureDiagramService.deleteArchitectureNode(outputId, nodeId, expectedRevision);
         return ResponseEntity.status(200).body(new ApiResponse("Architecture node deleted successfully"));
     }
 
@@ -89,21 +95,21 @@ public class ArchitectureDiagramController {
 
     @PostMapping("/edge/add/{outputId}")
     public ResponseEntity<ApiResponse> addArchitectureEdge(@PathVariable Integer outputId,
-                                                         @Valid @RequestBody ArchitectureEdgeRequestDTO dto) {
-        architectureDiagramService.addArchitectureEdge(outputId, dto);
+                                                         @Valid @RequestBody ArchitectureEdgeRequestDTO dto, @RequestParam Integer expectedRevision) {
+        architectureDiagramService.addArchitectureEdge(outputId, dto, expectedRevision);
         return ResponseEntity.status(200).body(new ApiResponse("Architecture edge added successfully"));
     }
 
     @PutMapping("/edge/update/{outputId}/{edgeId}")
     public ResponseEntity<ApiResponse> updateArchitectureEdge(@PathVariable Integer outputId, @PathVariable Integer edgeId,
-                                                            @Valid @RequestBody ArchitectureEdgeRequestDTO dto) {
-        architectureDiagramService.updateArchitectureEdge(outputId, edgeId, dto);
+                                                            @Valid @RequestBody ArchitectureEdgeRequestDTO dto, @RequestParam Integer expectedRevision) {
+        architectureDiagramService.updateArchitectureEdge(outputId, edgeId, dto, expectedRevision);
         return ResponseEntity.status(200).body(new ApiResponse("Architecture edge updated successfully"));
     }
 
     @DeleteMapping("/edge/delete/{outputId}/{edgeId}")
-    public ResponseEntity<ApiResponse> deleteArchitectureEdge(@PathVariable Integer outputId, @PathVariable Integer edgeId) {
-        architectureDiagramService.deleteArchitectureEdge(outputId, edgeId);
+    public ResponseEntity<ApiResponse> deleteArchitectureEdge(@PathVariable Integer outputId, @PathVariable Integer edgeId, @RequestParam Integer expectedRevision) {
+        architectureDiagramService.deleteArchitectureEdge(outputId, edgeId, expectedRevision);
         return ResponseEntity.status(200).body(new ApiResponse("Architecture edge deleted successfully"));
     }
 }

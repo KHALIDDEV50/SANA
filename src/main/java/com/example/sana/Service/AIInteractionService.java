@@ -25,12 +25,15 @@ public class AIInteractionService {
     private final ChangeProposalRepository changeProposalRepository;
 
     public List<AIInteraction> getAllAIInteractions() {
-        return aiInteractionRepository.findAll();
+        return aiInteractionRepository.findAll().stream()
+                .filter(interaction -> interaction.getRequestId() == null).toList();
     }
 
     public AIInteraction getAIInteractionById(Integer ai_interaction_id) {
-        return aiInteractionRepository.findById(ai_interaction_id)
+        AIInteraction interaction = aiInteractionRepository.findById(ai_interaction_id)
                 .orElseThrow(() -> new ApiException("AI interaction not found"));
+        requireLegacyInteraction(interaction);
+        return interaction;
     }
 
     public void addAIInteraction(Integer user_id, Integer project_id, AIInteraction aiInteraction) {
@@ -39,6 +42,10 @@ public class AIInteractionService {
         Project project = projectRepository.findById(project_id)
                 .orElseThrow(() -> new ApiException("Project not found"));
 
+        aiInteraction.setRequestId(null);
+        aiInteraction.setRequestJson(null);
+        aiInteraction.setOutputId(null);
+        aiInteraction.setBaseRevision(null);
         aiInteraction.setId(null);
         aiInteraction.setCreatedAt(null);
         aiInteraction.setUser(user);
@@ -50,6 +57,7 @@ public class AIInteractionService {
         AIInteraction oldAIInteraction = aiInteractionRepository.findById(ai_interaction_id)
                 .orElseThrow(() -> new ApiException("AI interaction not found"));
 
+        requireLegacyInteraction(oldAIInteraction);
         oldAIInteraction.setActionType(aiInteraction.getActionType());
         oldAIInteraction.setPromptSummary(aiInteraction.getPromptSummary());
         oldAIInteraction.setResponseJson(aiInteraction.getResponseJson());
@@ -64,6 +72,7 @@ public class AIInteractionService {
         AIInteraction aiInteraction = aiInteractionRepository.findById(ai_interaction_id)
                 .orElseThrow(() -> new ApiException("AI interaction not found"));
 
+        requireLegacyInteraction(aiInteraction);
         List<ChangeProposal> proposals = changeProposalRepository.findByAiInteractionId(ai_interaction_id);
         for (ChangeProposal proposal : proposals) {
             proposal.setAiInteraction(null);
@@ -73,4 +82,11 @@ public class AIInteractionService {
 
         aiInteractionRepository.delete(aiInteraction);
     }
+
+    private void requireLegacyInteraction(AIInteraction interaction) {
+        if (interaction.getRequestId() != null) {
+            throw new ApiException("Use the Architecture AI endpoints for managed runs");
+        }
+    }
+
 }

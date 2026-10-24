@@ -1,6 +1,8 @@
 package com.example.sana.Service.TechDomainServices;
 
 import com.example.sana.API.ApiException;
+import com.example.sana.API.ApiConflictException;
+import com.example.sana.DTO.TechDomainDTOs.ArchitectureGraphResponseDTO;
 import com.example.sana.DTO.TechDomainDTOs.ArchitectureDiagramRequestDTO;
 import com.example.sana.DTO.TechDomainDTOs.ArchitectureEdgeRequestDTO;
 import com.example.sana.DTO.TechDomainDTOs.ArchitectureNodeRequestDTO;
@@ -22,6 +24,7 @@ import tools.jackson.databind.json.JsonMapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -34,6 +37,7 @@ public class ArchitectureDiagramService {
     private final ProjectNodeRepository projectNodeRepository;
     private final ProjectEdgeRepository projectEdgeRepository;
     private final JsonMapper jsonMapper;
+    private final ArchitectureGraphMapper architectureGraphMapper;
 
     @Transactional(readOnly = true)
     public List<ProjectOutput> getAllArchitectureDiagrams() {
@@ -64,6 +68,7 @@ public class ArchitectureDiagramService {
             throw new ApiException("Project not found");
         }
 
+        if (!"TECH".equals(project.getDomain())) throw new ApiException("Architecture diagrams require a TECH project");
         ProjectOutput output = new ProjectOutput();
         output.setTitle(dto.getTitle());
         output.setOutputType(TechnicalOutputType.ARCHITECTURE.name());
@@ -75,16 +80,15 @@ public class ArchitectureDiagramService {
     }
 
     @Transactional
-    public void updateArchitectureDiagram(Integer outputId, ArchitectureDiagramRequestDTO dto) {
-        ProjectOutput output = getArchitectureOutput(outputId);
+    public void updateArchitectureDiagram(Integer outputId, ArchitectureDiagramRequestDTO dto, Integer expectedRevision) {
+        ProjectOutput output = lockArchitectureOutput(outputId, expectedRevision);
         output.setTitle(dto.getTitle());
-        output.setUpdatedAt(LocalDateTime.now());
-        projectOutputRepository.save(output);
+        advanceRevision(output);
     }
 
     @Transactional
-    public void deleteArchitectureDiagram(Integer outputId) {
-        ProjectOutput output = getArchitectureOutput(outputId);
+    public void deleteArchitectureDiagram(Integer outputId, Integer expectedRevision) {
+        ProjectOutput output = lockArchitectureOutput(outputId, expectedRevision);
         projectOutputRepository.delete(output);
     }
 
@@ -95,28 +99,47 @@ public class ArchitectureDiagramService {
     }
 
     @Transactional
-    public void addArchitectureNode(Integer outputId, ArchitectureNodeRequestDTO dto) {
-        ProjectOutput output = getArchitectureOutput(outputId);
+    public void addArchitectureNode(Integer outputId, ArchitectureNodeRequestDTO dto, Integer expectedRevision) {
+        ProjectOutput output = lockArchitectureOutput(outputId, expectedRevision);
         ProjectNode node = new ProjectNode();
         node.setProjectOutput(output);
         node.setCreatedAt(LocalDate.now());
         setNodeFields(node, dto);
         projectNodeRepository.save(node);
+        output.getNodes().add(node);
+        advanceRevision(output);
     }
 
     @Transactional
-    public void updateArchitectureNode(Integer outputId, Integer nodeId, ArchitectureNodeRequestDTO dto) {
-        getArchitectureOutput(outputId);
+    public void updateArchitectureNode(Integer outputId, Integer nodeId, ArchitectureNodeRequestDTO dto, Integer expectedRevision) {
+        ProjectOutput output = lockArchitectureOutput(outputId, expectedRevision);
         ProjectNode node = getOutputNode(outputId, nodeId);
         setNodeFields(node, dto);
+        var connected = new HashSet<ProjectEdge>();
+        if (node.getIncomingEdges() != null) connected.addAll(node.getIncomingEdges());
+        if (node.getOutgoingEdges() != null) connected.addAll(node.getOutgoingEdges());
+        for (var edge : connected) ArchitectureGraphRules.edge(edge.getType(), edge.getLabel(),
+                edge.getSourceNode().getType(), edge.getTargetNode().getType(), Map.of());
         projectNodeRepository.save(node);
+        advanceRevision(output);
     }
 
     @Transactional
-    public void deleteArchitectureNode(Integer outputId, Integer nodeId) {
-        getArchitectureOutput(outputId);
+    public void deleteArchitectureNode(Integer outputId, Integer nodeId, Integer expectedRevision) {
+        ProjectOutput output = lockArchitectureOutput(outputId, expectedRevision);
         ProjectNode node = getOutputNode(outputId, nodeId);
+        // Remove incident edges and both sides of the in-memory graph before deleting.
+        // Otherwise cascading parent/endpoint collections can retain deleted entities.
+        var incidentEdges = new HashSet<ProjectEdge>();
+        if (node.getOutgoingEdges() != null) incidentEdges.addAll(node.getOutgoingEdges());
+        if (node.getIncomingEdges() != null) incidentEdges.addAll(node.getIncomingEdges());
+        for (ProjectEdge edge : incidentEdges) {
+            detachEdge(output, edge);
+            projectEdgeRepository.delete(edge);
+        }
+        output.getNodes().remove(node);
         projectNodeRepository.delete(node);
+        advanceRevision(output);
     }
 
     @Transactional(readOnly = true)
@@ -126,8 +149,8 @@ public class ArchitectureDiagramService {
     }
 
     @Transactional
-    public void addArchitectureEdge(Integer outputId, ArchitectureEdgeRequestDTO dto) {
-        ProjectOutput output = getArchitectureOutput(outputId);
+    public void addArchitectureEdge(Integer outputId, ArchitectureEdgeRequestDTO dto, Integer expectedRevision) {
+        ProjectOutput output = lockArchitectureOutput(outputId, expectedRevision);
         ProjectNode source = getOutputNode(outputId, dto.getSourceNodeId());
         ProjectNode target = getOutputNode(outputId, dto.getTargetNodeId());
         ProjectEdge edge = new ProjectEdge();
@@ -135,23 +158,71 @@ public class ArchitectureDiagramService {
         edge.setCreatedAt(LocalDate.now());
         setEdgeFields(edge, dto, source, target);
         projectEdgeRepository.save(edge);
+        output.getEdges().add(edge);
+        advanceRevision(output);
     }
 
     @Transactional
-    public void updateArchitectureEdge(Integer outputId, Integer edgeId, ArchitectureEdgeRequestDTO dto) {
-        getArchitectureOutput(outputId);
+    public void updateArchitectureEdge(Integer outputId, Integer edgeId, ArchitectureEdgeRequestDTO dto, Integer expectedRevision) {
+        ProjectOutput output = lockArchitectureOutput(outputId, expectedRevision);
         ProjectEdge edge = getOutputEdge(outputId, edgeId);
         ProjectNode source = getOutputNode(outputId, dto.getSourceNodeId());
         ProjectNode target = getOutputNode(outputId, dto.getTargetNodeId());
         setEdgeFields(edge, dto, source, target);
         projectEdgeRepository.save(edge);
+        advanceRevision(output);
     }
 
     @Transactional
-    public void deleteArchitectureEdge(Integer outputId, Integer edgeId) {
-        getArchitectureOutput(outputId);
+    public void deleteArchitectureEdge(Integer outputId, Integer edgeId, Integer expectedRevision) {
+        ProjectOutput output = lockArchitectureOutput(outputId, expectedRevision);
         ProjectEdge edge = getOutputEdge(outputId, edgeId);
+        detachEdge(output, edge);
         projectEdgeRepository.delete(edge);
+        advanceRevision(output);
+    }
+
+    // Use the same parent lock as writers so graph and revision describe one snapshot.
+    @Transactional
+    public ArchitectureGraphResponseDTO getArchitectureGraph(Integer outputId) {
+        ProjectOutput output = lockArchitectureOutput(outputId);
+        return new ArchitectureGraphResponseDTO(outputId, output.getGraphRevision(), architectureGraphMapper.toDTO(output));
+    }
+
+    private ProjectOutput lockArchitectureOutput(Integer outputId) {
+        ProjectOutput output = projectOutputRepository.findByIdForUpdate(outputId)
+                .orElseThrow(() -> new ApiException("Project output not found"));
+        if (!isArchitectureDiagram(output)) throw new ApiException("Output is not an Architecture Diagram");
+        if (output.getGraphRevision() == null) throw new ApiException("Graph revision migration is required");
+        return output;
+    }
+
+    private ProjectOutput lockArchitectureOutput(Integer outputId, Integer expectedRevision) {
+        if (expectedRevision == null || expectedRevision < 0) {
+            throw new ApiException("Expected revision must be a non-negative integer");
+        }
+        ProjectOutput output = lockArchitectureOutput(outputId);
+        if (!expectedRevision.equals(output.getGraphRevision())) {
+            throw new ApiConflictException("Architecture diagram changed. Reload the graph and retry with its current revision");
+        }
+        if (output.getGraphRevision() == Integer.MAX_VALUE) throw new ApiConflictException("Graph revision limit reached");
+        return output;
+    }
+
+    private void advanceRevision(ProjectOutput output) {
+        output.setGraphRevision(output.getGraphRevision() + 1);
+        output.setUpdatedAt(LocalDateTime.now());
+        // The locked output is managed; dirty checking commits its revision atomically.
+    }
+
+    private void detachEdge(ProjectOutput output, ProjectEdge edge) {
+        output.getEdges().remove(edge);
+        if (edge.getSourceNode() != null && edge.getSourceNode().getOutgoingEdges() != null) {
+            edge.getSourceNode().getOutgoingEdges().remove(edge);
+        }
+        if (edge.getTargetNode() != null && edge.getTargetNode().getIncomingEdges() != null) {
+            edge.getTargetNode().getIncomingEdges().remove(edge);
+        }
     }
 
     private boolean isArchitectureDiagram(ProjectOutput output) {
@@ -199,6 +270,7 @@ public class ArchitectureDiagramService {
         }
         data.put("label", dto.getLabel());
 
+        ArchitectureGraphRules.node(dto.getType(), data, dto.getPositionX(), dto.getPositionY());
         node.setType(dto.getType());
         node.setDataJson(jsonMapper.writeValueAsString(data));
         node.setPositionX(dto.getPositionX());
@@ -208,6 +280,9 @@ public class ArchitectureDiagramService {
 
     private void setEdgeFields(ProjectEdge edge, ArchitectureEdgeRequestDTO dto,
                                ProjectNode source, ProjectNode target) {
+        Map<String, Object> properties = dto.getData() == null ? Map.of() : dto.getData();
+        if (source.getId().equals(target.getId())) throw new ApiException("Architecture edges require distinct endpoints");
+        ArchitectureGraphRules.edge(dto.getType(), dto.getLabel(), source.getType(), target.getType(), properties);
         String dataJson = dto.getData() == null ? null : jsonMapper.writeValueAsString(dto.getData());
         edge.setType(dto.getType());
         edge.setLabel(dto.getLabel());

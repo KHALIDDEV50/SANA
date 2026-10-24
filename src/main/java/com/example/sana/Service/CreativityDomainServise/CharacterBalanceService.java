@@ -1,6 +1,7 @@
 package com.example.sana.Service.CreativityDomainServise;
 
 import com.example.sana.API.ApiException;
+import com.example.sana.Service.TechDomainServices.ArchitectureWriteGuard;
 import com.example.sana.DTO.CreativityDomainDTOs.CharacterBalanceReportDTO;
 import com.example.sana.DTO.CreativityDomainDTOs.PlayableCharacterDTO;
 import com.example.sana.DTO.CreativityDomainDTOs.PlayableCharacterResponseDTO;
@@ -321,6 +322,7 @@ public class CharacterBalanceService {
             throw new ApiException("Project output not found");
         }
 
+        ArchitectureWriteGuard.rejectUnversionedWrite(output);
         return output;
     }
 
@@ -334,6 +336,7 @@ public class CharacterBalanceService {
             throw new ApiException("Playable character not found in this output");
         }
 
+        ArchitectureWriteGuard.rejectUnversionedWrite(character.getProjectOutput());
         return character;
     }
 }

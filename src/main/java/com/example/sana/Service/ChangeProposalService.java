@@ -26,12 +26,14 @@ public class ChangeProposalService {
     private final ChangeProposalItemRepository changeProposalItemRepository;
 
     public List<ChangeProposal> getAllChangeProposals() {
-        return changeProposalRepository.findAll();
+        return changeProposalRepository.findAll().stream().filter(proposal -> proposal.getManagedRequestId() == null).toList();
     }
 
     public ChangeProposal getChangeProposalById(Integer proposal_id) {
-        return changeProposalRepository.findById(proposal_id)
+        ChangeProposal proposal = changeProposalRepository.findById(proposal_id)
                 .orElseThrow(() -> new ApiException("Change proposal not found"));
+        requireLegacy(proposal);
+        return proposal;
     }
 
     public void addChangeProposal(Integer project_id, Integer ai_interaction_id, ChangeProposal changeProposal) {
@@ -43,11 +45,15 @@ public class ChangeProposalService {
             aiInteraction = aiInteractionRepository.findById(ai_interaction_id)
                     .orElseThrow(() -> new ApiException("AI interaction not found"));
 
+            if (aiInteraction.getRequestId() != null) throw new ApiException("Managed runs create proposals through callbacks only");
             if (!aiInteraction.getProject().getId().equals(project_id)) {
                 throw new ApiException("AI interaction must belong to the proposal project");
             }
         }
 
+        changeProposal.setManagedRequestId(null); changeProposal.setProposedGraphJson(null);
+        changeProposal.setOutputId(null); changeProposal.setBaseRevision(null); changeProposal.setAppliedOutputId(null);
+        changeProposal.setAppliedRevision(null); changeProposal.setAppliedMappingJson(null);
         changeProposal.setId(null);
         changeProposal.setCreatedAt(null);
         changeProposal.setProject(project);
@@ -60,6 +66,7 @@ public class ChangeProposalService {
         ChangeProposal oldChangeProposal = changeProposalRepository.findById(proposal_id)
                 .orElseThrow(() -> new ApiException("Change proposal not found"));
 
+        requireLegacy(oldChangeProposal);
         oldChangeProposal.setTitle(changeProposal.getTitle());
         oldChangeProposal.setDescription(changeProposal.getDescription());
         oldChangeProposal.setStatus(changeProposal.getStatus());
@@ -74,10 +81,15 @@ public class ChangeProposalService {
         ChangeProposal changeProposal = changeProposalRepository.findById(proposal_id)
                 .orElseThrow(() -> new ApiException("Change proposal not found"));
 
+        requireLegacy(changeProposal);
         List<ChangeProposalItem> items = changeProposalItemRepository.findByChangeProposalId(proposal_id);
         changeProposalItemRepository.deleteAll(items);
         changeProposalItemRepository.flush();
 
         changeProposalRepository.delete(changeProposal);
     }
+    private void requireLegacy(ChangeProposal proposal) {
+        if (proposal.getManagedRequestId() != null) throw new ApiException("Use the managed proposal review endpoints");
+    }
+
 }

@@ -1,6 +1,7 @@
 package com.example.sana.Service.CreativityDomainServise;
 
 import com.example.sana.API.ApiException;
+import com.example.sana.Service.TechDomainServices.ArchitectureWriteGuard;
 import com.example.sana.DTO.CreativityDomainDTOs.WorldDTO;
 import com.example.sana.Model.CreativityDomainModels.World;
 import com.example.sana.Model.ProjectNode;
@@ -41,6 +42,7 @@ public class WorldService {
     public void addWorld(Integer outputId, WorldDTO dto) {
 
         ProjectOutput output = projectOutputRepository.findProjectOutputById(outputId);
+        ArchitectureWriteGuard.rejectUnversionedWrite(output);
 
         if (output == null) {
             throw new ApiException("Project output not found");
@@ -80,6 +82,7 @@ public class WorldService {
     public void updateWorld(Integer id, WorldDTO dto) {
 
         World world = worldRepository.findWorldById(id);
+        ArchitectureWriteGuard.rejectUnversionedWrite(world == null || world.getProjectNode() == null ? null : world.getProjectNode().getProjectOutput());
 
         if (world == null) {
             throw new ApiException("World not found");
@@ -113,6 +116,7 @@ public class WorldService {
     public void deleteWorld(Integer id) {
 
         World world = worldRepository.findWorldById(id);
+        ArchitectureWriteGuard.rejectUnversionedWrite(world == null || world.getProjectNode() == null ? null : world.getProjectNode().getProjectOutput());
 
         if (world == null) {
             throw new ApiException("World not found");

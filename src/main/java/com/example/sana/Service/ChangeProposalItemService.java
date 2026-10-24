@@ -18,18 +18,21 @@ public class ChangeProposalItemService {
     private final ChangeProposalRepository changeProposalRepository;
 
     public List<ChangeProposalItem> getAllChangeProposalItems() {
-        return changeProposalItemRepository.findAll();
+        return changeProposalItemRepository.findAll().stream().filter(item -> item.getChangeProposal() == null || item.getChangeProposal().getManagedRequestId() == null).toList();
     }
 
     public ChangeProposalItem getChangeProposalItemById(Integer item_id) {
-        return changeProposalItemRepository.findById(item_id)
+        ChangeProposalItem item = changeProposalItemRepository.findById(item_id)
                 .orElseThrow(() -> new ApiException("Change proposal item not found"));
+        requireLegacy(item.getChangeProposal());
+        return item;
     }
 
     public void addChangeProposalItem(Integer proposal_id, ChangeProposalItem changeProposalItem) {
         ChangeProposal changeProposal = changeProposalRepository.findById(proposal_id)
                 .orElseThrow(() -> new ApiException("Change proposal not found"));
 
+        requireLegacy(changeProposal);
         changeProposalItem.setId(null);
         changeProposalItem.setChangeProposal(changeProposal);
         changeProposalItemRepository.save(changeProposalItem);
@@ -39,6 +42,7 @@ public class ChangeProposalItemService {
         ChangeProposalItem oldChangeProposalItem = changeProposalItemRepository.findById(item_id)
                 .orElseThrow(() -> new ApiException("Change proposal item not found"));
 
+        requireLegacy(oldChangeProposalItem.getChangeProposal());
         oldChangeProposalItem.setOperation(changeProposalItem.getOperation());
         oldChangeProposalItem.setTargetType(changeProposalItem.getTargetType());
         oldChangeProposalItem.setTargetId(changeProposalItem.getTargetId());
@@ -52,6 +56,11 @@ public class ChangeProposalItemService {
         ChangeProposalItem changeProposalItem = changeProposalItemRepository.findById(item_id)
                 .orElseThrow(() -> new ApiException("Change proposal item not found"));
 
+        requireLegacy(changeProposalItem.getChangeProposal());
         changeProposalItemRepository.delete(changeProposalItem);
     }
+    private void requireLegacy(ChangeProposal proposal) {
+        if (proposal != null && proposal.getManagedRequestId() != null) throw new ApiException("Managed proposal changes are immutable");
+    }
+
 }
