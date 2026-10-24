@@ -32,7 +32,7 @@ public class ProjectNode {
     @NotNull(message = "position X cannot be null")
     @Column(columnDefinition = "double not null")
     private Double positionX;
-    @NotNull(message = "positon Y cannot be empty")
+    @NotNull(message = "position Y cannot be null")
     @Column(columnDefinition = "double not null")
     private Double positionY;
     @Column(columnDefinition = "date")

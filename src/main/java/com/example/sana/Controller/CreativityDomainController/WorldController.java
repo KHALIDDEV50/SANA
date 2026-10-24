@@ -3,7 +3,7 @@ package com.example.sana.Controller.CreativityDomainController;
 
 import com.example.sana.API.ApiResponse;
 import com.example.sana.DTO.CreativityDomainDTOs.WorldDTO;
-import com.example.sana.Service.CreativityDomainServise.WorldService;
+import com.example.sana.Service.CreativityDomainServices.WorldService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

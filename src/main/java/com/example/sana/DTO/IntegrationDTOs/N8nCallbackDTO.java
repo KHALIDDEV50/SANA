@@ -1,6 +1,6 @@
 package com.example.sana.DTO.IntegrationDTOs;
 
-import com.example.sana.DTO.TechDomainDTOs.GraphDefinitionDTO;
+import com.example.sana.DTO.GraphDefinitionDTO;
 import java.util.List;
 
 public record N8nCallbackDTO(Integer schemaVersion, String requestId, String executionId,

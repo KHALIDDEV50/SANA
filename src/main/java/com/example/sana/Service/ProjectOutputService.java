@@ -1,7 +1,10 @@
 package com.example.sana.Service;
 
 import com.example.sana.API.ApiException;
-import com.example.sana.Service.TechDomainServices.ArchitectureWriteGuard;
+import com.example.sana.Enums.RepresentationType;
+import com.example.sana.Service.DiagramServices.DiagramRules;
+import com.example.sana.Service.DiagramServices.DiagramRulesRegistry;
+import com.example.sana.Service.DiagramServices.DiagramWriteGuard;
 import com.example.sana.Model.Project;
 import com.example.sana.Model.ProjectOutput;
 import com.example.sana.Repository.ProjectOutputRepository;
@@ -20,6 +23,7 @@ public class ProjectOutputService {
 
     private final ProjectOutputRepository projectOutputRepository;
     private final ProjectRepository projectRepository;
+    private final DiagramRulesRegistry diagramRulesRegistry;
 
     public List<ProjectOutput> getAllProjectOutputs() {
         return projectOutputRepository.findAll();
@@ -46,9 +50,13 @@ public class ProjectOutputService {
             throw new ApiException("Project not found");
         }
 
-        if ("ARCHITECTURE".equals(projectOutput.getOutputType()) && (!"TECH".equals(project.getDomain())
-                || projectOutput.getRepresentationType() != com.example.sana.Enums.RepresentationType.GRAPH))
-            throw new ApiException("Architecture outputs require a TECH project and GRAPH representation");
+        // A managed diagram type must match the project's domain and be a graph
+        DiagramRules rules = diagramRulesRegistry.findRulesByDiagramType(projectOutput.getOutputType());
+        if (rules != null && (!rules.getDomain().equals(project.getDomain())
+                || projectOutput.getRepresentationType() != RepresentationType.GRAPH)) {
+            throw new ApiException(projectOutput.getOutputType() + " outputs require a " + rules.getDomain() + " project and GRAPH representation");
+        }
+
         projectOutput.setId(null);
         projectOutput.setVersion(null);
         projectOutput.setGraphRevision(0);
@@ -63,8 +71,8 @@ public class ProjectOutputService {
     @Transactional
     public void updateProjectOutput(Integer outputId, ProjectOutput projectOutput) {
         ProjectOutput output = getProjectOutputById(outputId);
-        ArchitectureWriteGuard.rejectUnversionedWrite(output);
-        ArchitectureWriteGuard.rejectUnversionedWrite(projectOutput);
+        DiagramWriteGuard.rejectUnversionedWrite(output);
+        DiagramWriteGuard.rejectUnversionedWrite(projectOutput);
         output.setTitle(projectOutput.getTitle());
         output.setOutputType(projectOutput.getOutputType());
         output.setRepresentationType(projectOutput.getRepresentationType());
@@ -75,7 +83,7 @@ public class ProjectOutputService {
     @Transactional
     public void deleteProjectOutput(Integer outputId) {
         ProjectOutput output = getProjectOutputById(outputId);
-        ArchitectureWriteGuard.rejectUnversionedWrite(output);
+        DiagramWriteGuard.rejectUnversionedWrite(output);
         projectOutputRepository.delete(output);
     }
 }

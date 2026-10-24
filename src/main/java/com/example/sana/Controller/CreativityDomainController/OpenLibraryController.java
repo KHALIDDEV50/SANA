@@ -1,6 +1,6 @@
 package com.example.sana.Controller.CreativityDomainController;
 
-import com.example.sana.Service.CreativityDomainServise.OpenLibraryService;
+import com.example.sana.Service.CreativityDomainServices.OpenLibraryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

@@ -45,8 +45,7 @@ public interface CharacterProfileRepository extends JpaRepository<CharacterProfi
     @Query("SELECT c FROM CharacterProfile c WHERE c.id = :characterId")
     Optional<CharacterProfile> findByIdForUpdate(@Param("characterId") Integer characterId);
 
-
-
-
+    // Characters of every output in a project, offered to the AI for branching scene speakers
+    List<CharacterProfile> findByProjectNode_ProjectOutput_Project_IdOrderByIdAsc(Integer projectId);
 }
 

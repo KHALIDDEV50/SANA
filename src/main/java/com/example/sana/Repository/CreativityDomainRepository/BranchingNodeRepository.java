@@ -39,4 +39,9 @@ public interface BranchingNodeRepository extends JpaRepository<BranchingNode, In
     List<Object[]> findMapNodes(@Param("outputId") Integer outputId);
 
 
+
+    // Used before an AI proposal deletes a character or story event that scenes still reference
+    boolean existsBySpeaker_Id(Integer characterId);
+
+    boolean existsByRelatedStoryEvent_Id(Integer storyEventId);
 }
