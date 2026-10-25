@@ -46,5 +46,7 @@ public class N8nProperties {
         } catch (RuntimeException e) {
             throw new IllegalStateException("Enabled n8n integration requires a valid webhook URL and both private keys");
         }
+
     }
+
 }
