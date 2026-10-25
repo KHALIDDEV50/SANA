@@ -1,4 +1,3 @@
-
 package com.example.sana.Service.Business;
 
 import com.example.sana.Enums.BusinessToolType;
@@ -21,6 +20,14 @@ public class BusinessResponseValidator {
 
     public JsonNode validate(String responseJson, BusinessToolType expectedToolType) {
 
+        if (expectedToolType == null) {
+            throw new IllegalArgumentException("Expected business tool type is required.");
+        }
+
+        if (responseJson == null || responseJson.isBlank()) {
+            throw new IllegalArgumentException("AI response must not be empty.");
+        }
+
         List<String> errors = new ArrayList<>();
         JsonNode root;
 
@@ -36,6 +43,16 @@ public class BusinessResponseValidator {
 
         requireText(root, "toolType", "$", errors);
         requireText(root, "executiveSummary", "$", errors);
+
+        // Reject a copied schema label instead of an actual executive summary.
+        JsonNode summary = root.get("executiveSummary");
+        if (summary != null && summary.isTextual()) {
+            String normalized = summary.asText().strip().replaceAll("\\s+", " ");
+            if (Set.of("ملخص تنفيذي", "الملخص التنفيذي", "Executive summary",
+                    "Executive Summary").contains(normalized)) {
+                errors.add("$.executiveSummary must contain an actual analysis, not a placeholder");
+            }
+        }
 
         JsonNode toolTypeNode = root.get("toolType");
 
@@ -76,6 +93,12 @@ public class BusinessResponseValidator {
     private void validateBusinessModel(
             JsonNode root, List<String> errors) {
 
+        validateAllowedFields(
+                root,
+                "$",
+                errors,
+                Set.of("toolType", "executiveSummary", "businessModel", "businessModelCoherence", "gaps", "assumptions", "recommendations", "followUpQuestions"));
+
         requireObject(root, "businessModel", "$", errors);
         requireArray(root, "businessModelCoherence", "$", errors);
         requireArray(root, "gaps", "$", errors);
@@ -87,6 +110,20 @@ public class BusinessResponseValidator {
 
         if (model == null || !model.isObject()) {
             return;
+        }
+
+        validateAllowedFields(
+                model,
+                "$.businessModel",
+                errors,
+                Set.of("customerSegments", "valuePropositions", "channels",
+                        "customerRelationships", "revenueStreams", "keyResources",
+                        "keyActivities", "keyPartnerships", "costStructure"));
+        for (String arrayName : List.of(
+                "customerSegments", "valuePropositions", "channels",
+                "customerRelationships", "revenueStreams", "keyResources",
+                "keyActivities", "keyPartnerships", "costStructure")) {
+            requireArray(model, arrayName, "$.businessModel", errors);
         }
 
         validateObjectArray(model, "customerSegments", "businessModel",
@@ -127,10 +164,38 @@ public class BusinessResponseValidator {
         validateEnumInArray(model, "costStructure", "costType",
                 "$.businessModel.costStructure",
                 errors, "FIXED", "VARIABLE", "MIXED");
+
+        validateObjectArray(root, "businessModelCoherence", "$", errors,
+                "finding", "businessImpact", "priority");
+        validateObjectArray(root, "gaps", "$", errors,
+                "area", "description", "whyItMatters", "priority");
+        validateObjectArray(root, "assumptions", "$", errors,
+                "assumption", "reason", "validationMethod");
+        validateObjectArray(root, "recommendations", "$", errors,
+                "title", "action", "rationale", "priority", "firstStep");
+        validateObjectArray(root, "followUpQuestions", "$", errors,
+                "question", "reason");
+        validatePriorityArrays(root, List.of("businessModelCoherence", "gaps", "recommendations"), "$", errors);
+
+        for (String arrayName : List.of(
+                "customerSegments", "valuePropositions", "channels",
+                "customerRelationships", "revenueStreams", "keyResources",
+                "keyActivities", "keyPartnerships", "costStructure")) {
+            validateEnumInArray(
+                    model, arrayName, "evidenceBasis",
+                    "$.businessModel." + arrayName,
+                    errors, "FACT", "ASSUMPTION", "INFERENCE");
+        }
     }
 
     private void validateTargetAudience(
             JsonNode root, List<String> errors) {
+
+        validateAllowedFields(
+                root,
+                "$",
+                errors,
+                Set.of("toolType", "executiveSummary", "audienceSegments", "customerPersonas", "segmentPrioritization", "gaps", "assumptions", "recommendations", "researchQuestions"));
 
         requireArray(root, "audienceSegments", "$", errors);
         requireArray(root, "customerPersonas", "$", errors);
@@ -151,6 +216,18 @@ public class BusinessResponseValidator {
                 "painPoints", "motivations", "objections",
                 "preferredChannels", "buyingTriggers", "evidenceBasis");
 
+        validateObjectArray(root, "segmentPrioritization", "$", errors,
+                "segmentName", "priority", "rationale", "keyUncertainty");
+        validateObjectArray(root, "gaps", "$", errors,
+                "area", "description", "validationMethod", "priority");
+        validateObjectArray(root, "assumptions", "$", errors,
+                "assumption", "reason", "validationMethod");
+        validateObjectArray(root, "recommendations", "$", errors,
+                "title", "action", "rationale", "priority", "firstStep");
+        validateObjectArray(root, "researchQuestions", "$", errors,
+                "question", "purpose");
+        validatePriorityArrays(root, List.of("segmentPrioritization", "gaps", "recommendations"), "$", errors);
+
         validateEnumInArray(root, "audienceSegments", "customerType",
                 "$.audienceSegments", errors,
                 "B2C", "B2B", "B2G", "B2B2C", "OTHER");
@@ -166,10 +243,26 @@ public class BusinessResponseValidator {
         validateEnumInArray(root, "segmentPrioritization", "priority",
                 "$.segmentPrioritization", errors,
                 "HIGH", "MEDIUM", "LOW");
+
+        validateEnumInArray(root, "audienceSegments", "evidenceBasis",
+                "$.audienceSegments", errors, "FACT", "ASSUMPTION", "INFERENCE");
+
+        validateEnumInArray(root, "customerPersonas", "evidenceBasis",
+                "$.customerPersonas", errors, "FACT", "ASSUMPTION", "INFERENCE");
+
+        Set<String> segmentNames = collectTextValues(root, "audienceSegments", "name");
+        validateReferences(root, "customerPersonas", "segmentName", "$", segmentNames, errors);
+        validateReferences(root, "segmentPrioritization", "segmentName", "$", segmentNames, errors);
     }
 
     private void validateSwot(
             JsonNode root, List<String> errors) {
+
+        validateAllowedFields(
+                root,
+                "$",
+                errors,
+                Set.of("toolType", "executiveSummary", "strengths", "weaknesses", "opportunities", "threats", "strategies", "criticalGaps", "assumptions", "recommendations", "followUpQuestions"));
 
         requireArray(root, "strengths", "$", errors);
         requireArray(root, "weaknesses", "$", errors);
@@ -197,6 +290,28 @@ public class BusinessResponseValidator {
                 "title", "description", "potentialImpact",
                 "warningIndicators", "evidenceBasis", "priority");
 
+        for (String arrayName : List.of(
+                "strengths", "weaknesses", "opportunities", "threats")) {
+            validateEnumInArray(
+                    root, arrayName, "evidenceBasis",
+                    "$." + arrayName, errors,
+                    "FACT", "ASSUMPTION", "INFERENCE");
+            validateEnumInArray(
+                    root, arrayName, "priority",
+                    "$." + arrayName, errors,
+                    "HIGH", "MEDIUM", "LOW");
+        }
+
+        validateObjectArray(root, "criticalGaps", "$", errors,
+                "area", "description", "validationMethod", "priority");
+        validateObjectArray(root, "assumptions", "$", errors,
+                "assumption", "reason", "validationMethod");
+        validateObjectArray(root, "recommendations", "$", errors,
+                "title", "action", "rationale", "priority", "firstStep");
+        validateObjectArray(root, "followUpQuestions", "$", errors,
+                "question", "reason");
+        validatePriorityArrays(root, List.of("criticalGaps", "recommendations"), "$", errors);
+
         JsonNode strategies = root.get("strategies");
 
         if (strategies != null && strategies.isObject()) {
@@ -219,11 +334,48 @@ public class BusinessResponseValidator {
             validateObjectArray(strategies, "WT", "strategies", errors,
                     "title", "action", "linkedWeaknesses",
                     "linkedThreats", "priority");
+
+            for (String strategyType : List.of("SO", "WO", "ST", "WT")) {
+                validateEnumInArray(
+                        strategies, strategyType, "priority",
+                        "$.strategies." + strategyType, errors,
+                        "HIGH", "MEDIUM", "LOW");
+            }
+
+            // Each strategy must reference existing items in its corresponding SWOT category.
+            for (String type : List.of("SO", "WO", "ST", "WT")) {
+                if (type.equals("SO") || type.equals("ST")) {
+                    validateReferences(strategies, type, "linkedStrengths", "$.strategies",
+                            collectTextValues(root, "strengths", "title"), errors);
+                } else {
+                    validateReferences(strategies, type, "linkedWeaknesses", "$.strategies",
+                            collectTextValues(root, "weaknesses", "title"), errors);
+                }
+                if (type.equals("SO") || type.equals("WO")) {
+                    validateReferences(strategies, type, "linkedOpportunities", "$.strategies",
+                            collectTextValues(root, "opportunities", "title"), errors);
+                } else {
+                    validateReferences(strategies, type, "linkedThreats", "$.strategies",
+                            collectTextValues(root, "threats", "title"), errors);
+                }
+            }
+
+            validateAllowedFields(
+                    strategies,
+                    "$.strategies",
+                    errors,
+                    Set.of("SO", "WO", "ST", "WT"));
         }
     }
 
     private void validateCompetitors(
             JsonNode root, List<String> errors) {
+
+        validateAllowedFields(
+                root,
+                "$",
+                errors,
+                Set.of("toolType", "executiveSummary", "competitors", "comparisonCriteria", "comparison", "competitiveAdvantages", "marketGaps", "informationGaps", "assumptions", "recommendations", "researchQuestions"));
 
         requireArray(root, "competitors", "$", errors);
         requireArray(root, "comparisonCriteria", "$", errors);
@@ -260,17 +412,52 @@ public class BusinessResponseValidator {
                 "competitorName", "missingInformation",
                 "whyItMatters", "researchMethod", "priority");
 
+        validateObjectArray(root, "assumptions", "$", errors,
+                "assumption", "reason", "validationMethod");
+        validateObjectArray(root, "recommendations", "$", errors,
+                "title", "action", "rationale", "priority", "firstStep");
+        validateObjectArray(root, "researchQuestions", "$", errors,
+                "question", "purpose");
+        validateEnumInArray(root, "recommendations", "priority",
+                "$.recommendations", errors, "HIGH", "MEDIUM", "LOW");
+
         validateEnumInArray(root, "competitors", "competitorType",
                 "$.competitors", errors, "DIRECT", "INDIRECT");
 
-        validateEnumInArray(root, "competitors", "confidence",
-                "$.competitors", errors, "HIGH", "MEDIUM", "LIMITED");
+        for (String arrayName : List.of("competitors", "comparison", "competitiveAdvantages")) {
+            validateEnumInArray(root, arrayName, "confidence",
+                    "$." + arrayName, errors, "HIGH", "MEDIUM", "LIMITED");
+        }
+
+        // informationGaps may intentionally use an unspecified competitor, so it is not linked here.
+        validateReferences(root, "comparison", "competitorName", "$",
+                collectTextValues(root, "competitors", "name"), errors);
+        validateReferences(root, "comparison", "criterion", "$",
+                collectTextValues(root, "comparisonCriteria", "criterion"), errors);
+
+        for (String arrayName : List.of(
+                "competitors", "comparison", "competitiveAdvantages", "marketGaps")) {
+            validateEnumInArray(
+                    root, arrayName, "evidenceBasis",
+                    "$." + arrayName, errors,
+                    "PROVIDED_DATA", "ASSUMPTION", "INFERENCE");
+        }
+
+        validateEnumInArray(root, "informationGaps", "priority",
+                "$.informationGaps", errors, "HIGH", "MEDIUM", "LOW");
     }
 
     private void validateRisks(
             JsonNode root, List<String> errors) {
 
-        requireObject(root, "riskContext", "$", errors);
+        validateAllowedFields(
+                root,
+                "$",
+                errors,
+                Set.of("toolType", "executiveSummary", "riskContext", "risks", "criticalRiskAreas", "assumptions", "informationGaps", "recommendations", "followUpQuestions"));
+
+        // Validate riskContext as a non-empty string.
+        requireText(root, "riskContext", "$", errors);
         requireArray(root, "risks", "$", errors);
         requireArray(root, "criticalRiskAreas", "$", errors);
         requireArray(root, "assumptions", "$", errors);
@@ -286,6 +473,18 @@ public class BusinessResponseValidator {
                 "mitigationMeasures", "contingencyPlan",
                 "responsibleRole", "evidenceBasis", "confidence");
 
+        validateObjectArray(root, "criticalRiskAreas", "$", errors,
+                "area", "description", "priority", "informationNeeded");
+        validateObjectArray(root, "assumptions", "$", errors,
+                "assumption", "reason", "validationMethod");
+        validateObjectArray(root, "informationGaps", "$", errors,
+                "area", "missingInformation", "whyItMatters", "validationMethod", "priority");
+        validateObjectArray(root, "recommendations", "$", errors,
+                "title", "action", "rationale", "priority", "firstStep");
+        validateObjectArray(root, "followUpQuestions", "$", errors,
+                "question", "reason");
+        validatePriorityArrays(root, List.of("criticalRiskAreas", "informationGaps", "recommendations"), "$", errors);
+
         validateEnumInArray(root, "risks", "category",
                 "$.risks", errors,
                 "STRATEGIC", "FINANCIAL", "OPERATIONAL",
@@ -298,6 +497,21 @@ public class BusinessResponseValidator {
 
         validateEnumInArray(root, "risks", "confidence",
                 "$.risks", errors, "HIGH", "MEDIUM", "LIMITED");
+
+        validateEnumInArray(root, "risks", "evidenceBasis",
+                "$.risks", errors, "FACT", "ASSUMPTION", "INFERENCE");
+    }
+
+    private void validatePriorityArrays(
+            JsonNode parent,
+            List<String> arrayNames,
+            String parentPath,
+            List<String> errors) {
+        for (String arrayName : arrayNames) {
+            validateEnumInArray(parent, arrayName, "priority",
+                    parentPath + "." + arrayName, errors,
+                    "HIGH", "MEDIUM", "LOW");
+        }
     }
 
     private void validateObjectArray(
@@ -322,6 +536,13 @@ public class BusinessResponseValidator {
                 continue;
             }
 
+            // Reject properties that are not declared for this object schema.
+            validateAllowedFields(
+                    item,
+                    path,
+                    errors,
+                    new HashSet<>(Arrays.asList(requiredFields)));
+
             for (String field : requiredFields) {
                 JsonNode value = item.get(field);
 
@@ -335,19 +556,24 @@ public class BusinessResponseValidator {
                         errors.add(path + "." + field + " must be an array");
                     } else {
                         for (int j = 0; j < value.size(); j++) {
-                            if (!value.get(j).isTextual()) {
+                            if (!value.get(j).isTextual()
+                                    || value.get(j).asText().isBlank()) {
                                 errors.add(path + "." + field
-                                        + "[" + j + "] must be a string");
+                                        + "[" + j + "] must be a non-empty string");
                             }
                         }
                     }
-                } else if (!value.isTextual()) {
-                    errors.add(path + "." + field + " must be a string");
+                } else {
+                    // Required analytical text must contain meaningful non-blank content.
+                    requireText(item, field, path, errors);
                 }
             }
         }
     }
 
+    /**
+     * Validates that a field in each array object contains an allowed enum value.
+     */
     private void validateEnumInArray(
             JsonNode parent,
             String arrayName,
@@ -366,6 +592,7 @@ public class BusinessResponseValidator {
 
         for (int i = 0; i < array.size(); i++) {
             JsonNode item = array.get(i);
+            String fieldPath = path + "[" + i + "]." + fieldName;
 
             if (!item.isObject()) {
                 continue;
@@ -373,12 +600,45 @@ public class BusinessResponseValidator {
 
             JsonNode value = item.get(fieldName);
 
-            if (value != null && value.isTextual()
-                    && !allowed.contains(value.asText())) {
-                errors.add(path + "[" + i + "]." + fieldName
-                        + " has invalid value: " + value.asText());
+            if (value == null || value.isNull()) {
+                errors.add(fieldPath + " is required");
+                continue;
+            }
+
+            if (!value.isTextual() || value.asText().isBlank()) {
+                errors.add(fieldPath + " must be a non-empty string");
+                continue;
+            }
+
+            if (!allowed.contains(value.asText())) {
+                errors.add(
+                        fieldPath + " has invalid value: " + value.asText()
+                                + ". Allowed values: " + allowed);
             }
         }
+    }
+    /**
+     * Rejects fields that are not declared in the expected object schema.
+     */
+    private void validateAllowedFields(
+            JsonNode object,
+            String path,
+            List<String> errors,
+            Set<String> allowedFields) {
+
+        if (object == null || !object.isObject()) {
+            return;
+        }
+
+        object.properties().forEach(entry -> {
+            String field = entry.getKey();
+
+            if (!allowedFields.contains(field)) {
+                errors.add(
+                        path + "." + field
+                                + " is not allowed by the response schema");
+            }
+        });
     }
 
     private void requireText(
@@ -422,6 +682,49 @@ public class BusinessResponseValidator {
         }
     }
 
+    /** Collects valid reference targets without duplicating structural validation. */
+    private Set<String> collectTextValues(JsonNode parent, String arrayName, String field) {
+        Set<String> values = new HashSet<>();
+        JsonNode array = parent.get(arrayName);
+        if (array != null && array.isArray()) {
+            for (JsonNode item : array) {
+                JsonNode value = item.isObject() ? item.get(field) : null;
+                if (value != null && value.isTextual() && !value.asText().isBlank()) {
+                    values.add(value.asText());
+                }
+            }
+        }
+        return values;
+    }
+
+    /** Checks scalar and array references against the names supplied in this response. */
+    private void validateReferences(JsonNode parent, String arrayName, String field,
+                                    String parentPath, Set<String> targets, List<String> errors) {
+        JsonNode array = parent.get(arrayName);
+        if (array == null || !array.isArray()) {
+            return;
+        }
+        for (int i = 0; i < array.size(); i++) {
+            JsonNode item = array.get(i);
+            JsonNode value = item.isObject() ? item.get(field) : null;
+            String path = parentPath + "." + arrayName + "[" + i + "]." + field;
+            if (value != null && value.isTextual() && !value.asText().isBlank()) {
+                if (!targets.contains(value.asText())) {
+                    errors.add(path + " must reference an existing item: " + value.asText());
+                }
+            } else if (value != null && value.isArray()) {
+                for (int j = 0; j < value.size(); j++) {
+                    JsonNode reference = value.get(j);
+                    if (reference.isTextual() && !reference.asText().isBlank()
+                            && !targets.contains(reference.asText())) {
+                        errors.add(path + "[" + j + "] must reference an existing item: "
+                                + reference.asText());
+                    }
+                }
+            }
+        }
+    }
+
     private boolean isArrayField(String field) {
         return Set.of(
                 "needs", "conditions", "warningIndicators",
@@ -434,7 +737,8 @@ public class BusinessResponseValidator {
                 "preventiveMeasures", "mitigationMeasures",
                 "customerSegments", "painPoints", "motivations",
                 "buyingBarriers", "decisionCriteria", "goals",
-                "objections", "preferredChannels", "buyingTriggers"
+                "objections", "preferredChannels", "buyingTriggers",
+                "informationNeeded"
         ).contains(field);
     }
 }
