@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 @Service
+@lombok.extern.slf4j.Slf4j
 public class N8nClient {
     private final N8nProperties properties;
     private final AIJson json;
@@ -38,6 +39,12 @@ public class N8nClient {
                     .contentType(org.springframework.http.MediaType.APPLICATION_JSON).body(storedRequest)
                     .exchange((request, response) -> {
                         int status = response.getStatusCode().value();
+                        // Log the status only; never expose credentials or request content.
+                        log.info(
+                                "n8n dispatch response. Request ID: {}, HTTP status: {}",
+                                requestId,
+                                status
+                        );
                         if (status == 429) throw new DispatchFailure(true, "DISPATCH_RATE_LIMITED");
                         if (status >= 400 && status < 500) throw new DispatchFailure(false, "DISPATCH_REJECTED");
                         if (status != 202) throw new DispatchFailure(null, "DISPATCH_UNCERTAIN");
