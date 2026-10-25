@@ -1,4 +1,4 @@
-package com.example.sana.Service.CreativityDomainServise;
+package com.example.sana.Service.CreativityDomainServices;
 
 import com.example.sana.API.ApiException;
 import com.example.sana.DTO.CreativityDomainDTOs.MoodboardDTO;

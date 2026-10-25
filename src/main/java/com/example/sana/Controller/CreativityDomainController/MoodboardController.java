@@ -2,8 +2,8 @@ package com.example.sana.Controller.CreativityDomainController;
 
 import com.example.sana.API.ApiResponse;
 import com.example.sana.DTO.CreativityDomainDTOs.MoodboardDTO;
-import com.example.sana.Service.CreativityDomainServise.MoodboardService;
-import com.example.sana.Service.CreativityDomainServise.OpenverseService;
+import com.example.sana.Service.CreativityDomainServices.MoodboardService;
+import com.example.sana.Service.CreativityDomainServices.OpenverseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
