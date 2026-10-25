@@ -18,6 +18,7 @@ import java.util.Set;
 import static com.example.sana.Service.CreativityDomainServices.CreativityProperties.LONG_TEXT;
 import static com.example.sana.Service.CreativityDomainServices.CreativityProperties.optionalPositiveInteger;
 import static com.example.sana.Service.CreativityDomainServices.CreativityProperties.optionalText;
+import static com.example.sana.Service.CreativityDomainServices.CreativityProperties.optionalTextOrList;
 import static com.example.sana.Service.CreativityDomainServices.CreativityProperties.requireInteger;
 import static com.example.sana.Service.CreativityDomainServices.CreativityProperties.requireText;
 import static com.example.sana.Service.CreativityDomainServices.CreativityProperties.text;
@@ -36,11 +37,13 @@ public class StoryMapRules extends BasicDiagramRules {
                 "Story map of characters, worlds, locations, world rules and story events. properties.label is the element's name or title. "
                         + "CHARACTER properties: shortDescription, role (max 50 chars), age (positive number) are required; optional aliases (100), "
                         + "appearance, history, innerConflict, characterArc, writerNotes, and traits, strengths, weaknesses, skills, goals, fears, "
-                        + "secrets, characterValues (each max 50 chars). Label max 255. "
+                        + "secrets, characterValues (each a short text of max 50 chars in total, e.g. \"brave, loyal\"; a list of short words is also "
+                        + "accepted and joined with commas, but must still fit 50 chars). Label max 255. "
                         + "WORLD properties: description required; optional history, lore, atmosphere, notes. Label max 50. "
                         + "LOCATION properties: optional locationType (50), narrativeSignificance, notes, worldKey (key of a WORLD node), "
                         + "parentLocationKey (key of another LOCATION node). Label max 50. "
-                        + "WORLD_RULE properties: description required; optional scope, conditions, exceptions, consequences (each max 50), notes, "
+                        + "WORLD_RULE properties: description required; optional scope, conditions, exceptions, consequences (each a short text of "
+                        + "max 50 chars; put longer explanations in description or notes), notes, "
                         + "worldKey. Label max 50. "
                         + "STORY_EVENT properties: description and presentationOrder (whole number) required; optional eventType (50), "
                         + "chronologicalOrder (positive), inWorldTime (50), notes. Label max 255. "
@@ -68,7 +71,7 @@ public class StoryMapRules extends BasicDiagramRules {
                     optionalText(properties, key, LONG_TEXT);
                 }
                 for (String key : List.of("traits", "strengths", "weaknesses", "skills", "goals", "fears", "secrets", "characterValues")) {
-                    optionalText(properties, key, 50);
+                    optionalTextOrList(properties, key, 50);
                 }
             }
             case "WORLD" -> {
@@ -90,7 +93,7 @@ public class StoryMapRules extends BasicDiagramRules {
                 GraphRuleChecks.requireText(properties.get("label"), 50, "World rule name");
                 requireText(properties, "description", LONG_TEXT);
                 for (String key : List.of("scope", "conditions", "exceptions", "consequences")) {
-                    optionalText(properties, key, 50);
+                    optionalTextOrList(properties, key, 50);
                 }
                 optionalText(properties, "notes", LONG_TEXT);
                 optionalText(properties, "worldKey", 100);

@@ -34,7 +34,12 @@ public class GraphValidator {
         for (var node : candidate.getNodes()) {
             if (node == null) throw new ApiException("Null graph node");
             identity(node.getKey(), node.getId(), oldNodes, oldKeys, keys, nodeIds);
-            rules.validateNode(node.getType(), node.getProperties(), node.getPositionX(), node.getPositionY());
+            // Name the element in the error so a rejected AI proposal or manual edit is easy to trace
+            try {
+                rules.validateNode(node.getType(), node.getProperties(), node.getPositionX(), node.getPositionY());
+            } catch (ApiException e) {
+                throw new ApiException(node.getKey() + ": " + e.getMessage());
+            }
             properties(node.getProperties(), 0); nodes.put(node.getKey(), node);
         }
         for (var edge : candidate.getEdges()) {
@@ -44,7 +49,11 @@ public class GraphValidator {
             if (source == null || target == null || source == target) throw new ApiException("Edge endpoints must reference two distinct nodes in proposedGraph");
             if (edge.getProperties() == null) throw new ApiException("Edge properties are required");
             if (edge.getLabel() == null) edge.setLabel(edge.getProperties().get("label") instanceof String label ? label : edge.getType());
-            rules.validateEdge(edge.getType(), edge.getLabel(), source.getType(), target.getType(), edge.getProperties());
+            try {
+                rules.validateEdge(edge.getType(), edge.getLabel(), source.getType(), target.getType(), edge.getProperties());
+            } catch (ApiException e) {
+                throw new ApiException(edge.getKey() + ": " + e.getMessage());
+            }
             properties(edge.getProperties(), 0);
         }
         // Rules that look at the whole graph, for example "only one central topic"

@@ -32,6 +32,7 @@ import java.util.Map;
 
 import static com.example.sana.Service.CreativityDomainServices.CreativityProperties.integer;
 import static com.example.sana.Service.CreativityDomainServices.CreativityProperties.text;
+import static com.example.sana.Service.CreativityDomainServices.CreativityProperties.textOrList;
 
 // Reads and saves Story Map diagrams. Each node's properties are the fields of its
 // CharacterProfile, World, Location, WorldRule or StoryEvent row; properties.label is the name or title.
@@ -239,16 +240,16 @@ public class StoryMapGraphAdapter implements DiagramGraphAdapter {
         character.setAliases(text(properties, "aliases"));
         character.setAge(integer(properties, "age"));
         character.setAppearance(text(properties, "appearance"));
-        character.setTraits(text(properties, "traits"));
-        character.setStrengths(text(properties, "strengths"));
-        character.setWeaknesses(text(properties, "weaknesses"));
-        character.setSkills(text(properties, "skills"));
+        character.setTraits(textOrList(properties, "traits"));
+        character.setStrengths(textOrList(properties, "strengths"));
+        character.setWeaknesses(textOrList(properties, "weaknesses"));
+        character.setSkills(textOrList(properties, "skills"));
         character.setHistory(text(properties, "history"));
-        character.setGoals(text(properties, "goals"));
-        character.setFears(text(properties, "fears"));
+        character.setGoals(textOrList(properties, "goals"));
+        character.setFears(textOrList(properties, "fears"));
         character.setInnerConflict(text(properties, "innerConflict"));
-        character.setSecrets(text(properties, "secrets"));
-        character.setCharacterValues(text(properties, "characterValues"));
+        character.setSecrets(textOrList(properties, "secrets"));
+        character.setCharacterValues(textOrList(properties, "characterValues"));
         character.setCharacterArc(text(properties, "characterArc"));
         character.setWriterNotes(text(properties, "writerNotes"));
         character.setUpdatedAt(LocalDate.now());
@@ -362,10 +363,10 @@ public class StoryMapGraphAdapter implements DiagramGraphAdapter {
 
         rule.setName(text(properties, "label"));
         rule.setDescription(text(properties, "description"));
-        rule.setScope(text(properties, "scope"));
-        rule.setConditions(text(properties, "conditions"));
-        rule.setExceptions(text(properties, "exceptions"));
-        rule.setConsequences(text(properties, "consequences"));
+        rule.setScope(textOrList(properties, "scope"));
+        rule.setConditions(textOrList(properties, "conditions"));
+        rule.setExceptions(textOrList(properties, "exceptions"));
+        rule.setConsequences(textOrList(properties, "consequences"));
         rule.setNotes(text(properties, "notes"));
         rule.setUpdatedAt(LocalDate.now());
 

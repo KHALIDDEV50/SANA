@@ -4,7 +4,9 @@ import com.example.sana.API.ApiException;
 import com.example.sana.Service.DiagramServices.GraphRuleChecks;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 // Reads and checks typed values in Creativity graph properties.
 // JSON numbers can arrive as Integer, Long or BigDecimal, so integers are read through Number.
@@ -22,6 +24,40 @@ public final class CreativityProperties {
         Object value = properties.get(key);
 
         return value instanceof String text ? text : null;
+    }
+
+    // A short text property that may also arrive as a list of short texts (AI agents often send
+    // ["brave", "loyal"]); a list is joined with commas, an Arabic comma when the text is Arabic
+    public static String textOrList(Map<String, Object> properties, String key) {
+
+        Object value = properties.get(key);
+
+        if (value instanceof String text) {
+            return text;
+        }
+
+        if (value instanceof List<?> list && !list.isEmpty() && list.stream().allMatch(item -> item instanceof String)) {
+            String joined = list.stream().map(item -> ((String) item).trim()).collect(Collectors.joining(", "));
+            return joined.codePoints().anyMatch(c -> c >= 0x0600 && c <= 0x06FF) ? joined.replace(", ", "، ") : joined;
+        }
+
+        return null;
+    }
+
+    // When present, the property must be text, or a list of texts, that fits in limit characters once joined
+    public static void optionalTextOrList(Map<String, Object> properties, String key, int limit) {
+
+        Object value = properties.get(key);
+
+        if (value == null) {
+            return;
+        }
+
+        String text = textOrList(properties, key);
+
+        if (text == null || text.length() > limit) {
+            throw new ApiException("Property " + key + " must be text, or a list of short texts, of at most " + limit + " characters in total");
+        }
     }
 
     // An integer property, or null when it is missing
