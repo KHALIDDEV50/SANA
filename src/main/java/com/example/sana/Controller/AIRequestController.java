@@ -1,5 +1,8 @@
 package com.example.sana.Controller;
 
+import com.example.sana.Service.OwnershipService;
+import com.example.sana.Model.User;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.example.sana.DTO.AIDTOs.AIProposalAcceptanceDTO;
 import com.example.sana.DTO.AIDTOs.AIProposalResponseDTO;
 import com.example.sana.DTO.AIDTOs.AIRequestDTO;
@@ -21,34 +24,45 @@ public class AIRequestController {
 
     private final AIRequestService aiRequestService;
     private final AIProposalService aiProposalService;
+    private final OwnershipService ownershipService;
 
     // Start a CREATE, EDIT or ADVISE request; the result arrives later through the n8n callback
     @PostMapping("/requests")
-    public ResponseEntity<AIRunResponseDTO> startRequest(@PathVariable Integer projectId, @Valid @RequestBody AIRequestDTO request) {
+    public ResponseEntity<AIRunResponseDTO> startRequest(@AuthenticationPrincipal User user, @PathVariable Integer projectId, @Valid @RequestBody AIRequestDTO request) {
+        ownershipService.checkProject(user, projectId);
+
         return ResponseEntity.status(202).body(aiRequestService.start(projectId, request));
     }
 
     // Poll the state and result of a request
     @GetMapping("/requests/{requestId}")
-    public ResponseEntity<AIRunResponseDTO> getRequest(@PathVariable Integer projectId, @PathVariable UUID requestId) {
+    public ResponseEntity<AIRunResponseDTO> getRequest(@AuthenticationPrincipal User user, @PathVariable Integer projectId, @PathVariable UUID requestId) {
+        ownershipService.checkProject(user, projectId);
+
         return ResponseEntity.status(200).body(aiRequestService.getRun(projectId, requestId));
     }
 
     // Show a proposed diagram and its computed changes
     @GetMapping("/proposals/{proposalId}")
-    public ResponseEntity<AIProposalResponseDTO> previewProposal(@PathVariable Integer projectId, @PathVariable Integer proposalId) {
+    public ResponseEntity<AIProposalResponseDTO> previewProposal(@AuthenticationPrincipal User user, @PathVariable Integer projectId, @PathVariable Integer proposalId) {
+        ownershipService.checkProject(user, projectId);
+
         return ResponseEntity.status(200).body(aiProposalService.preview(projectId, proposalId));
     }
 
     // Apply a pending proposal to the diagram
     @PostMapping("/proposals/{proposalId}/accept")
-    public ResponseEntity<AIProposalAcceptanceDTO> acceptProposal(@PathVariable Integer projectId, @PathVariable Integer proposalId) {
+    public ResponseEntity<AIProposalAcceptanceDTO> acceptProposal(@AuthenticationPrincipal User user, @PathVariable Integer projectId, @PathVariable Integer proposalId) {
+        ownershipService.checkProject(user, projectId);
+
         return ResponseEntity.status(200).body(aiProposalService.accept(projectId, proposalId));
     }
 
     // Reject a pending proposal without changing the diagram
     @PostMapping("/proposals/{proposalId}/reject")
-    public ResponseEntity<AIProposalResponseDTO> rejectProposal(@PathVariable Integer projectId, @PathVariable Integer proposalId) {
+    public ResponseEntity<AIProposalResponseDTO> rejectProposal(@AuthenticationPrincipal User user, @PathVariable Integer projectId, @PathVariable Integer proposalId) {
+        ownershipService.checkProject(user, projectId);
+
         return ResponseEntity.status(200).body(aiProposalService.reject(projectId, proposalId));
     }
 }

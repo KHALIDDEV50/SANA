@@ -1,5 +1,8 @@
 package com.example.sana.Controller.CreativityDomainController;
 
+import com.example.sana.Service.OwnershipService;
+import com.example.sana.Model.User;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.example.sana.Service.CreativityDomainServices.YarnExportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -13,17 +16,22 @@ import org.springframework.web.bind.annotation.*;
 public class YarnExportController {
 
     private final YarnExportService yarnExportService;
+    private final OwnershipService ownershipService;
 
     // Export a branching narrative using the first scene as the start.
     @GetMapping("/export/yarn/{outputId}")
-    public ResponseEntity<?> exportYarn(@PathVariable Integer outputId) {
+    public ResponseEntity<?> exportYarn(@AuthenticationPrincipal User user, @PathVariable Integer outputId) {
+        ownershipService.checkOutput(user, outputId);
+
         return downloadYarn(outputId, null);
     }
 
     // Export a branching narrative with a selected starting scene.
     // startNodeId refers to BranchingNode.id.
     @GetMapping("/export/yarn/{outputId}/start/{startNodeId}")
-    public ResponseEntity<?> exportYarnWithStart(@PathVariable Integer outputId, @PathVariable Integer startNodeId) {
+    public ResponseEntity<?> exportYarnWithStart(@AuthenticationPrincipal User user, @PathVariable Integer outputId, @PathVariable Integer startNodeId) {
+        ownershipService.checkOutput(user, outputId);
+
         return downloadYarn(outputId, startNodeId);
     }
 

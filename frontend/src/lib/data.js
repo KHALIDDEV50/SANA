@@ -1,7 +1,6 @@
 import {TYPES, CREATIVE_TYPES, typesForDomain, starterNodes} from './templates';
 export {TYPES};
 export const API_MODE = import.meta.env.VITE_SANA_MODE === 'api';
-export const USER_ID = Number(import.meta.env.VITE_SANA_USER_ID || 0);
 const BASE = (import.meta.env.VITE_SANA_API_URL || '').replace(/\/$/,'');
 const STORE = 'sana-demo-v1';
 const now = () => new Date().toISOString();
@@ -23,8 +22,24 @@ const examples = [
 function load(){try{const parsed=JSON.parse(localStorage.getItem(STORE));if(Array.isArray(parsed))return parsed;}catch{} return clone(examples)}
 function persist(projects){localStorage.setItem(STORE,JSON.stringify(projects));return projects}
 function projectWithCounts(p){return {...p,elementCount:(p.elements?.length ?? p.outputs?.reduce((n,o)=>n+(o.nodes?.length||0),0) ?? 0),relationCount:p.relations?.length ?? 0}}
+// ---------- Login (HTTP Basic) ----------
+// The backend uses Basic Auth: every request carries "Basic base64(email:password)".
+// It is kept in sessionStorage, so it is forgotten when the tab closes.
+const AUTH_KEY='sana-auth';
+const toBasic=(email,password)=>btoa(String.fromCharCode(...new TextEncoder().encode(`${email}:${password}`)));
+export const authApi={
+ hasCredentials:()=>{try{return Boolean(sessionStorage.getItem(AUTH_KEY))}catch{return false}},
+ me:()=>api('/api/v1/auth/me'),
+ async login(email,password){try{sessionStorage.setItem(AUTH_KEY,toBasic(email,password))}catch{}try{return await api('/api/v1/auth/me')}catch(e){authApi.forget();throw e}},
+ async register(name,email,password){await api('/api/v1/auth/register',{method:'POST',body:JSON.stringify({name,email,passwordHash:password})});return authApi.login(email,password)},
+ async logout(){try{await api('/api/v1/auth/logout',{method:'POST'})}catch{}authApi.forget()},
+ forget(){try{sessionStorage.removeItem(AUTH_KEY)}catch{}},
+};
 export async function api(path,opts={}){
- const response=await fetch(`${BASE}${path}`,{...opts,credentials:'include',headers:{'Content-Type':'application/json',...(opts.headers||{})}});
+ let token=null;try{token=sessionStorage.getItem(AUTH_KEY)}catch{}
+ const response=await fetch(`${BASE}${path}`,{...opts,credentials:'include',headers:{'Content-Type':'application/json',...(token?{Authorization:`Basic ${token}`}:{}),...(opts.headers||{})}});
+ // A 401 means the login is missing or wrong: forget it and let the app show the login screen
+ if(response.status===401&&!path.startsWith('/api/v1/auth/')){authApi.forget();window.dispatchEvent(new Event('sana-unauthorized'))}
  if(!response.ok){let detail='';try{const j=await response.json();detail=j.message||j.error||j.detail||'';}catch{}throw new Error(detail||`HTTP ${response.status} — ${path}`)}
  if(response.status===204)return null;const text=await response.text();if(!text)return null;try{return JSON.parse(text)}catch{return text}
 }
@@ -56,7 +71,7 @@ let diagramTypesCache=null;
 export async function diagramTypes(){if(!diagramTypesCache)diagramTypesCache=await api('/api/v1/diagram/types');return diagramTypesCache||[]}
 
 // ---------- API reads ----------
-async function getApiProjects(){if(!USER_ID)throw new Error('API mode requires VITE_SANA_USER_ID (existing backend test user).');const ps=await api(`/api/v1/project/get/user/${USER_ID}`);return (Array.isArray(ps)?ps:[]).map(p=>({...p,backendDomain:p.domain,domain:toUiDomain(p)}));}
+async function getApiProjects(){const ps=await api('/api/v1/project/get/my');return (Array.isArray(ps)?ps:[]).map(p=>({...p,backendDomain:p.domain,domain:toUiDomain(p)}));}
 async function listDiagrams(projectId){const list=await api(`/api/v1/diagram/get/project/${projectId}`);return (Array.isArray(list)?list:[]).map(d=>({id:d.id,title:d.title,outputType:d.outputType}))}
 async function createDiagram(projectId,title,diagramType){
  await api(`/api/v1/diagram/add/${projectId}`,json('POST',{title,diagramType}));
@@ -146,7 +161,8 @@ export const repository={
  async createProject(payload){
   if(API_MODE){
    const before=await getApiProjects();const domain=payload.domain||'writing';
-   await api(`/api/v1/project/add/${USER_ID}`,json('POST',{name:payload.name,description:payload.description||'',domain:backendDomain(domain),status:'DRAFT'}));
+   const me=await authApi.me();
+   await api(`/api/v1/project/add/${me.id}`,json('POST',{name:payload.name,description:payload.description||'',domain:backendDomain(domain),status:'DRAFT'}));
    const after=await getApiProjects();const ids=new Set(before.map(x=>x.id));const p=after.find(x=>!ids.has(x.id));
    if(!p)throw new Error('Project created but could not resolve its ID; refresh projects before retrying');
    storage.set(uiDomainKey(p.id),domain);

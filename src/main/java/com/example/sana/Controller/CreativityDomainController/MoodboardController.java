@@ -1,5 +1,8 @@
 package com.example.sana.Controller.CreativityDomainController;
 
+import com.example.sana.Service.OwnershipService;
+import com.example.sana.Model.User;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.example.sana.API.ApiResponse;
 import com.example.sana.DTO.CreativityDomainDTOs.MoodboardDTO;
 import com.example.sana.Service.CreativityDomainServices.MoodboardService;
@@ -16,6 +19,7 @@ public class MoodboardController {
 
     private final MoodboardService moodboardService;
     private final OpenverseService openverseService;
+    private final OwnershipService ownershipService;
 
     // Search Openverse without a key; images are not saved by searching.
     @GetMapping("/images/search")
@@ -33,52 +37,70 @@ public class MoodboardController {
 
     // Create one board inside an existing SANA Project.
     @PostMapping("/add/{projectId}")
-    public ResponseEntity<?> createBoard(@PathVariable Integer projectId, @Valid @RequestBody MoodboardDTO.CreateBoard request) {
+    public ResponseEntity<?> createBoard(@AuthenticationPrincipal User user, @PathVariable Integer projectId, @Valid @RequestBody MoodboardDTO.CreateBoard request) {
+        ownershipService.checkProject(user, projectId);
+
         return ResponseEntity.status(200).body(moodboardService.createBoard(projectId, request));
     }
 
     @GetMapping("/get/project/{projectId}")
-    public ResponseEntity<?> projectBoards(@PathVariable Integer projectId) {
+    public ResponseEntity<?> projectBoards(@AuthenticationPrincipal User user, @PathVariable Integer projectId) {
+        ownershipService.checkProject(user, projectId);
+
         return ResponseEntity.status(200).body(moodboardService.getProjectBoards(projectId));
     }
 
     @GetMapping("/get/{outputId}")
-    public ResponseEntity<?> getBoard(@PathVariable Integer outputId) {
+    public ResponseEntity<?> getBoard(@AuthenticationPrincipal User user, @PathVariable Integer outputId) {
+        ownershipService.checkOutput(user, outputId);
+
         return ResponseEntity.status(200).body(moodboardService.getBoard(outputId));
     }
 
     @PutMapping("/update/{outputId}/title")
-    public ResponseEntity<?> renameBoard(@PathVariable Integer outputId, @Valid @RequestBody MoodboardDTO.RenameBoard request) {
+    public ResponseEntity<?> renameBoard(@AuthenticationPrincipal User user, @PathVariable Integer outputId, @Valid @RequestBody MoodboardDTO.RenameBoard request) {
+        ownershipService.checkOutput(user, outputId);
+
         return ResponseEntity.status(200).body(moodboardService.renameBoard(outputId, request));
     }
 
     // Add a verified Openverse image as a standalone ProjectNode.
     @PostMapping("/add/{outputId}/images")
-    public ResponseEntity<?> addImage(@PathVariable Integer outputId, @Valid @RequestBody MoodboardDTO.AddImage request) {
+    public ResponseEntity<?> addImage(@AuthenticationPrincipal User user, @PathVariable Integer outputId, @Valid @RequestBody MoodboardDTO.AddImage request) {
+        ownershipService.checkOutput(user, outputId);
+
         return ResponseEntity.status(200).body(moodboardService.addImage(outputId, request));
     }
 
     // Add an independent, freely movable text label.
     @PostMapping("/add/{outputId}/labels")
-    public ResponseEntity<?> addLabel(@PathVariable Integer outputId, @Valid @RequestBody MoodboardDTO.AddLabel request) {
+    public ResponseEntity<?> addLabel(@AuthenticationPrincipal User user, @PathVariable Integer outputId, @Valid @RequestBody MoodboardDTO.AddLabel request) {
+        ownershipService.checkOutput(user, outputId);
+
         return ResponseEntity.status(200).body(moodboardService.addLabel(outputId, request));
     }
 
     // Save X/Y after drag-and-drop for either image or label.
     @PutMapping("/update/{outputId}/items/{itemId}/position")
-    public ResponseEntity<?> moveItem(@PathVariable Integer outputId, @PathVariable Integer itemId,
+    public ResponseEntity<?> moveItem(@AuthenticationPrincipal User user, @PathVariable Integer outputId, @PathVariable Integer itemId,
                                       @Valid @RequestBody MoodboardDTO.MoveItem request) {
+        ownershipService.checkOutput(user, outputId);
+
         return ResponseEntity.status(200).body(moodboardService.moveItem(outputId, itemId, request));
     }
 
     @PutMapping("/update/{outputId}/labels/{itemId}")
-    public ResponseEntity<?> editLabel(@PathVariable Integer outputId, @PathVariable Integer itemId,
+    public ResponseEntity<?> editLabel(@AuthenticationPrincipal User user, @PathVariable Integer outputId, @PathVariable Integer itemId,
                                        @Valid @RequestBody MoodboardDTO.EditLabel request) {
+        ownershipService.checkOutput(user, outputId);
+
         return ResponseEntity.status(200).body(moodboardService.editLabel(outputId, itemId, request));
     }
 
     @DeleteMapping("/delete/{outputId}/items/{itemId}")
-    public ResponseEntity<?> deleteItem(@PathVariable Integer outputId, @PathVariable Integer itemId) {
+    public ResponseEntity<?> deleteItem(@AuthenticationPrincipal User user, @PathVariable Integer outputId, @PathVariable Integer itemId) {
+        ownershipService.checkOutput(user, outputId);
+
         moodboardService.deleteItem(outputId, itemId);
         return ResponseEntity.status(200).body(new ApiResponse("Moodboard item deleted successfully"));
     }

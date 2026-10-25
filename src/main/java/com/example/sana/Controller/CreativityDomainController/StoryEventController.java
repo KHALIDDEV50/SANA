@@ -1,5 +1,8 @@
 package com.example.sana.Controller.CreativityDomainController;
 
+import com.example.sana.Service.OwnershipService;
+import com.example.sana.Model.User;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.example.sana.API.ApiResponse;
 import com.example.sana.DTO.CreativityDomainDTOs.StoryEventDTO;
 import com.example.sana.Service.CreativityDomainServices.StoryEventService;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 public class StoryEventController {
 
     private final StoryEventService storyEventService;
+    private final OwnershipService ownershipService;
 
 
     // Get all StoryEvents in the system
@@ -25,7 +29,9 @@ public class StoryEventController {
 
     // Get a specific StoryEvent by its ID
     @GetMapping("/get/{id}")
-    public ResponseEntity<?> getStoryEventById(@PathVariable Integer id) {
+    public ResponseEntity<?> getStoryEventById(@AuthenticationPrincipal User user, @PathVariable Integer id) {
+        ownershipService.checkStoryEvent(user, id);
+
         return ResponseEntity.status(200).body(storyEventService.getStoryEventById(id));
     }
 
@@ -34,7 +40,9 @@ public class StoryEventController {
     // The backend automatically creates and links a ProjectNode
     // outputId = the ProjectOutput where the event will be created
     @PostMapping("/add/{outputId}")
-    public ResponseEntity<?> addStoryEvent(@PathVariable Integer outputId, @RequestBody @Valid StoryEventDTO dto) {
+    public ResponseEntity<?> addStoryEvent(@AuthenticationPrincipal User user, @PathVariable Integer outputId, @RequestBody @Valid StoryEventDTO dto) {
+        ownershipService.checkOutput(user, outputId);
+
         storyEventService.addStoryEvent(outputId, dto);
         return ResponseEntity.status(200).body(new ApiResponse("Story event added successfully"));
     }
@@ -45,7 +53,9 @@ public class StoryEventController {
     // inWorldTime, notes, positionX and positionY
     // Does NOT create a new Node or change the ProjectOutput
     @PutMapping("/update/{id}")
-    public ResponseEntity<?> updateStoryEvent(@PathVariable Integer id, @RequestBody @Valid StoryEventDTO dto) {
+    public ResponseEntity<?> updateStoryEvent(@AuthenticationPrincipal User user, @PathVariable Integer id, @RequestBody @Valid StoryEventDTO dto) {
+        ownershipService.checkStoryEvent(user, id);
+
         storyEventService.updateStoryEvent(id, dto);
         return ResponseEntity.status(200).body(new ApiResponse("Story event updated successfully"));
     }
@@ -54,7 +64,9 @@ public class StoryEventController {
     // Delete a StoryEvent and its associated ProjectNode
     // Connected ProjectEdges may also be deleted by cascade
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<?> deleteStoryEvent(@PathVariable Integer id) {
+    public ResponseEntity<?> deleteStoryEvent(@AuthenticationPrincipal User user, @PathVariable Integer id) {
+        ownershipService.checkStoryEvent(user, id);
+
         storyEventService.deleteStoryEvent(id);
         return ResponseEntity.status(200).body(new ApiResponse("Story event deleted successfully"));
     }
@@ -63,7 +75,9 @@ public class StoryEventController {
     // Events are sorted by presentationOrder
     // outputId = ProjectOutput ID
     @GetMapping("/timeline/presentation/{outputId}")
-    public ResponseEntity<?> getTimelineByPresentationOrder(@PathVariable Integer outputId) {
+    public ResponseEntity<?> getTimelineByPresentationOrder(@AuthenticationPrincipal User user, @PathVariable Integer outputId) {
+        ownershipService.checkOutput(user, outputId);
+
         return ResponseEntity.status(200).body(storyEventService.getTimelineByPresentationOrder(outputId));
     }
 
@@ -73,7 +87,9 @@ public class StoryEventController {
     // Events without chronologicalOrder appear last
     // outputId = ProjectOutput ID
     @GetMapping("/timeline/chronological/{outputId}")
-    public ResponseEntity<?> getTimelineByChronologicalOrder(@PathVariable Integer outputId) {
+    public ResponseEntity<?> getTimelineByChronologicalOrder(@AuthenticationPrincipal User user, @PathVariable Integer outputId) {
+        ownershipService.checkOutput(user, outputId);
+
         return ResponseEntity.status(200).body(storyEventService.getTimelineByChronologicalOrder(outputId));
     }
 

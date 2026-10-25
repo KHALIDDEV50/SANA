@@ -1,5 +1,8 @@
 package com.example.sana.Controller.CreativityDomainController;
 
+import com.example.sana.Service.OwnershipService;
+import com.example.sana.Model.User;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.example.sana.API.ApiResponse;
 import com.example.sana.DTO.CreativityDomainDTOs.LocationDTO;
 import com.example.sana.Service.CreativityDomainServices.LocationService;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 public class LocationController {
 
     private final LocationService locationService;
+    private final OwnershipService ownershipService;
 
 
     // Get all locations in the system
@@ -25,7 +29,9 @@ public class LocationController {
 
     // Get a specific location by its ID
     @GetMapping("/get/{id}")
-    public ResponseEntity<?> getLocationById(@PathVariable Integer id) {
+    public ResponseEntity<?> getLocationById(@AuthenticationPrincipal User user, @PathVariable Integer id) {
+        ownershipService.checkLocation(user, id);
+
         return ResponseEntity.status(200).body(locationService.getLocationById(id));
     }
 
@@ -34,7 +40,9 @@ public class LocationController {
     // The backend automatically creates and links a ProjectNode
     // outputId = the ProjectOutput where the location will be created
     @PostMapping("/add/{outputId}")
-    public ResponseEntity<?> addLocation(@PathVariable Integer outputId, @RequestBody @Valid LocationDTO dto) {
+    public ResponseEntity<?> addLocation(@AuthenticationPrincipal User user, @PathVariable Integer outputId, @RequestBody @Valid LocationDTO dto) {
+        ownershipService.checkOutput(user, outputId);
+
         locationService.addLocation(outputId, null, null, dto);
         return ResponseEntity.status(200).body(new ApiResponse("Location added successfully"));
     }
@@ -45,7 +53,9 @@ public class LocationController {
     // outputId = the ProjectOutput ID
     // worldId = the World ID
     @PostMapping("/add/{outputId}/world/{worldId}")
-    public ResponseEntity<?> addLocationToWorld(@PathVariable Integer outputId, @PathVariable Integer worldId, @RequestBody @Valid LocationDTO dto) {
+    public ResponseEntity<?> addLocationToWorld(@AuthenticationPrincipal User user, @PathVariable Integer outputId, @PathVariable Integer worldId, @RequestBody @Valid LocationDTO dto) {
+        ownershipService.checkOutput(user, outputId);
+
         locationService.addLocation(outputId, worldId, null, dto);
         return ResponseEntity.status(200).body(new ApiResponse("Location added to world successfully"));
     }
@@ -57,7 +67,9 @@ public class LocationController {
     // outputId = the ProjectOutput ID
     // parentLocationId = the existing Parent Location ID
     @PostMapping("/add/{outputId}/parent/{parentLocationId}")
-    public ResponseEntity<?> addChildLocation(@PathVariable Integer outputId, @PathVariable Integer parentLocationId, @RequestBody @Valid LocationDTO dto) {
+    public ResponseEntity<?> addChildLocation(@AuthenticationPrincipal User user, @PathVariable Integer outputId, @PathVariable Integer parentLocationId, @RequestBody @Valid LocationDTO dto) {
+        ownershipService.checkOutput(user, outputId);
+
         locationService.addLocation(outputId, null, parentLocationId, dto);
         return ResponseEntity.status(200).body(new ApiResponse("Child location added successfully"));
     }
@@ -70,7 +82,9 @@ public class LocationController {
     // worldId = the World ID
     // parentLocationId = the Parent Location ID
     @PostMapping("/add/{outputId}/world/{worldId}/parent/{parentLocationId}")
-    public ResponseEntity<?> addLocationToWorldAndParent(@PathVariable Integer outputId, @PathVariable Integer worldId, @PathVariable Integer parentLocationId, @RequestBody @Valid LocationDTO dto) {
+    public ResponseEntity<?> addLocationToWorldAndParent(@AuthenticationPrincipal User user, @PathVariable Integer outputId, @PathVariable Integer worldId, @PathVariable Integer parentLocationId, @RequestBody @Valid LocationDTO dto) {
+        ownershipService.checkOutput(user, outputId);
+
         locationService.addLocation(outputId, worldId, parentLocationId, dto);
 
         return ResponseEntity.status(200).body(new ApiResponse("Child location added successfully"));
@@ -81,7 +95,9 @@ public class LocationController {
     // Updates: name, locationType, narrativeSignificance, notes, positionX, positionY
     // Does NOT change the World or Parent Location relationships
     @PutMapping("/update/{id}")
-    public ResponseEntity<?> updateLocation(@PathVariable Integer id, @RequestBody @Valid LocationDTO dto) {
+    public ResponseEntity<?> updateLocation(@AuthenticationPrincipal User user, @PathVariable Integer id, @RequestBody @Valid LocationDTO dto) {
+        ownershipService.checkLocation(user, id);
+
         locationService.updateLocation(id, dto);
         return ResponseEntity.status(200).body(new ApiResponse("Location updated successfully"));
     }
@@ -92,7 +108,8 @@ public class LocationController {
     // worldId = the new World to assign
     // The backend checks that the World belongs to the same ProjectOutput
     @PutMapping("/update/{locationId}/world/{worldId}")
-    public ResponseEntity<?> updateLocationWorld(@PathVariable Integer locationId, @PathVariable Integer worldId) {
+    public ResponseEntity<?> updateLocationWorld(@AuthenticationPrincipal User user, @PathVariable Integer locationId, @PathVariable Integer worldId) {
+        ownershipService.checkLocation(user, locationId);
 
         locationService.updateLocationWorld(locationId, worldId);
 
@@ -105,7 +122,9 @@ public class LocationController {
     // The backend prevents a Location from becoming its own parent
     // and prevents circular parent-child relationships
     @PutMapping("/update/{locationId}/parent/{parentLocationId}")
-    public ResponseEntity<?> updateParentLocation(@PathVariable Integer locationId, @PathVariable Integer parentLocationId) {
+    public ResponseEntity<?> updateParentLocation(@AuthenticationPrincipal User user, @PathVariable Integer locationId, @PathVariable Integer parentLocationId) {
+        ownershipService.checkLocation(user, locationId);
+
         locationService.updateParentLocation(locationId, parentLocationId);
 
         return ResponseEntity.status(200).body(new ApiResponse("Parent location updated successfully"));
@@ -116,7 +135,8 @@ public class LocationController {
     // A Location cannot be deleted if it contains Child Locations
     // Deleting the Node may also delete its connected ProjectEdges
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<?> deleteLocation(@PathVariable Integer id) {
+    public ResponseEntity<?> deleteLocation(@AuthenticationPrincipal User user, @PathVariable Integer id) {
+        ownershipService.checkLocation(user, id);
 
         locationService.deleteLocation(id);
 

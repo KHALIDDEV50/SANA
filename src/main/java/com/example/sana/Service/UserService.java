@@ -4,6 +4,7 @@ import com.example.sana.API.ApiException;
 import com.example.sana.Model.User;
 import com.example.sana.Repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -14,6 +15,7 @@ import java.util.List;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     // Get all users
     public List<User> getAllUsers() {
@@ -31,6 +33,8 @@ public class UserService {
         }
 
         user.setId(null);
+        user.setRole("USER");
+        user.setPasswordHash(passwordEncoder.encode(user.getPasswordHash()));
         user.setCreatedAt(LocalDateTime.now());
 
         userRepository.save(user);
@@ -56,7 +60,7 @@ public class UserService {
         // Update user information
         oldUser.setName(user.getName());
         oldUser.setEmail(user.getEmail());
-        oldUser.setPasswordHash(user.getPasswordHash());
+        oldUser.setPasswordHash(passwordEncoder.encode(user.getPasswordHash()));
 
         userRepository.save(oldUser);
     }
