@@ -1,6 +1,6 @@
 # Frontend API source reference
 
-Snapshot: 24 October 2026. Read [the frontend handoff](../Frontend-Handoff.md) first for readiness, mocks, revision handling, response shapes, and unsupported features. This inventory is extracted from controller annotations and Java signatures; it is not a record of executed requests or an OpenAPI specification.
+Snapshot: 25 October 2026. This inventory is extracted from controller annotations and Java signatures; it is not a record of executed requests or an OpenAPI specification. For the AI flow (request, polling, proposal review) and the full rules of every diagram type, read [the n8n integration guide](../N8n-Backend-Integration.md).
 
 ## Reading this reference
 
@@ -8,9 +8,12 @@ Snapshot: 24 October 2026. Read [the frontend handoff](../Frontend-Handoff.md) f
 - `{name}` identifies a path parameter. `@RequestParam` values belong in the query string; they are required unless the signature says `required = false`.
 - `@RequestBody` identifies the JSON body type. Most writes return a message rather than the saved object. GET return shapes come from the corresponding service or response DTO.
 - All signatures below are current source declarations. Generic entity CRUD and machine endpoints are included for completeness, not as preferred UI flows.
-- `AIProjectController` is the active Architecture request/review API. Legacy AIInteraction/ChangeProposal/ChangeProposalItem CRUD must not be used to manipulate managed n8n runs/proposals.
+- `AIRequestController` is the AI request/review API for all four domains. Legacy AIInteraction/ChangeProposal/ChangeProposalItem CRUD must not be used to manipulate managed n8n runs/proposals.
+- `DiagramController` (`/api/v1/diagram`) is the manual editor for every diagram type. Start with `GET /api/v1/diagram/types` to get each type's node and edge types. The Architecture routes are kept for existing clients and behave the same as `/api/v1/diagram` limited to ARCHITECTURE.
+- Creativity diagrams (STORY_MAP, BRANCHING_STORY) are still edited through the Creativity controllers. `/api/v1/diagram` can list, read and rename them but rejects their node/edge changes and deletion.
+- Generic ProjectNode/ProjectEdge/ProjectOutput writes are rejected for the write-guarded diagram types (every type except the two Creativity ones).
 - `N8nCallbackController` is machine-only. Browser code must never call it or contain callback credentials.
-- The Java source links, DTO field constraints, and enums are the source of truth for this checkout; live serialization is still unverified while database repair is pending.
+- The Java source links, DTO field constraints, and enums are the source of truth for this checkout; none of these routes were called while writing this reference.
 
 ## AIInteractionController
 
@@ -292,21 +295,45 @@ Source: [ProjectUnderstandingController.java](../../src/main/java/com/example/sa
 | PUT | `/api/v1/project-understanding/update/{id}` | `@PathVariable Integer id, @Valid @RequestBody ProjectUnderstanding projectUnderstanding` |
 | DELETE | `/api/v1/project-understanding/delete/{id}` | `@PathVariable Integer id` |
 
-## AIProjectController
+## AIRequestController
 
-Source: [AIProjectController.java](../../src/main/java/com/example/sana/Controller/TechDomainControllers/AIProjectController.java).
+Source: [AIRequestController.java](../../src/main/java/com/example/sana/Controller/AIRequestController.java).
 
 | Method | Path | Handler parameters from source |
 |---|---|---|
-| POST | `/api/projects/{projectId}/ai/requests` | `@PathVariable Integer projectId, @Valid @RequestBody ArchitectureAIRequestDTO request` |
+| POST | `/api/projects/{projectId}/ai/requests` | `@PathVariable Integer projectId, @Valid @RequestBody AIRequestDTO request` |
 | GET | `/api/projects/{projectId}/ai/requests/{requestId}` | `@PathVariable Integer projectId, @PathVariable UUID requestId` |
 | GET | `/api/projects/{projectId}/ai/proposals/{proposalId}` | `@PathVariable Integer projectId, @PathVariable Integer proposalId` |
 | POST | `/api/projects/{projectId}/ai/proposals/{proposalId}/accept` | `@PathVariable Integer projectId, @PathVariable Integer proposalId` |
 | POST | `/api/projects/{projectId}/ai/proposals/{proposalId}/reject` | `@PathVariable Integer projectId, @PathVariable Integer proposalId` |
 
+## DiagramController
+
+Source: [DiagramController.java](../../src/main/java/com/example/sana/Controller/DiagramController.java).
+
+| Method | Path | Handler parameters from source |
+|---|---|---|
+| GET | `/api/v1/diagram/types` | `None` |
+| GET | `/api/v1/diagram/get/project/{projectId}` | `@PathVariable Integer projectId, @RequestParam(required = false) String diagramType` |
+| GET | `/api/v1/diagram/get/{outputId}` | `@PathVariable Integer outputId` |
+| GET | `/api/v1/diagram/graph/get/{outputId}` | `@PathVariable Integer outputId` |
+| POST | `/api/v1/diagram/add/{projectId}` | `@PathVariable Integer projectId, @Valid @RequestBody DiagramRequestDTO dto` |
+| PUT | `/api/v1/diagram/update/{outputId}` | `@PathVariable Integer outputId, @Valid @RequestBody DiagramRequestDTO dto, @RequestParam Integer expectedRevision` |
+| DELETE | `/api/v1/diagram/delete/{outputId}` | `@PathVariable Integer outputId, @RequestParam Integer expectedRevision` |
+| GET | `/api/v1/diagram/node/get/{outputId}/{nodeId}` | `@PathVariable Integer outputId, @PathVariable Integer nodeId` |
+| POST | `/api/v1/diagram/node/add/{outputId}` | `@PathVariable Integer outputId, @Valid @RequestBody DiagramNodeRequestDTO dto, @RequestParam Integer expectedRevision` |
+| PUT | `/api/v1/diagram/node/update/{outputId}/{nodeId}` | `@PathVariable Integer outputId, @PathVariable Integer nodeId, @Valid @RequestBody DiagramNodeRequestDTO dto, @RequestParam Integer expectedRevision` |
+| DELETE | `/api/v1/diagram/node/delete/{outputId}/{nodeId}` | `@PathVariable Integer outputId, @PathVariable Integer nodeId, @RequestParam Integer expectedRevision` |
+| GET | `/api/v1/diagram/edge/get/{outputId}/{edgeId}` | `@PathVariable Integer outputId, @PathVariable Integer edgeId` |
+| POST | `/api/v1/diagram/edge/add/{outputId}` | `@PathVariable Integer outputId, @Valid @RequestBody DiagramEdgeRequestDTO dto, @RequestParam Integer expectedRevision` |
+| PUT | `/api/v1/diagram/edge/update/{outputId}/{edgeId}` | `@PathVariable Integer outputId, @PathVariable Integer edgeId, @Valid @RequestBody DiagramEdgeRequestDTO dto, @RequestParam Integer expectedRevision` |
+| DELETE | `/api/v1/diagram/edge/delete/{outputId}/{edgeId}` | `@PathVariable Integer outputId, @PathVariable Integer edgeId, @RequestParam Integer expectedRevision` |
+
+`GET /graph/get/{outputId}` returns `{outputId, graphRevision, graph}`; send that `graphRevision` as `expectedRevision` on the next write. A stale revision returns 409. For Creativity diagrams the graph's node properties are the profile/scene fields.
+
 ## ArchitectureDiagramController
 
-Source: [ArchitectureDiagramController.java](../../src/main/java/com/example/sana/Controller/TechDomainControllers/ArchitectureDiagramController.java).
+Source: [ArchitectureDiagramController.java](../../src/main/java/com/example/sana/Controller/TechDomainControllers/ArchitectureDiagramController.java). Kept for existing clients; same behavior as `/api/v1/diagram` limited to ARCHITECTURE outputs.
 
 | Method | Path | Handler parameters from source |
 |---|---|---|
@@ -314,16 +341,16 @@ Source: [ArchitectureDiagramController.java](../../src/main/java/com/example/san
 | GET | `/api/v1/tech/architecture/get` | `None` |
 | GET | `/api/v1/tech/architecture/get/{outputId}` | `@PathVariable Integer outputId` |
 | GET | `/api/v1/tech/architecture/get/project/{projectId}` | `@PathVariable Integer projectId` |
-| POST | `/api/v1/tech/architecture/add/{projectId}` | `@PathVariable Integer projectId, @Valid @RequestBody ArchitectureDiagramRequestDTO dto` |
-| PUT | `/api/v1/tech/architecture/update/{outputId}` | `@PathVariable Integer outputId, @Valid @RequestBody ArchitectureDiagramRequestDTO dto, @RequestParam Integer expectedRevision` |
+| POST | `/api/v1/tech/architecture/add/{projectId}` | `@PathVariable Integer projectId, @Valid @RequestBody DiagramRequestDTO dto` |
+| PUT | `/api/v1/tech/architecture/update/{outputId}` | `@PathVariable Integer outputId, @Valid @RequestBody DiagramRequestDTO dto, @RequestParam Integer expectedRevision` |
 | DELETE | `/api/v1/tech/architecture/delete/{outputId}` | `@PathVariable Integer outputId, @RequestParam Integer expectedRevision` |
 | GET | `/api/v1/tech/architecture/node/get/{outputId}/{nodeId}` | `@PathVariable Integer outputId, @PathVariable Integer nodeId` |
-| POST | `/api/v1/tech/architecture/node/add/{outputId}` | `@PathVariable Integer outputId, @Valid @RequestBody ArchitectureNodeRequestDTO dto, @RequestParam Integer expectedRevision` |
-| PUT | `/api/v1/tech/architecture/node/update/{outputId}/{nodeId}` | `@PathVariable Integer outputId, @PathVariable Integer nodeId, @Valid @RequestBody ArchitectureNodeRequestDTO dto, @RequestParam Integer expectedRevision` |
+| POST | `/api/v1/tech/architecture/node/add/{outputId}` | `@PathVariable Integer outputId, @Valid @RequestBody DiagramNodeRequestDTO dto, @RequestParam Integer expectedRevision` |
+| PUT | `/api/v1/tech/architecture/node/update/{outputId}/{nodeId}` | `@PathVariable Integer outputId, @PathVariable Integer nodeId, @Valid @RequestBody DiagramNodeRequestDTO dto, @RequestParam Integer expectedRevision` |
 | DELETE | `/api/v1/tech/architecture/node/delete/{outputId}/{nodeId}` | `@PathVariable Integer outputId, @PathVariable Integer nodeId, @RequestParam Integer expectedRevision` |
 | GET | `/api/v1/tech/architecture/edge/get/{outputId}/{edgeId}` | `@PathVariable Integer outputId, @PathVariable Integer edgeId` |
-| POST | `/api/v1/tech/architecture/edge/add/{outputId}` | `@PathVariable Integer outputId, @Valid @RequestBody ArchitectureEdgeRequestDTO dto, @RequestParam Integer expectedRevision` |
-| PUT | `/api/v1/tech/architecture/edge/update/{outputId}/{edgeId}` | `@PathVariable Integer outputId, @PathVariable Integer edgeId, @Valid @RequestBody ArchitectureEdgeRequestDTO dto, @RequestParam Integer expectedRevision` |
+| POST | `/api/v1/tech/architecture/edge/add/{outputId}` | `@PathVariable Integer outputId, @Valid @RequestBody DiagramEdgeRequestDTO dto, @RequestParam Integer expectedRevision` |
+| PUT | `/api/v1/tech/architecture/edge/update/{outputId}/{edgeId}` | `@PathVariable Integer outputId, @PathVariable Integer edgeId, @Valid @RequestBody DiagramEdgeRequestDTO dto, @RequestParam Integer expectedRevision` |
 | DELETE | `/api/v1/tech/architecture/edge/delete/{outputId}/{edgeId}` | `@PathVariable Integer outputId, @PathVariable Integer edgeId, @RequestParam Integer expectedRevision` |
 
 ## ToolRunController
@@ -353,50 +380,55 @@ Source: [UserController.java](../../src/main/java/com/example/sana/Controller/Us
 
 These are source fields, not response objects. Validation annotations are reproduced as declared. No annotation on a field does not guarantee unrestricted values: service/domain validation and database columns may impose additional rules. Lists/sets, entity responses, and record DTOs require the specific source contracts linked below.
 
-### ArchitectureAIRequestDTO
+### AIRequestDTO
 
-[ArchitectureAIRequestDTO.java](../../src/main/java/com/example/sana/DTO/TechDomainDTOs/ArchitectureAIRequestDTO.java)
+[AIRequestDTO.java](../../src/main/java/com/example/sana/DTO/AIDTOs/AIRequestDTO.java). Body of `POST /api/projects/{projectId}/ai/requests` for every domain.
 
 | Field | Java type | Declared validation |
 |---|---|---|
-| `task` | `ArchitectureAITask` | `@NotNull(message = "Architecture AI task is required")` |
+| `task` | `AITask` | `@NotNull(message = "AI task is required")`; CREATE, EDIT or ADVISE |
 | `prompt` | `String` | `@NotBlank(message = "AI prompt is required")`; `@Size(max = 10000, message = "AI prompt must not exceed 10000 characters")` |
-| `diagramType` | `String` | `@Size(max = 50, message = "Diagram type must not exceed 50 characters")` |
-| `outputId` | `Integer` | `@Positive(message = "Output ID must be greater than zero")` |
-| `baseRevision` | `Integer` | `@PositiveOrZero(message = "Base revision cannot be negative")` |
-| `selectedElementIds` | `List<String>` | At most 100 entries; each must be nonblank and use node:<positive ID> or edge:<positive ID>; service also rejects duplicates |
+| `diagramType` | `String` | `@Size(max = 50, message = "Diagram type must not exceed 50 characters")`. Required for CREATE except in TECH projects, where it defaults to ARCHITECTURE. Must be a type of the project's domain (see [Diagram types](#diagram-types)). For EDIT/ADVISE it is optional and, if sent, must match the output |
+| `outputId` | `Integer` | `@Positive(message = "Output ID must be greater than zero")`; required for EDIT and ADVISE, forbidden for CREATE |
+| `baseRevision` | `Integer` | `@PositiveOrZero(message = "Base revision cannot be negative")`; optional; if sent it must equal the output's current graphRevision |
+| `selectedElementIds` | `List<String>` | At most 100 entries; each must be nonblank and use node:<positive ID> or edge:<positive ID>; service also rejects duplicates. Forbidden for CREATE |
 
-### ArchitectureDiagramRequestDTO
+The domain always comes from the stored project. CREATE and EDIT need a diagram type with rules; ADVISE works on any graph output.
 
-[ArchitectureDiagramRequestDTO.java](../../src/main/java/com/example/sana/DTO/TechDomainDTOs/ArchitectureDiagramRequestDTO.java)
+### DiagramRequestDTO
 
-| Field | Java type | Declared validation |
-|---|---|---|
-| `title` | `String` | `@NotBlank(message = "Architecture diagram title is required")`; `@Size(max = 255, message = "Architecture diagram title must not exceed 255 characters")` |
-
-### ArchitectureNodeRequestDTO
-
-[ArchitectureNodeRequestDTO.java](../../src/main/java/com/example/sana/DTO/TechDomainDTOs/ArchitectureNodeRequestDTO.java)
+[DiagramRequestDTO.java](../../src/main/java/com/example/sana/DTO/DiagramDTOs/DiagramRequestDTO.java). Used by `/api/v1/diagram` and the Architecture routes.
 
 | Field | Java type | Declared validation |
 |---|---|---|
-| `type` | `String` | `@NotBlank(message = "Architecture node type is required")`; `@Size(max = 50, message = "Architecture node type must not exceed 50 characters")` |
-| `label` | `String` | `@NotBlank(message = "Architecture node label is required")`; `@Size(max = 255, message = "Architecture node label must not exceed 255 characters")` |
-| `positionX` | `Double` | `@NotNull(message = "Architecture node position X is required")` |
-| `positionY` | `Double` | `@NotNull(message = "Architecture node position Y is required")` |
-| `data` | `Map<String, Object>` | See service rules |
+| `title` | `String` | `@NotBlank(message = "Diagram title is required")`; `@Size(max = 255, message = "Diagram title must not exceed 255 characters")` |
+| `diagramType` | `String` | `@Size(max = 50, message = "Diagram type must not exceed 50 characters")`. Required by `POST /api/v1/diagram/add/{projectId}`; the Architecture routes set it themselves; ignored on update |
 
-### ArchitectureEdgeRequestDTO
+### DiagramNodeRequestDTO
 
-[ArchitectureEdgeRequestDTO.java](../../src/main/java/com/example/sana/DTO/TechDomainDTOs/ArchitectureEdgeRequestDTO.java)
+[DiagramNodeRequestDTO.java](../../src/main/java/com/example/sana/DTO/DiagramDTOs/DiagramNodeRequestDTO.java)
 
 | Field | Java type | Declared validation |
 |---|---|---|
-| `type` | `String` | `@NotBlank(message = "Architecture edge type is required")`; `@Size(max = 50, message = "Architecture edge type must not exceed 50 characters")` |
-| `label` | `String` | `@NotBlank(message = "Architecture edge label is required")`; `@Size(max = 50, message = "Architecture edge label must not exceed 50 characters")` |
+| `type` | `String` | `@NotBlank(message = "Node type is required")`; `@Size(max = 50, message = "Node type must not exceed 50 characters")`; must be a node type of the diagram |
+| `label` | `String` | `@NotBlank(message = "Node label is required")`; `@Size(max = 255, message = "Node label must not exceed 255 characters")` |
+| `positionX` | `Double` | `@NotNull(message = "Node position X is required")` |
+| `positionY` | `Double` | `@NotNull(message = "Node position Y is required")` |
+| `data` | `Map<String, Object>` | Extra node properties, for example `description`, ERD `attributes` or class `methods`. Checked by the diagram's rules |
+
+### DiagramEdgeRequestDTO
+
+[DiagramEdgeRequestDTO.java](../../src/main/java/com/example/sana/DTO/DiagramDTOs/DiagramEdgeRequestDTO.java)
+
+| Field | Java type | Declared validation |
+|---|---|---|
+| `type` | `String` | `@NotBlank(message = "Edge type is required")`; `@Size(max = 50, message = "Edge type must not exceed 50 characters")`; must be an edge type of the diagram |
+| `label` | `String` | `@Size(max = 50, message = "Edge label must not exceed 50 characters")`. Optional; the edge type is used when it is empty |
 | `sourceNodeId` | `Integer` | `@NotNull(message = "Source node ID is required")`; `@Positive(message = "Source node ID must be greater than zero")` |
 | `targetNodeId` | `Integer` | `@NotNull(message = "Target node ID is required")`; `@Positive(message = "Target node ID must be greater than zero")` |
-| `data` | `Map<String, Object>` | See service rules |
+| `data` | `Map<String, Object>` | Extra edge properties such as `description` or class-diagram `multiplicity` |
+
+After every manual node or edge change, the whole diagram is re-checked against its rules. A change that would leave the diagram invalid is rejected with 400 and nothing is saved.
 
 ### CharacterProfileDTO
 
@@ -582,15 +614,17 @@ These are source fields, not response objects. Validation annotations are reprod
 
 - [BusinessToolRequestDTO](../../src/main/java/com/example/sana/DTO/Business/BusinessToolRequestDTO.java): projectId/outputId are required positive integers; toolType required; inputJson is an optional JSON-encoded string, max 20000; baseRevision optional and non-negative. Business workflow is disabled by default.
 - [Project](../../src/main/java/com/example/sana/Model/Project.java), [ProjectOutput](../../src/main/java/com/example/sana/Model/ProjectOutput.java), [ProjectUnderstanding](../../src/main/java/com/example/sana/Model/ProjectUnderstanding.java), and [ProjectRecord](../../src/main/java/com/example/sana/Model/ProjectRecord.java) currently serve as generic request bodies. Send only editable scalar fields described in the handoff; omit relationships, IDs, and server-managed fields.
-- [ProjectNode](../../src/main/java/com/example/sana/Model/ProjectNode.java) and [ProjectEdge](../../src/main/java/com/example/sana/Model/ProjectEdge.java) are generic graph storage shapes. dataJson is a string. Architecture uses specialized DTOs and cannot be mutated through unversioned generic APIs.
+- [ProjectNode](../../src/main/java/com/example/sana/Model/ProjectNode.java) and [ProjectEdge](../../src/main/java/com/example/sana/Model/ProjectEdge.java) are generic graph storage shapes. dataJson is a string. Write-guarded diagram types use the diagram DTOs above and cannot be mutated through these unversioned generic APIs.
+- When creating a ProjectOutput through the generic API with a diagram outputType, the project's domain must match that type and representationType must be GRAPH.
 
 ## Response contracts to map explicitly
 
-- [GraphDefinitionDTO](../../src/main/java/com/example/sana/DTO/TechDomainDTOs/GraphDefinitionDTO.java)
-- [ArchitectureGraphResponseDTO](../../src/main/java/com/example/sana/DTO/TechDomainDTOs/ArchitectureGraphResponseDTO.java)
-- [ArchitectureAIRunResponseDTO](../../src/main/java/com/example/sana/DTO/TechDomainDTOs/ArchitectureAIRunResponseDTO.java)
-- [ArchitectureProposalResponseDTO](../../src/main/java/com/example/sana/DTO/TechDomainDTOs/ArchitectureProposalResponseDTO.java)
-- [ArchitectureAcceptanceDTO](../../src/main/java/com/example/sana/DTO/TechDomainDTOs/ArchitectureAcceptanceDTO.java)
+- [GraphDefinitionDTO](../../src/main/java/com/example/sana/DTO/GraphDefinitionDTO.java): `{nodes:[{key,id,type,properties,positionX,positionY}], edges:[{key,id,type,label,sourceKey,targetKey,properties}], properties:{title,...}}`
+- [DiagramGraphResponseDTO](../../src/main/java/com/example/sana/DTO/DiagramDTOs/DiagramGraphResponseDTO.java): `{outputId, graphRevision, graph}`
+- [DiagramTypeDTO](../../src/main/java/com/example/sana/DTO/DiagramDTOs/DiagramTypeDTO.java): `{domain, diagramType, nodeTypes, edgeTypes, rulesSummary}`
+- [AIRunResponseDTO](../../src/main/java/com/example/sana/DTO/AIDTOs/AIRunResponseDTO.java)
+- [AIProposalResponseDTO](../../src/main/java/com/example/sana/DTO/AIDTOs/AIProposalResponseDTO.java)
+- [AIProposalAcceptanceDTO](../../src/main/java/com/example/sana/DTO/AIDTOs/AIProposalAcceptanceDTO.java)
 - [CreativitySearchResultDTO](../../src/main/java/com/example/sana/DTO/CreativityDomainDTOs/CreativitySearchResultDTO.java)
 - [CreativityRelationDTO](../../src/main/java/com/example/sana/DTO/CreativityDomainDTOs/CreativityRelationDTO.java)
 - [CreativityDeletePreviewDTO](../../src/main/java/com/example/sana/DTO/CreativityDomainDTOs/CreativityDeletePreviewDTO.java)
@@ -605,11 +639,32 @@ These are source fields, not response objects. Validation annotations are reprod
 - [OpenLibraryResponseDTO](../../src/main/java/com/example/sana/DTO/CreativityDomainDTOs/OpenLibraryResponseDTO.java)
 - [N8nCallbackDTO](../../src/main/java/com/example/sana/DTO/IntegrationDTOs/N8nCallbackDTO.java)
 
-N8nCallbackDTO.Result/Clarification/Proposal/Failure are nested inside the public run-status DTO. The callback envelope itself is machine-only. Creativity internal AI DTOs under AI/DTO are not an exposed frontend AI API.
+N8nCallbackDTO.Result/Clarification/Proposal/Failure are nested inside the public run-status DTO. The callback envelope itself is machine-only.
+
+## Diagram types
+
+Every diagram is a ProjectOutput with representationType GRAPH and one of these outputType values. The project's domain must match. `GET /api/v1/diagram/types` returns this list from the running backend, with each type's rules text; prefer it over hard-coding.
+
+| Domain | Diagram type | Node types | Edge types | Manual editing |
+|---|---|---|---|---|
+| TECH | `ARCHITECTURE` | CLIENT, APPLICATION, SERVICE, DATABASE, QUEUE, COMPONENT, EXTERNAL_SYSTEM | DEPENDENCY, CONNECTS_TO, DATA_FLOW | `/api/v1/diagram` or `/api/v1/tech/architecture` |
+| TECH | `ERD` | ENTITY | ONE_TO_ONE, ONE_TO_MANY, MANY_TO_MANY | `/api/v1/diagram` |
+| TECH | `CLASS_DIAGRAM` | CLASS, ABSTRACT_CLASS, INTERFACE, ENUM | INHERITANCE, IMPLEMENTATION, ASSOCIATION, AGGREGATION, COMPOSITION, DEPENDENCY | `/api/v1/diagram` |
+| TECH | `USE_CASE` | ACTOR, USE_CASE | ASSOCIATION, INCLUDE, EXTEND, GENERALIZATION | `/api/v1/diagram` |
+| BUSINESS | `BUSINESS_MODEL_CANVAS` | the 9 canvas blocks of BusinessNodeType | SERVES, DELIVERS, REACHES, BUILDS_RELATIONSHIP_WITH, GENERATES_REVENUE, REQUIRES, PERFORMED_BY, PARTNERS_WITH, INCURS_COST | `/api/v1/diagram` |
+| BUSINESS | `TARGET_AUDIENCE` | TARGET_AUDIENCE, CUSTOMER_PERSONA | BELONGS_TO_AUDIENCE, HAS_NEED, HAS_PREFERENCE | `/api/v1/diagram` |
+| BUSINESS | `SWOT` | SWOT_STRENGTH, SWOT_WEAKNESS, SWOT_OPPORTUNITY, SWOT_THREAT | SUPPORTS, LIMITS, ENABLES, THREATENS | `/api/v1/diagram` |
+| BUSINESS | `COMPETITOR_ANALYSIS` | COMPETITOR, COMPETITOR_PRODUCT, COMPETITOR_FEATURE | COMPETES_WITH, OFFERS, DIFFERENTIATES_FROM | `/api/v1/diagram` |
+| BUSINESS | `RISK_ANALYSIS` | RISK, RISK_CAUSE, RISK_MITIGATION | CAUSED_BY, AFFECTS, MITIGATES | `/api/v1/diagram` |
+| EDUCATION | `MIND_MAP` | CENTRAL_TOPIC, TOPIC, SUBTOPIC, NOTE | BRANCH, RELATED | `/api/v1/diagram` |
+| CREATIVITY | `STORY_MAP` | CHARACTER, WORLD, LOCATION, WORLD_RULE, STORY_EVENT | all CreativityRelationType values | Creativity controllers |
+| CREATIVITY | `BRANCHING_STORY` | DIALOGUE, DECISION, EVENT, ENDING | BRANCH_CHOICE | BranchingNarrativeController |
+
+Node and edge property rules for each type are in [the n8n integration guide](../N8n-Backend-Integration.md#diagram-types-and-rules).
 
 ## Enum and vocabulary reference
 
-Send uppercase enum names, never translated labels. Domain is currently a String on Project: use EDUCATION, BUSINESS, TECH, CREATIVITY. outputType is a String on ProjectOutput; no unified cross-domain output-type registry exists. TechnicalOutputType lists declared types, but only Architecture has the specialized flow described in the handoff.
+Send uppercase enum names, never translated labels. Domain is a String on Project: use EDUCATION, BUSINESS, TECH, CREATIVITY exactly; AI requests reject any other value.
 
 | Enum | Values | Source |
 |---|---|---|
@@ -629,13 +684,16 @@ Send uppercase enum names, never translated labels. Domain is currently a String
 | ProposalStatus | `PENDING`, `APPROVED`, `REJECTED` | [ProposalStatus.java](../../src/main/java/com/example/sana/Enums/ProposalStatus.java) |
 | RecordStatus | `DRAFT`, `CONFIRMED`, `ARCHIVED` | [RecordStatus.java](../../src/main/java/com/example/sana/Enums/RecordStatus.java) |
 | RepresentationType | `GRAPH`, `IMAGE` | [RepresentationType.java](../../src/main/java/com/example/sana/Enums/RepresentationType.java) |
-| ArchitectureAITask | `CREATE`, `EDIT`, `ADVISE` | [ArchitectureAITask.java](../../src/main/java/com/example/sana/Enums/TechDomainEnums/ArchitectureAITask.java) |
+| AITask | `CREATE`, `EDIT`, `ADVISE` | [AITask.java](../../src/main/java/com/example/sana/Enums/AITask.java) |
 | TechnicalOutputType | `ARCHITECTURE`, `ERD`, `USE_CASE`, `CLASS_DIAGRAM` | [TechnicalOutputType.java](../../src/main/java/com/example/sana/Enums/TechDomainEnums/TechnicalOutputType.java) |
+| BusinessOutputType | `BUSINESS_MODEL_CANVAS`, `TARGET_AUDIENCE`, `SWOT`, `COMPETITOR_ANALYSIS`, `RISK_ANALYSIS` | [BusinessOutputType.java](../../src/main/java/com/example/sana/Enums/BusinessOutputType.java) |
+| EducationOutputType | `MIND_MAP` | [EducationOutputType.java](../../src/main/java/com/example/sana/Enums/EducationDomainEnums/EducationOutputType.java) |
+| CreativityOutputType | `STORY_MAP`, `BRANCHING_STORY` | [CreativityOutputType.java](../../src/main/java/com/example/sana/Enums/CreativityDomainEnums/CreativityOutputType.java) |
 
-ArchitectureGraphRules additionally defines node strings CLIENT, APPLICATION, SERVICE, DATABASE, QUEUE, COMPONENT, EXTERNAL_SYSTEM and edge strings DEPENDENCY, CONNECTS_TO, DATA_FLOW. These are explicit service vocabularies rather than enum classes.
+Node and edge type strings for each diagram are defined by its rules class (see [Diagram types](#diagram-types)), not by enum classes, except where the rules reuse BusinessNodeType, BusinessEdgeType, BranchingNodeType and CreativityRelationType.
 
-ProposalStatus is the generic persistence enum (APPROVED); the Architecture review API maps it to ACCEPTED. ChangeTargetType.RECORD exists generically but is not an Architecture diagram proposal target to advertise.
+ProposalStatus is the generic persistence enum (APPROVED); the AI review API maps it to ACCEPTED. ChangeTargetType.RECORD exists generically but is not a diagram proposal target to advertise.
 
 ## Scope and verification
 
-This inventory contains 155 route declarations from 26 controller source files. No endpoints were called. No test/build was run. Missing Education-specific controllers and unexposed Creativity AI services are gaps, not omitted live routes.
+This inventory contains 170 route declarations from 27 controller source files, counted from the sources on 25 October 2026. No endpoints were called and no build or test was run.

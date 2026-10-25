@@ -16,4 +16,7 @@ public interface PlayableCharacterRepository extends JpaRepository<PlayableChara
     // Find a character only inside its own output
     PlayableCharacter findByIdAndProjectOutput_Id(
             Integer id, Integer outputId);
+
+    // Used before an AI proposal deletes a character that playable characters still reference
+    boolean existsByCharacterProfile_Id(Integer characterId);
 }

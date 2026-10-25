@@ -76,4 +76,7 @@ public interface StoryEventRepository extends JpaRepository<StoryEvent, Integer>
 
 
 
+
+    // Story events of every output in a project, offered to the AI for branching scenes
+    List<StoryEvent> findByProjectNode_ProjectOutput_Project_IdOrderByIdAsc(Integer projectId);
 }

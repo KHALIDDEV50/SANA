@@ -1,7 +1,7 @@
 package com.example.sana.Service;
 
 import com.example.sana.API.ApiException;
-import com.example.sana.Service.TechDomainServices.ArchitectureWriteGuard;
+import com.example.sana.Service.DiagramServices.DiagramWriteGuard;
 import com.example.sana.Model.ProjectEdge;
 import com.example.sana.Model.ProjectNode;
 import com.example.sana.Model.ProjectOutput;
@@ -31,7 +31,7 @@ public class ProjectEdgeService {
         if (output == null){
             throw new ApiException("Project output not found");
         }
-        ArchitectureWriteGuard.rejectUnversionedWrite(output);
+        DiagramWriteGuard.rejectUnversionedWrite(output);
         ProjectNode sourceNode = projectNodeRepository.findProjectNodeById(sourceNodeId);
         if (sourceNode == null){
             throw new ApiException("Source node not found");
@@ -59,7 +59,7 @@ public class ProjectEdgeService {
             throw new ApiException("project edge not found");
         }
 
-        ArchitectureWriteGuard.rejectUnversionedWrite(edge.getProjectOutput());
+        DiagramWriteGuard.rejectUnversionedWrite(edge.getProjectOutput());
         edge.setDataJson(projectEdge.getDataJson());
         edge.setType(projectEdge.getType());
         edge.setLabel(projectEdge.getLabel());
@@ -71,7 +71,7 @@ public class ProjectEdgeService {
         if (edge == null){
             throw new ApiException("project edge not found");
         }
-        ArchitectureWriteGuard.rejectUnversionedWrite(edge.getProjectOutput());
+        DiagramWriteGuard.rejectUnversionedWrite(edge.getProjectOutput());
         projectEdgeRepository.delete(edge);
     }
 

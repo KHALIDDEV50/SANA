@@ -5,6 +5,8 @@ import com.example.sana.API.ApiConflictException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import com.example.sana.API.ApiResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.persistence.LockTimeoutException;
 import jakarta.persistence.OptimisticLockException;
@@ -24,6 +26,7 @@ import java.util.Arrays;
 @RestControllerAdvice
 public class ControllerAdvice {
 
+    private static final Logger log = LoggerFactory.getLogger(ControllerAdvice.class);
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiResponse> handleStatusException(ResponseStatusException e) {
@@ -125,8 +128,9 @@ public class ControllerAdvice {
     public ResponseEntity<ApiResponse> handleException(
             Exception e) {
 
-        // Print full error in console
-        // Do not log raw payload/provider exception content.
+        // Log the full error on the server only, the client still gets a generic message.
+        // n8n HTTP errors are handled in AIDispatchWorker and never reach this handler.
+        log.error("Unexpected error while handling request", e);
 
         return ResponseEntity.status(500).body(new ApiResponse("The operation could not be completed"));
     }

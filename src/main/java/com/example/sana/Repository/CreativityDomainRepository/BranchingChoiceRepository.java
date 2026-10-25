@@ -59,4 +59,7 @@ public interface BranchingChoiceRepository extends JpaRepository<BranchingChoice
 
 
 
+
+    // Find the choice stored for a ProjectEdge
+    BranchingChoice findByProjectEdge_Id(Integer projectEdgeId);
 }

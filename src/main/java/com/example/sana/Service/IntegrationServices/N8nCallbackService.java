@@ -2,11 +2,15 @@ package com.example.sana.Service.IntegrationServices;
 
 import com.example.sana.API.*;
 import com.example.sana.DTO.IntegrationDTOs.N8nCallbackDTO;
-import com.example.sana.DTO.TechDomainDTOs.*;
+import com.example.sana.DTO.AIDTOs.AIWorkflowRequestDTO;
 import com.example.sana.Enums.*;
 import com.example.sana.Model.*;
 import com.example.sana.Repository.*;
-import com.example.sana.Service.TechDomainServices.*;
+import com.example.sana.Service.DiagramServices.DiagramRules;
+import com.example.sana.Service.DiagramServices.DiagramRulesRegistry;
+import com.example.sana.Service.DiagramServices.GraphDiff;
+import com.example.sana.Service.DiagramServices.GraphRuleChecks;
+import com.example.sana.Service.DiagramServices.GraphValidator;
 import com.example.sana.Service.Business.BusinessResponseValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,8 +25,9 @@ public class N8nCallbackService {
     private final AIInteractionRepository interactions;
     private final ChangeProposalRepository proposals;
     private final ChangeProposalItemRepository items;
-    private final ArchitectureGraphValidator validator;
-    private final ArchitectureGraphDiff diff;
+    private final GraphValidator validator;
+    private final GraphDiff diff;
+    private final DiagramRulesRegistry diagramRulesRegistry;
     private final BusinessResponseValidator businessValidator;
     private final AIJson json;
 
@@ -33,7 +38,7 @@ public class N8nCallbackService {
         AIInteraction run = interactions.findByRequestIdForUpdate(callback.requestId())
                 .orElseThrow(() -> new ApiException("AI request not found"));
         if (run.getRequestJson() == null) throw new ApiException("Request has no authoritative snapshot");
-        var request = json.read(run.getRequestJson(), ArchitectureAIWorkflowRequestDTO.class);
+        var request = json.read(run.getRequestJson(), AIWorkflowRequestDTO.class);
         if (!run.getRequestId().equals(request.getRequestId()) || !run.getProject().getId().equals(request.getProjectId())
                 || !Objects.equals(run.getOutputId(), request.getOutputId()) || !Objects.equals(run.getBaseRevision(), request.getBaseRevision())
                 || !run.getActionType().equals(request.getTask().name())) throw new ApiException("AI request metadata is inconsistent");
@@ -57,7 +62,7 @@ public class N8nCallbackService {
         run.setDispatchLeaseUntil(null); run.setNextDispatchAt(null);
         if (callback.status() == N8nCallbackDTO.CallbackStatus.FAILED) {
             // Raw provider/tool error text can contain credentials; do not persist or expose it.
-            String code = Set.of("INVALID_AI_RESULT", "WORKFLOW_FAILED", "MODEL_UNAVAILABLE", "TOOL_FAILED", "EXECUTION_TIMEOUT").contains(callback.error().code())
+            String code = Set.of("INVALID_AI_RESULT", "AI_EXECUTION_FAILED", "WORKFLOW_FAILED", "MODEL_UNAVAILABLE", "TOOL_FAILED", "EXECUTION_TIMEOUT").contains(callback.error().code())
                     ? callback.error().code() : "WORKFLOW_FAILED";
             AIRunLifecycle.fail(run, ExecutionStatus.FAILED, code, "AI workflow failed. Submit a new request to retry.");
         } else {
@@ -74,31 +79,32 @@ public class N8nCallbackService {
             throw new ApiException("Unsupported callback schema or status");
         try { if (!UUID.fromString(callback.requestId()).toString().equals(callback.requestId())) throw new IllegalArgumentException(); }
         catch (RuntimeException e) { throw new ApiException("Callback requestId must be a canonical UUID"); }
-        ArchitectureGraphRules.text(callback.executionId(), 255, "Execution ID");
+        GraphRuleChecks.requireText(callback.executionId(), 255, "Execution ID");
         if (callback.status() == N8nCallbackDTO.CallbackStatus.COMPLETED) {
             if (callback.result() == null || callback.error() != null) throw new ApiException("COMPLETED requires result and excludes error");
         } else {
             if (callback.error() == null || callback.result() != null) throw new ApiException("FAILED requires error and excludes result");
-            ArchitectureGraphRules.text(callback.error().message(), 2000, "Failure message");
+            GraphRuleChecks.requireText(callback.error().message(), 2000, "Failure message");
             if (callback.error().code() == null || !callback.error().code().matches("[A-Z][A-Z0-9_]{0,63}")) throw new ApiException("Invalid failure code");
             if (callback.error().details() != null) {
                 if (callback.error().details().size() > 20) throw new ApiException("Too many failure details");
-                callback.error().details().forEach(detail -> ArchitectureGraphRules.text(detail, 1000, "Failure detail"));
+                callback.error().details().forEach(detail -> GraphRuleChecks.requireText(detail, 1000, "Failure detail"));
             }
         }
     }
 
-    private void validateResult(N8nCallbackDTO callback, ArchitectureAIWorkflowRequestDTO request) {
+    private void validateResult(N8nCallbackDTO callback, AIWorkflowRequestDTO request) {
         if (callback.status() == N8nCallbackDTO.CallbackStatus.FAILED) return;
         var result = callback.result();
         if (result.type() == null) throw new ApiException("Result type is required");
-        ArchitectureGraphRules.text(result.message(), 20000, "AI message");
-        ArchitectureGraphRules.text(result.modelName(), 255, "Model name");
+        GraphRuleChecks.requireText(result.message(), 20000, "AI message");
+        GraphRuleChecks.requireText(result.modelName(), 255, "Model name");
         switch (result.type()) {
             case ADVICE -> {
                 if (result.proposal() != null || result.clarification() != null) throw new ApiException("ADVICE excludes proposal and clarification");
-                if ("BUSINESS".equals(request.getDomain())) {
-                    Object tool = request.getContext().get("businessToolType");
+                // Only Business tool runs promise a structured report; plain Business advice is free text
+                Object tool = request.getContext().get("businessToolType");
+                if ("BUSINESS".equals(request.getDomain()) && tool != null) {
                     try { businessValidator.validate(result.message(), BusinessToolType.valueOf(String.valueOf(tool))); }
                     catch (RuntimeException e) { throw new ApiException("Invalid structured business analysis result"); }
                 }
@@ -106,23 +112,26 @@ public class N8nCallbackService {
             case CLARIFICATION -> {
                 if (result.proposal() != null || result.clarification() == null || result.clarification().suggestedAnswers() == null)
                     throw new ApiException("CLARIFICATION requires a question and suggestedAnswers array");
-                ArchitectureGraphRules.text(result.clarification().question(), 2000, "Clarification question");
+                GraphRuleChecks.requireText(result.clarification().question(), 2000, "Clarification question");
                 if (result.clarification().suggestedAnswers().size() > 10) throw new ApiException("Too many suggested answers");
-                result.clarification().suggestedAnswers().forEach(answer -> ArchitectureGraphRules.text(answer, 255, "Suggested answer"));
+                result.clarification().suggestedAnswers().forEach(answer -> GraphRuleChecks.requireText(answer, 255, "Suggested answer"));
             }
             case PROPOSAL -> {
-                if (!"TECH".equals(request.getDomain()) || !"ARCHITECTURE".equals(request.getDiagramType()) || request.getTask().name().equals("ADVISE"))
+                // Proposals are only allowed for CREATE/EDIT on a diagram type that has rules
+                DiagramRules rules = diagramRulesRegistry.findRules(request.getDomain(), request.getDiagramType());
+                if (rules == null || request.getTask() == AITask.ADVISE) {
                     throw new ApiException("This request does not permit graph proposals");
+                }
                 if (result.clarification() != null || result.proposal() == null) throw new ApiException("PROPOSAL requires a graph and excludes clarification");
-                ArchitectureGraphRules.text(result.proposal().title(), 255, "Proposal title");
-                ArchitectureGraphRules.text(result.proposal().description(), 10000, "Proposal description");
+                GraphRuleChecks.requireText(result.proposal().title(), 255, "Proposal title");
+                GraphRuleChecks.requireText(result.proposal().description(), 10000, "Proposal description");
                 String title = request.getOutputId() == null ? result.proposal().title() : String.valueOf(request.getCurrentGraph().getProperties().get("title"));
-                validator.validate(result.proposal().proposedGraph(), request.getOutputId() == null ? null : request.getCurrentGraph(), title);
+                validator.validate(result.proposal().proposedGraph(), request.getOutputId() == null ? null : request.getCurrentGraph(), title, rules);
             }
         }
     }
 
-    private void storeProposal(AIInteraction run, ArchitectureAIWorkflowRequestDTO request, N8nCallbackDTO.Proposal candidate) {
+    private void storeProposal(AIInteraction run, AIWorkflowRequestDTO request, N8nCallbackDTO.Proposal candidate) {
         var proposal = new ChangeProposal();
         proposal.setManagedRequestId(run.getRequestId()); proposal.setTitle(candidate.title()); proposal.setDescription(candidate.description());
         proposal.setStatus(ProposalStatus.PENDING); proposal.setBaseVersion(run.getProject().getVersion());

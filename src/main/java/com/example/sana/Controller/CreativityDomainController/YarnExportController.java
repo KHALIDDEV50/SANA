@@ -1,6 +1,6 @@
 package com.example.sana.Controller.CreativityDomainController;
 
-import com.example.sana.Service.CreativityDomainServise.YarnExportService;
+import com.example.sana.Service.CreativityDomainServices.YarnExportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
