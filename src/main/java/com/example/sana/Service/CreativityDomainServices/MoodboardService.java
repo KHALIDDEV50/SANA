@@ -3,6 +3,7 @@ package com.example.sana.Service.CreativityDomainServices;
 import com.example.sana.API.ApiException;
 import com.example.sana.DTO.CreativityDomainDTOs.MoodboardDTO;
 import com.example.sana.DTO.CreativityDomainDTOs.OpenverseDTO;
+import com.example.sana.DTO.CreativityDomainDTOs.MoodboardAIDTO;
 import com.example.sana.Enums.RepresentationType;
 import com.example.sana.Model.ProjectNode;
 import com.example.sana.Model.ProjectOutput;
@@ -51,6 +52,45 @@ public class MoodboardService {
         output.setProject(projectRepository.getReferenceById(projectId));
         ProjectOutput saved = projectOutputRepository.save(output);
         return new MoodboardDTO.BoardSummary(saved.getId(), projectId, saved.getTitle());
+    }
+
+    /** Called only by the approval service with a server-owned, verified draft. All writes share one transaction. */
+    @Transactional
+    public MoodboardDTO.BoardSummary saveApprovedDraft(Integer projectId, String draftId, String owner,
+                                                       MoodboardAIDTO.Preview preview) {
+        if (!projectId.equals(preview.projectId()) || !draftId.equals(preview.draftId())
+                || !"PENDING".equals(preview.status()) || preview.images().size() < 3 || preview.images().size() > 6)
+            throw new ApiException("Invalid approved moodboard draft");
+        var summary = createBoard(projectId, new MoodboardDTO.CreateBoard(preview.title()));
+        var output = projectOutputRepository.findById(summary.id()).orElseThrow();
+        output.setPropertiesJson(json(java.util.Map.of("moodboardAIDraftId", draftId, "moodboardAIOwner", owner,
+                "origin", "CREATIVITY_MOODBOARD_AI", "imagesVisuallyAnalyzed", false)));
+        projectOutputRepository.save(output);
+        for (var reference : preview.images()) {
+            validatePosition(reference.positionX(), reference.positionY());
+            // Exact metadata shown at preview time, fetched from Openverse by the server, never from approval JSON.
+            createItem(summary.id(), IMAGE, json(reference.image()), reference.positionX(), reference.positionY());
+        }
+        for (var note : preview.notes()) {
+            validatePosition(note.positionX(), note.positionY());
+            createItem(summary.id(), LABEL, json(labelData(note.text(), note.color(), note.backgroundColor(), 17)),
+                    note.positionX(), note.positionY());
+        }
+        double paletteY = preview.notes().stream().mapToDouble(n -> n.positionY() + 100 + Math.ceil(n.text().length() / 22.0) * 27).max().orElse(800) + 40;
+        for (int i = 0; i < preview.palette().size(); i++) {
+            var color = preview.palette().get(i);
+            String text = color.name() + "\n" + color.hex();
+            // Palette remains an ordinary editable colored label; no new node type or schema.
+            createItem(summary.id(), LABEL, json(labelData(text, contrast(color.hex()), color.hex(), 17)),
+                    30.0 + (i % 3) * 250, paletteY + (i / 3) * 180);
+        }
+        return summary;
+    }
+
+    private String contrast(String hex) {
+        int rgb = Integer.parseInt(hex.substring(1), 16);
+        double brightness = ((rgb >> 16) * 299 + ((rgb >> 8) & 255) * 587 + (rgb & 255) * 114) / 1000.0;
+        return brightness > 155 ? "#153840" : "#FFFFFF";
     }
 
     @Transactional(readOnly = true)

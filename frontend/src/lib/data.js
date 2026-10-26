@@ -40,7 +40,7 @@ export async function api(path,opts={}){
  const response=await fetch(`${BASE}${path}`,{...opts,credentials:'include',headers:{'Content-Type':'application/json',...(token?{Authorization:`Basic ${token}`}:{}),...(opts.headers||{})}});
  // A 401 means the login is missing or wrong: forget it and let the app show the login screen
  if(response.status===401&&!path.startsWith('/api/v1/auth/')){authApi.forget();window.dispatchEvent(new Event('sana-unauthorized'))}
- if(!response.ok){let detail='';try{const j=await response.json();detail=j.message||j.error||j.detail||'';}catch{}throw new Error(detail||`HTTP ${response.status} — ${path}`)}
+ if(!response.ok){let detail='';try{const j=await response.json();detail=j.message||(typeof j.error==='string'?j.error:j.error?.message)||j.detail||'';}catch{}throw new Error(detail||`HTTP ${response.status} — ${path}`)}
  if(response.status===204)return null;const text=await response.text();if(!text)return null;try{return JSON.parse(text)}catch{return text}
 }
 const json=(method,payload)=>({method,body:JSON.stringify(payload)});
@@ -55,16 +55,21 @@ const PRIMARY_DIAGRAM={writing:'STORY_MAP',games:'STORY_MAP',technology:'ARCHITE
 const STORY_TYPES={characters:'CHARACTER',worlds:'WORLD',locations:'LOCATION',rules:'WORLD_RULE',events:'STORY_EVENT'};
 const toBackendType=type=>STORY_TYPES[type]||String(type).toUpperCase();
 const toUiType=type=>Object.keys(STORY_TYPES).find(k=>STORY_TYPES[k]===type)||String(type).toLowerCase();
-export const backendDomain=domain=>BACKEND_DOMAIN[domain]||'CREATIVITY';
+export const backendDomain=domain=>BACKEND_DOMAIN[String(domain||'').toLowerCase()]||({'CREATIVITY':'CREATIVITY','TECH':'TECH','BUSINESS':'BUSINESS','EDUCATION':'EDUCATION'}[String(domain||'').toUpperCase()]||'CREATIVITY');
 const uiDomainKey=id=>`sana-ui-domain-${id}`;
 const activeDiagramKey=id=>`sana-active-diagram-${id}`;
 const storage={get:k=>{try{return localStorage.getItem(k)}catch{return null}},set:(k,v)=>{try{localStorage.setItem(k,String(v))}catch{}}};
 // writing and games are both CREATIVITY; remember which one the user picked, else guess from a branching diagram
 function toUiDomain(p){
- if(p.domain==='TECH')return 'technology';if(p.domain==='BUSINESS')return 'business';if(p.domain==='EDUCATION')return 'education';
- const hint=storage.get(uiDomainKey(p.id));if(hint)return hint;
- return (p.outputs||[]).some(o=>o.outputType==='BRANCHING_STORY')?'games':'writing';
+ const raw=String(p.domain||'').toUpperCase();
+ if(raw==='TECH'||raw==='TECHNOLOGY')return 'technology';if(raw==='BUSINESS')return 'business';if(raw==='EDUCATION')return 'education';
+ // Old SANA clients stored writing/games as backend domain values. Keep their UI identity.
+ if(raw==='GAMES')return 'games';if(raw==='WRITING')return 'writing';
+ const hint=storage.get(uiDomainKey(p.id));if(hint==='writing'||hint==='games')return hint;
+ return (p.outputs||[]).some(o=>['BRANCHING_STORY','GAME'].includes(o.outputType))?'games':'writing';
 }
+// Existing project records are read-only during navigation. A GET must never
+// silently PUT or migrate projects: migration belongs to an explicit admin step.
 // Node types the add-element palette offers: the active diagram's types in API mode
 export const elementTypes=project=>project?.nodeTypes?.length?project.nodeTypes:typesForDomain(project?.domain);
 let diagramTypesCache=null;
@@ -85,29 +90,112 @@ function toElement(node,outputId,storyMap,entityId,rawNode){
  if(!storyMap)return base;
  return {...base,entityId,role:pr.role||'',age:pr.age||'',locationType:pr.locationType||'',eventType:pr.eventType||'',presentationOrder:pr.presentationOrder,chronologicalOrder:pr.chronologicalOrder};
 }
-// A project shows one diagram at a time on its map: the one picked last, else the domain's main diagram
+// Old SANA creativity projects stored their actual characters and relations in
+// ProjectOutput(type=CREATIVITY). New diagram APIs deliberately omit that legacy
+// output from /diagram/get/project, which made populated projects look empty.
+const LEGACY_CREATIVE_TYPES=['CHARACTER','WORLD','LOCATION','WORLD_RULE','STORY_EVENT'];
+const LEGACY_EDGE_TYPES=['CUSTOM','FAMILY','FRIENDSHIP','RIVALRY','WORK','ROMANTIC','PARTICIPATES_IN','CAUSES','AFFECTED_BY','LIVES_IN','BELONGS_TO','VISITS','LEADS_TO','PRECEDES','SIMULTANEOUS_WITH','NARRATIVE_LINK','INSIDE','CONNECTED_TO','NEAR','APPLIES_TO','RESTRICTS','AFFECTS'];
+function parseNodeData(raw){try{return JSON.parse(raw||'{}')||{}}catch{return {}}}
+function legacyNodeType(type){const s=String(type||'').toUpperCase().replace(/^SANA_/,'');return LEGACY_CREATIVE_TYPES.includes(s)?toUiType(s):null}
+async function legacyCreativityGraph(output,searchResults=null){
+ const nodes=Array.isArray(output.nodes)?output.nodes:[];
+ const edges=Array.isArray(output.edges)?output.edges:[];
+ const found=searchResults??await api(`/api/v1/creativity/search/${output.id}?type=ALL`);
+ const entities=Array.isArray(found)?found:[];
+ const nodeMap=new Map(nodes.map(n=>[n.id,n]));
+ const elements=entities.map(e=>{
+   const node=nodeMap.get(e.nodeId)||{id:e.nodeId,type:e.type,positionX:e.positionX,positionY:e.positionY};
+   const data=parseNodeData(node.dataJson);
+   return {id:e.nodeId,nodeId:e.nodeId,entityId:e.id,outputId:output.id,
+      type:toUiType(e.type),name:e.title||data.name||e.type,
+      description:e.description||data.description||'',notes:data.notes||'',
+      x:e.positionX??node.positionX??100,y:e.positionY??node.positionY??100,
+      raw:data,rawNode:node,legacyCreative:true};
+ });
+ const seen=new Set(elements.map(e=>e.nodeId));
+ // Show unmatched generic nodes rather than silently lose any legacy data.
+ for(const node of nodes){
+   if(seen.has(node.id))continue;
+   const type=legacyNodeType(node.type);
+   if(!type)continue;
+   const data=parseNodeData(node.dataJson);
+   elements.push({id:node.id,nodeId:node.id,outputId:output.id,type,
+     name:data.name||data.title||node.type,description:data.description||'',notes:data.notes||'',
+     x:node.positionX??100,y:node.positionY??100,raw:data,rawNode:node,
+     legacyCreative:true,entityId:null});
+ }
+ const idSet=new Set(elements.map(e=>e.nodeId));
+ const relations=edges.filter(e=>e.type!=='BRANCH_CHOICE').map(e=>({
+   id:e.id,source:e.sourceNode?.id??e.sourceNodeId,
+   target:e.targetNode?.id??e.targetNodeId,type:e.type,label:e.label,outputId:output.id
+ })).filter(e=>idSet.has(e.source)&&idSet.has(e.target));
+ return {elements,relations};
+}
+// Both legacy and modern outputs appear in the selector. Existing project data
+// is never copied, reset, deleted, or moved when the user opens a project.
 async function getApiProject(id){
  const p=await api(`/api/v1/project/get/${id}`);
  const domain=toUiDomain(p);
+ const creativity=domain==='games'||domain==='writing';
  const types=await diagramTypes();
  let diagrams=await listDiagrams(id);
- const canvas=diagrams.filter(d=>d.outputType!=='BRANCHING_STORY');
- let active=canvas.find(d=>String(d.id)===storage.get(activeDiagramKey(id)))||canvas.find(d=>d.outputType===PRIMARY_DIAGRAM[domain])||canvas[0];
- if(!active){active=await createDiagram(id,p.name,PRIMARY_DIAGRAM[domain]);diagrams=[...diagrams,active]}
+ let oldOutputs=[];
+ const legacySearchCache=new Map();
+ if(creativity){
+   oldOutputs=await api(`/api/v1/project-output/get/project/${id}`);
+   if(!Array.isArray(oldOutputs))oldOutputs=[];
+   const legacy=oldOutputs.filter(o=>o.outputType==='CREATIVITY'&&o.representationType==='GRAPH');
+   for(const o of legacy){
+     if(!diagrams.some(d=>d.id===o.id))diagrams.push({id:o.id,title:o.title||'Creative workspace',outputType:'CREATIVITY',legacyCreative:true});
+     // A backend may omit lazy-loaded ProjectOutput.nodes during JSON serialization.
+     // Search still returns the persisted creative entities, so use both signals.
+     const search=await api(`/api/v1/creativity/search/${o.id}?type=ALL`);
+     legacySearchCache.set(o.id,Array.isArray(search)?search:[]);
+   }
+ }
+ const remembered=storage.get(activeDiagramKey(id));
+ const oldWithNodes=oldOutputs.find(o=>o.outputType==='CREATIVITY'&&o.representationType==='GRAPH'&&((Array.isArray(o.nodes)&&o.nodes.length>0)||(legacySearchCache.get(o.id)||[]).length>0));
+ let active=diagrams.find(d=>String(d.id)===remembered)||
+   (oldWithNodes&&diagrams.find(d=>d.id===oldWithNodes.id))||
+   diagrams.find(d=>d.outputType===PRIMARY_DIAGRAM[domain])||
+   diagrams.find(d=>d.outputType!=='BRANCHING_STORY');
+ if(!active){
+   // Never write to the database on opening a project. Creating diagrams is an
+   // explicit action via the New Diagram control.
+   return {...p,backendDomain:p.domain,domain,outputs:oldOutputs.length?oldOutputs:p.outputs||[],
+     diagrams,activeOutputId:null,activeType:null,graphRevision:null,storyMap:false,
+     legacyCreative:false,nodeTypes:typesForDomain(domain),edgeTypes:[],
+     diagramTypes:types.filter(t=>t.domain===backendDomain(domain)&&t.diagramType!=='BRANCHING_STORY').map(t=>t.diagramType),
+     elements:[],relations:[]};
+ }
+ if(active.legacyCreative||active.outputType==='CREATIVITY'){
+   const legacy=oldOutputs.find(o=>o.id===active.id);
+   if(!legacy)throw new Error('Legacy creativity output was not returned by the backend');
+   const {elements,relations}=await legacyCreativityGraph(legacy,legacySearchCache.get(legacy.id));
+   return {...p,backendDomain:p.domain,domain,outputs:oldOutputs,diagrams,
+     activeOutputId:active.id,activeType:'CREATIVITY',graphRevision:legacy.graphRevision??0,
+     storyMap:true,legacyCreative:true,
+     nodeTypes:LEGACY_CREATIVE_TYPES.map(toUiType),edgeTypes:LEGACY_EDGE_TYPES,
+     diagramTypes:types.filter(t=>t.domain===backendDomain(domain)&&t.diagramType!=='BRANCHING_STORY').map(t=>t.diagramType),
+     elements,relations};
+ }
  const rules=types.find(t=>t.diagramType===active.outputType)||{nodeTypes:[],edgeTypes:[]};
  const {graphRevision,graph}=await api(`/api/v1/diagram/graph/get/${active.id}`);
  const storyMap=active.outputType==='STORY_MAP';
- // The graph only has node IDs; Creativity edit/delete endpoints need the entity IDs
  const entityIds=new Map();
- if(storyMap){const found=await api(`/api/v1/creativity/search/${active.id}?type=ALL`);for(const r of (Array.isArray(found)?found:[]))entityIds.set(r.nodeId,r.id)}
- const rawNodes=new Map((p.outputs||[]).flatMap(o=>o.nodes||[]).map(n=>[n.id,n]));
- const elements=graph.nodes.map(n=>toElement(n,active.id,storyMap,entityIds.get(n.id),rawNodes.get(n.id)));
- const idByKey=new Map(graph.nodes.map(n=>[n.key,n.id]));
- const relations=graph.edges.map(e=>({id:e.id,source:idByKey.get(e.sourceKey),target:idByKey.get(e.targetKey),type:e.type,label:e.label,outputId:active.id,properties:e.properties}));
- return {...p,backendDomain:p.domain,domain,outputs:p.outputs||[],diagrams,activeOutputId:active.id,activeType:active.outputType,graphRevision,storyMap,
-  nodeTypes:rules.nodeTypes.map(toUiType),edgeTypes:rules.edgeTypes,
-  diagramTypes:types.filter(t=>t.domain===p.domain&&t.diagramType!=='BRANCHING_STORY').map(t=>t.diagramType),
-  elements,relations};
+ if(storyMap){
+   const found=await api(`/api/v1/creativity/search/${active.id}?type=ALL`);
+   for(const r of (Array.isArray(found)?found:[]))entityIds.set(r.nodeId,r.id);
+ }
+ const rawNodes=new Map((oldOutputs.length?oldOutputs:p.outputs||[]).flatMap(o=>o.nodes||[]).map(n=>[n.id,n]));
+ const elements=(graph.nodes||[]).map(n=>toElement(n,active.id,storyMap,entityIds.get(n.id),rawNodes.get(n.id)));
+ const idByKey=new Map((graph.nodes||[]).map(n=>[n.key,n.id]));
+ const relations=(graph.edges||[]).map(e=>({id:e.id,source:idByKey.get(e.sourceKey),target:idByKey.get(e.targetKey),type:e.type,label:e.label,outputId:active.id,properties:e.properties}));
+ return {...p,backendDomain:p.domain,domain,outputs:oldOutputs.length?oldOutputs:p.outputs||[],diagrams,
+   activeOutputId:active.id,activeType:active.outputType,graphRevision,storyMap,
+   legacyCreative:false,nodeTypes:rules.nodeTypes.map(toUiType),edgeTypes:rules.edgeTypes,
+   diagramTypes:types.filter(t=>t.domain===backendDomain(domain)&&t.diagramType!=='BRANCHING_STORY').map(t=>t.diagramType),
+   elements,relations};
 }
 // ID of the project's diagram of a type, created when missing (branching tab, character balance)
 export async function diagramIdFor(project,diagramType){
@@ -124,13 +212,18 @@ const revision=p=>`?expectedRevision=${p.graphRevision}`;
 async function writeApiNode(projectId,type,values,oldId){
  const p=await getApiProject(projectId),existing=oldId?p.elements.find(e=>String(e.id)===String(oldId)):null;
  const outputId=p.activeOutputId;
+ if(outputId==null)throw new Error("Create or select a diagram before adding elements");
  const x=Number(values.x??existing?.x??140),y=Number(values.y??existing?.y??135);
  if(p.storyMap){
    if(!CREATIVE_TYPES.includes(type))throw new Error('Story maps hold characters, worlds, locations, rules and events only');
-   const payload={positionX:x,positionY:y,...(type==='events'?{title:values.name}:{name:values.name}),description:values.description||'—',notes:values.notes||''};
+   const detailPath=type==='characters'?`/api/v1/character-profile/get/by/${existing?.entityId}`:
+     `/api/v1/${entityPaths[type]}/get/${existing?.entityId}`;
+   const previous=existing?.entityId?await api(detailPath):{};
+   const payload={positionX:x,positionY:y,...(type==='events'?{title:values.name}:{name:values.name}),
+     description:values.description||'—',notes:values.notes||''};
    // Keep advanced text fields already stored by the backend when editing.
-   for(const field of ['aliases','appearance','traits','strengths','weaknesses','skills','history','goals','fears','innerConflict','secrets','characterValues','characterArc','lore','atmosphere','scope','conditions','exceptions','consequences','inWorldTime'])if(existing?.raw?.[field]!=null)payload[field]=existing.raw[field];
-   if(type==='characters'){payload.shortDescription=values.description||'—';payload.role=values.role||existing?.role||'OTHER';payload.age=Number(values.age)||Number(existing?.age)||18;payload.writerNotes=values.notes||'';}
+   for(const field of ['aliases','appearance','traits','strengths','weaknesses','skills','history','goals','fears','innerConflict','secrets','characterValues','characterArc','lore','atmosphere','scope','conditions','exceptions','consequences','inWorldTime'])if(previous?.[field]!=null)payload[field]=previous[field];
+   if(type==='characters'){payload.shortDescription=values.description||'—';payload.role=values.role||previous.role||'OTHER';payload.age=Number(values.age)||Number(previous.age)||18;payload.writerNotes=values.notes||previous.writerNotes||'';}
    if(type==='locations'){payload.locationType=values.locationType||'';payload.narrativeSignificance=values.description||'';}
    if(type==='events'){payload.eventType=values.eventType||'';payload.presentationOrder=Number(values.presentationOrder)||1;payload.chronologicalOrder=values.chronologicalOrder?Number(values.chronologicalOrder):null;}
    await api(`/api/v1/${entityPaths[type]}/${existing?`update/${existing.entityId}`:`add/${outputId}`}`,json(existing?'PUT':'POST',payload));
@@ -148,7 +241,9 @@ async function writeApiNode(projectId,type,values,oldId){
 
 // ---------- AI (n8n through the backend) ----------
 export const aiApi={
- start:(projectId,body)=>api(`/api/projects/${projectId}/ai/requests`,json('POST',body)),
+ start:(projectId,body,domain)=>api(
+  ['writing','games'].includes(domain)?`/api/projects/${projectId}/creativity/ai/requests`:`/api/projects/${projectId}/ai/requests`,
+  json('POST',body)),
  status:statusUrl=>api(statusUrl),
  proposal:(projectId,proposalId)=>api(`/api/projects/${projectId}/ai/proposals/${proposalId}`),
  accept:(projectId,proposalId)=>api(`/api/projects/${projectId}/ai/proposals/${proposalId}/accept`,{method:'POST'}),
