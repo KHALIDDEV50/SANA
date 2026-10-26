@@ -1,3 +1,4 @@
+
 /* SANA v4 — real SANA navy / turquoise / gold, with neutral warm surfaces.
    Tools use one central canvas and an on-demand right-side editing drawer. */
 :root{--deep:#092e39;--navy:#0c3440;--teal:#168a8f;--aqua:#41b7b4;--gold:#d8aa5c;--goldlight:#fae3ae;--cream:#f2eee7;--paper:#fffcf7;--border:#ddd9d0;--muted:#627379;--shadow:0 15px 34px rgba(19,48,54,.065);color:#243d42;background:#f3efe8}
@@ -60,8 +61,8 @@ body,.app{background:#f3efe8;color:#243d42}
 .studio-grouped-tools{margin-inline-start:13px;padding-inline-start:7px;border-inline-start:1px solid rgba(173,215,212,.24);display:flex;flex-direction:column;gap:2px}.studio-grouped-tools button{font-size:12px!important}.studio-grouped-tools button svg{opacity:.75}
 
 /* Login is shown only in API mode, scoped to avoid changes to the existing SANA UI. */
-.sana-auth-shell {min-height:100vh;display:flex;align-items:center;justify-content:center;padding:26px;background:var(--bg,#f7f7f4);color:var(--ink,#19373b)}
-.sana-auth-card {width:min(440px,100%);padding:32px;border-radius:22px;background:var(--surface,#fff);border:1px solid rgba(34,76,80,.18);box-shadow:0 15px 45px rgba(21,42,44,.12);text-align:center}
+.sana-auth-shell {min-height:100vh;display:flex;align-items:center;justify-content:center;padding:26px;background:var(--cream);color:var(--deep)}
+.sana-auth-card {width:min(440px,100%);padding:32px;border-radius:22px;background:var(--paper);border:1px solid rgba(34,76,80,.18);box-shadow:0 15px 45px rgba(21,42,44,.12);text-align:center}
 .sana-auth-card>img {width:140px;height:auto;max-height:95px;object-fit:contain}
 .sana-auth-card h1 {font-size:1.55rem;margin:12px 0 8px;color:inherit}
 .sana-auth-card>p {opacity:.75;margin:0 0 22px}
