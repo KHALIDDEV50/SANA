@@ -21,7 +21,7 @@ const examples = [
 ];
 function load(){try{const parsed=JSON.parse(localStorage.getItem(STORE));if(Array.isArray(parsed))return parsed;}catch{} return clone(examples)}
 function persist(projects){localStorage.setItem(STORE,JSON.stringify(projects));return projects}
-function projectWithCounts(p){return {...p,elementCount:(p.elements?.length ?? p.outputs?.reduce((n,o)=>n+(o.nodes?.length||0),0) ?? 0),relationCount:p.relations?.length ?? 0}}
+function projectWithCounts(p){return {...p,elementCount:(p.elements?.length ?? (p.outputs?.every(o=>Array.isArray(o.nodes))?p.outputs.reduce((n,o)=>n+o.nodes.length,0):null)),relationCount:p.relations?.length ?? 0}}
 // ---------- Login (HTTP Basic) ----------
 // The backend uses Basic Auth: every request carries "Basic base64(email:password)".
 // It is kept in sessionStorage, so it is forgotten when the tab closes.
@@ -40,7 +40,7 @@ export async function api(path,opts={}){
  const response=await fetch(`${BASE}${path}`,{...opts,credentials:'include',headers:{'Content-Type':'application/json',...(token?{Authorization:`Basic ${token}`}:{}),...(opts.headers||{})}});
  // A 401 means the login is missing or wrong: forget it and let the app show the login screen
  if(response.status===401&&!path.startsWith('/api/v1/auth/')){authApi.forget();window.dispatchEvent(new Event('sana-unauthorized'))}
- if(!response.ok){let detail='';try{const j=await response.json();detail=j.message||(typeof j.error==='string'?j.error:j.error?.message)||j.detail||'';}catch{}throw new Error(detail||`HTTP ${response.status} — ${path}`)}
+ if(!response.ok){let detail='';try{const j=await response.json();detail=j.message||(typeof j.error==='string'?j.error:j.error?.message)||j.detail||'';}catch{}const error=new Error(detail||`HTTP ${response.status} — ${path}`);error.status=response.status;throw error}
  if(response.status===204)return null;const text=await response.text();if(!text)return null;try{return JSON.parse(text)}catch{return text}
 }
 const json=(method,payload)=>({method,body:JSON.stringify(payload)});
@@ -192,16 +192,17 @@ async function getApiProject(id){
  const idByKey=new Map((graph.nodes||[]).map(n=>[n.key,n.id]));
  const relations=(graph.edges||[]).map(e=>({id:e.id,source:idByKey.get(e.sourceKey),target:idByKey.get(e.targetKey),type:e.type,label:e.label,outputId:active.id,properties:e.properties}));
  return {...p,backendDomain:p.domain,domain,outputs:oldOutputs.length?oldOutputs:p.outputs||[],diagrams,
-   activeOutputId:active.id,activeType:active.outputType,graphRevision,storyMap,
+   activeOutputId:active.id,activeType:active.outputType,graphRevision,graphProperties:graph.properties||{},storyMap,
    legacyCreative:false,nodeTypes:rules.nodeTypes.map(toUiType),edgeTypes:rules.edgeTypes,
    diagramTypes:types.filter(t=>t.domain===backendDomain(domain)&&t.diagramType!=='BRANCHING_STORY').map(t=>t.diagramType),
    elements,relations};
 }
 // ID of the project's diagram of a type, created when missing (branching tab, character balance)
-export async function diagramIdFor(project,diagramType){
+export async function diagramIdFor(project,diagramType,create=false){
  if(!API_MODE)return 'demo';
  const known=(project.diagrams||[]).find(d=>d.outputType===diagramType);if(known)return known.id;
  const existing=(await listDiagrams(project.id)).find(d=>d.outputType===diagramType);
+ if(!existing&&!create){const error=new Error('No diagram exists for this tool. Create one explicitly.');error.code='DIAGRAM_REQUIRED';throw error;}
  const diagram=existing||await createDiagram(project.id,project.name,diagramType);
  project.diagrams=[...(project.diagrams||[]),diagram];
  return diagram.id;
@@ -222,17 +223,18 @@ async function writeApiNode(projectId,type,values,oldId){
    const payload={positionX:x,positionY:y,...(type==='events'?{title:values.name}:{name:values.name}),
      description:values.description||'—',notes:values.notes||''};
    // Keep advanced text fields already stored by the backend when editing.
-   for(const field of ['aliases','appearance','traits','strengths','weaknesses','skills','history','goals','fears','innerConflict','secrets','characterValues','characterArc','lore','atmosphere','scope','conditions','exceptions','consequences','inWorldTime'])if(previous?.[field]!=null)payload[field]=previous[field];
+   for(const field of ['aliases','appearance','traits','strengths','weaknesses','skills','history','goals','fears','innerConflict','secrets','characterValues','characterArc','lore','atmosphere','scope','conditions','exceptions','consequences','inWorldTime'])if(values.properties?.[field]!=null)payload[field]=values.properties[field];else if(previous?.[field]!=null)payload[field]=previous[field];
    if(type==='characters'){payload.shortDescription=values.description||'—';payload.role=values.role||previous.role||'OTHER';payload.age=Number(values.age)||Number(previous.age)||18;payload.writerNotes=values.notes||previous.writerNotes||'';}
    if(type==='locations'){payload.locationType=values.locationType||'';payload.narrativeSignificance=values.description||'';}
    if(type==='events'){payload.eventType=values.eventType||'';payload.presentationOrder=Number(values.presentationOrder)||1;payload.chronologicalOrder=values.chronologicalOrder?Number(values.chronologicalOrder):null;}
    await api(`/api/v1/${entityPaths[type]}/${existing?`update/${existing.entityId}`:`add/${outputId}`}`,json(existing?'PUT':'POST',payload));
+   if(type==='locations'&&existing?.entityId){for(const [kind,target]of Object.entries(values.locationLinks||{}))if(target)await api(`/api/v1/location/update/${existing.entityId}/${kind}/${target}`,{method:'PUT'})}
  }else{
    // Keep properties this form does not show (for example ERD attributes or AI-added fields)
-   const data={...(existing?.properties||{})};delete data.label;
+   const data={...(existing?.properties||{}),...(values.properties||{})};delete data.label;
    data.description=values.description||'';if(values.notes)data.notes=values.notes;else delete data.notes;
    const backendType=toBackendType(type);
-   if(backendType==='ENTITY'&&!Array.isArray(data.attributes))data.attributes=[{name:'id',dataType:'INT',primaryKey:true,nullable:false}];
+   if(backendType==='ENTITY'&&(!Array.isArray(data.attributes)||!data.attributes.some(a=>a.primaryKey)))throw Error('ERD entities require attributes and a primary key.');
    const body={type:backendType,label:values.name,positionX:x,positionY:y,data};
    await api(existing?`/api/v1/diagram/node/update/${outputId}/${existing.nodeId}${revision(p)}`:`/api/v1/diagram/node/add/${outputId}${revision(p)}`,json(existing?'PUT':'POST',body));
  }
@@ -244,13 +246,17 @@ export const aiApi={
  start:(projectId,body,domain)=>api(
   ['writing','games'].includes(domain)?`/api/projects/${projectId}/creativity/ai/requests`:`/api/projects/${projectId}/ai/requests`,
   json('POST',body)),
- status:statusUrl=>api(statusUrl),
+ status:statusUrl=>{if(!/^\/api\/projects\/\d+\/(?:creativity\/)?ai\/requests\/[A-Za-z0-9-]+$/.test(statusUrl))throw Error('Invalid AI status address');return api(statusUrl)},
  proposal:(projectId,proposalId)=>api(`/api/projects/${projectId}/ai/proposals/${proposalId}`),
  accept:(projectId,proposalId)=>api(`/api/projects/${projectId}/ai/proposals/${proposalId}/accept`,{method:'POST'}),
  reject:(projectId,proposalId)=>api(`/api/projects/${projectId}/ai/proposals/${proposalId}/reject`,{method:'POST'}),
 };
 
 export const repository={
+ async linkLocation(id,kind,target){return api(`/api/v1/location/update/${id}/${kind}/${target}`,{method:'PUT'})},
+ async renameDiagram(projectId,title){const p=await getApiProject(projectId);await api(`/api/v1/diagram/update/${p.activeOutputId}${revision(p)}`,json('PUT',{title,diagramType:p.activeType}));return getApiProject(projectId)},
+ async deleteDiagram(projectId){const p=await getApiProject(projectId);await api(`/api/v1/diagram/delete/${p.activeOutputId}${revision(p)}`,{method:'DELETE'});return getApiProject(projectId)},
+ async deleteImpact(projectId,element){const p=await getApiProject(projectId);if(!API_MODE||!p.storyMap||p.legacyCreative)return null;return api(`/api/v1/creativity/relations/delete/preview/${p.activeOutputId}/node/${element.nodeId}`)},
  async list(){return API_MODE?(await getApiProjects()).map(projectWithCounts):load().map(projectWithCounts)},
  async get(id){return API_MODE?getApiProject(id):load().find(p=>String(p.id)===String(id))||null},
  async createProject(payload){
@@ -261,6 +267,7 @@ export const repository={
    const after=await getApiProjects();const ids=new Set(before.map(x=>x.id));const p=after.find(x=>!ids.has(x.id));
    if(!p)throw new Error('Project created but could not resolve its ID; refresh projects before retrying');
    storage.set(uiDomainKey(p.id),domain);
+   if(payload.aiFirst)return {...p,domain};
    const diagram=await createDiagram(p.id,payload.name,PRIMARY_DIAGRAM[domain]);storage.set(activeDiagramKey(p.id),diagram.id);
    for(const node of starterNodes(payload.templateId,payload.lang))await writeApiNode(p.id,node.type,node);
    return {...p,domain};
@@ -300,11 +307,18 @@ export const repository={
   }
   const all=load(),p=all.find(p=>String(p.id)===String(projectId));const e=p.elements.find(e=>String(e.id)===String(id));if(e){e.x=x;e.y=y;persist(all)}
  },
- async allowedRelationTypes(projectId,sourceId,targetId){
+ async allowedRelationTypes(projectId,sourceId,targetId,editingId){
   if(!API_MODE)return ['CUSTOM','FAMILY','FRIENDSHIP','RIVALRY','WORK','ROMANTIC','PARTICIPATES_IN','CAUSES','AFFECTED_BY','LIVES_IN','BELONGS_TO','VISITS','LEADS_TO','PRECEDES','SIMULTANEOUS_WITH','NARRATIVE_LINK','INSIDE','CONNECTED_TO','NEAR','APPLIES_TO','RESTRICTS','AFFECTS'];
   const p=await getApiProject(projectId),a=p.elements.find(e=>String(e.id)===String(sourceId)),b=p.elements.find(e=>String(e.id)===String(targetId));
   if(!a||!b)return p.edgeTypes;
-  if(!p.storyMap)return p.edgeTypes;
+  if(!p.storyMap)return p.edgeTypes.filter(type=>{
+ const source=a.type.toUpperCase(),target=b.type.toUpperCase();
+ if(p.activeType==='ARCHITECTURE'&&type==='DATA_FLOW')return [source,target].some(t=>['DATABASE','QUEUE'].includes(t));
+ if(p.activeType==='USE_CASE'){if(type==='ASSOCIATION')return source==='ACTOR'&&target==='USE_CASE';if(['INCLUDE','EXTEND'].includes(type))return source==='USE_CASE'&&target==='USE_CASE';if(type==='GENERALIZATION')return source===target;}
+ if(p.activeType==='CLASS_DIAGRAM'){if(type==='INHERITANCE'){const compatible=source==='INTERFACE'?target==='INTERFACE':['CLASS','ABSTRACT_CLASS'].includes(source)&&['CLASS','ABSTRACT_CLASS'].includes(target);const seen=new Set();const reaches=id=>{if(String(id)===String(sourceId))return true;if(seen.has(String(id)))return false;seen.add(String(id));return p.relations.filter(r=>r.type==='INHERITANCE'&&String(r.id)!==String(editingId)&&String(r.source)===String(id)).some(r=>reaches(r.target))};return compatible&&!reaches(targetId)}if(type==='IMPLEMENTATION')return source!=='INTERFACE'&&target==='INTERFACE';}
+ if(p.activeType==='MIND_MAP'&&type==='BRANCH')return target!=='CENTRAL_TOPIC'&&!p.relations.some(r=>r.type==='BRANCH'&&String(r.target)===String(targetId)&&String(r.id)!==String(editingId));
+ return true;
+ });
   const types=await api(`/api/v1/creativity/relations/get/types/${p.activeOutputId}/${a.nodeId}/${b.nodeId}`);
   return Array.isArray(types)?types.map(t=>typeof t==='string'?t:t.name||String(t)):['CUSTOM'];
  },
@@ -314,11 +328,12 @@ export const repository={
    if(!a||!b)throw new Error('Both nodes must be on the open diagram');
    const type=data.type||p.edgeTypes[0];
    if(p.storyMap){const label=data.label||(type==='CUSTOM'?'Related':type.replaceAll('_',' '));await api(`/api/v1/creativity/relations/add/${p.activeOutputId}/${a.nodeId}/${b.nodeId}`,json('POST',{type,label}));}
-   else await api(`/api/v1/diagram/edge/add/${p.activeOutputId}${revision(p)}`,json('POST',{type,label:data.label||'',sourceNodeId:a.nodeId,targetNodeId:b.nodeId,data:{}}));
+   else await api(`/api/v1/diagram/edge/add/${p.activeOutputId}${revision(p)}`,json('POST',{type,label:data.label||'',sourceNodeId:a.nodeId,targetNodeId:b.nodeId,data:data.properties||{}}));
    return getApiProject(projectId);
   }
   const all=load(),p=all.find(p=>String(p.id)===String(projectId));if(!p)throw new Error('Project not found');p.relations.push({id:makeId(),source:Number(data.source),target:Number(data.target),type:data.type||'CUSTOM',label:data.label||'Related'});p.updatedAt=now();persist(all);return p;
  },
+ async updateRelation(projectId,data){if(!API_MODE){const all=load(),p=all.find(p=>String(p.id)===String(projectId));const edge=p.relations.find(e=>String(e.id)===String(data.id));Object.assign(edge,data);persist(all);return p;}const p=await getApiProject(projectId);if(p.storyMap)throw Error('Story relationship updates are not supported by this editor.');const a=p.elements.find(e=>String(e.id)===String(data.source)),b=p.elements.find(e=>String(e.id)===String(data.target));if(!a||!b)throw Error('Both nodes must be on the open diagram');await api(`/api/v1/diagram/edge/update/${p.activeOutputId}/${data.id}${revision(p)}`,json('PUT',{type:data.type,label:data.label,sourceNodeId:a.nodeId,targetNodeId:b.nodeId,data:data.properties||{}}));return getApiProject(projectId)},
  async removeRelation(projectId,r){
   if(API_MODE){
    const p=await getApiProject(projectId);
