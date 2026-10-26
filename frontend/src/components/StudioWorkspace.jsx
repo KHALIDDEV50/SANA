@@ -1,0 +1,9 @@
+import React,{useEffect,useRef,useState} from 'react';
+export function useDialogFocus(ref,onClose,enabled=true){
+ const close=useRef(onClose);close.current=onClose;
+ useEffect(()=>{if(!enabled||!ref.current)return;const previous=document.activeElement,root=ref.current;
+ const focusable=()=>[...root.querySelectorAll('button:not(:disabled),a[href],input:not(:disabled),textarea:not(:disabled),select:not(:disabled),[tabindex="0"]')].filter(e=>e.getClientRects().length);
+ focusable()[0]?.focus();const key=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close.current?.()}if(e.key==='Tab'){const all=focusable(),first=all[0],last=all.at(-1);if(!first){e.preventDefault();return}if(e.shiftKey&&(document.activeElement===first||!root.contains(document.activeElement))){e.preventDefault();last.focus()}else if(!e.shiftKey&&(document.activeElement===last||!root.contains(document.activeElement))){e.preventDefault();first.focus()}}};root.addEventListener('keydown',key);return()=>{root.removeEventListener('keydown',key);previous?.isConnected&&previous.focus?.()};
+ },[enabled,ref]);
+}
+export default function StudioWorkspace({children,assistant,open}){const dock=useRef(null),[mobile,setMobile]=useState(()=>window.matchMedia('(max-width:800px)').matches);useEffect(()=>{const media=window.matchMedia('(max-width:800px)'),change=()=>setMobile(media.matches);media.addEventListener('change',change);return()=>media.removeEventListener('change',change)},[]);useDialogFocus(dock,assistant?.props?.onClose,open&&mobile);return <div className={`spark-workspace ${open?'assistant-open':''}`}><div className="spark-editor">{children}</div><div ref={dock} className="spark-assistant-dock" hidden={!open} role={mobile&&open?'dialog':undefined} aria-modal={mobile&&open?true:undefined}>{assistant}</div></div>}

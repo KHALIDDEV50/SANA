@@ -1,3 +1,4 @@
+
 /* SANA v4 — real SANA navy / turquoise / gold, with neutral warm surfaces.
    Tools use one central canvas and an on-demand right-side editing drawer. */
 :root{--deep:#092e39;--navy:#0c3440;--teal:#168a8f;--aqua:#41b7b4;--gold:#d8aa5c;--goldlight:#fae3ae;--cream:#f2eee7;--paper:#fffcf7;--border:#ddd9d0;--muted:#627379;--shadow:0 15px 34px rgba(19,48,54,.065);color:#243d42;background:#f3efe8}
@@ -48,7 +49,7 @@ body,.app{background:#f3efe8;color:#243d42}
 @media(max-width:1200px){.ux-tool-head{align-items:flex-start;flex-wrap:wrap}.ux-tool-actions{width:100%;justify-content:flex-start}.ux-tool-heading p{max-width:100%}}
 @media(max-width:900px){.studio-main{padding:20px 14px 35px}.ux-tool-head{gap:13px}.ux-tool-heading{align-items:flex-start}.ux-tool-heading h1{font-size:23px}.ux-stage-scroll{max-height:61vh}.ux-steps span{flex:1 1 190px}.ux-balance-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:650px){.ux-tool-actions{gap:6px}.ux-tool-actions .ux-action{flex:1 1 auto;padding:10px 9px;font-size:11px}.ux-tool-heading p{font-size:11px}.ux-tool-icon{height:44px;flex-basis:44px}.ux-stage-guide{font-size:10px}.ux-balance-grid{grid-template-columns:1fr}.ux-report-metrics{gap:5px}.ux-report-metrics>div{padding:10px}.ux-report-metrics strong{font-size:20px}.ux-drawer{width:100vw}.ux-drawer-top{padding:21px}.ux-drawer-body{padding:21px}.ux-steps{gap:6px}.ux-steps span{flex:1 1 100%;padding:8px 12px}}
-@media(prefers-reduced-motion:reduce){.ux-drawer,.ux-drawer-shade{animation:none}.ux-action{transition:none}.landing-hero .hero-scene *{animation:none!important}}
+@media(prefers-reduced-motion:reduce){.ux-drawer,.ux-drawer-shade{animation:none}.ux-action{transition:none}/* Hero star, orbit and ring animations are preserved. Reduced motion handled separately. */}
 /* Existing generic element and relation forms also appear in the same right-hand drawer. */
 .modal-backdrop.modal-as-drawer{display:flex;align-items:stretch;justify-content:flex-end;padding:0;background:rgba(10,31,38,.48);backdrop-filter:blur(4px)}
 .modal-as-drawer .modal-card{width:min(455px,100vw);height:100vh;max-height:100vh;border-radius:0;box-shadow:-16px 0 50px rgba(6,31,39,.20);background:#fffcf6;animation:ux-slide .25s ease-out}
@@ -58,3 +59,19 @@ body,.app{background:#f3efe8;color:#243d42}
 .modal-as-drawer .form-field input,.modal-as-drawer .form-field textarea,.modal-as-drawer .form-field select{background:#fffefb;border-color:#d9ded7;color:#243f45}
 .studio-tools-toggle{margin-top:9px;border-top:1px solid rgba(193,222,218,.15)!important;padding-top:15px!important}.studio-tools-toggle>svg:last-child{margin-inline-start:auto;color:#b4d6d0;transition:transform .15s}.studio-tools-toggle.opened>svg:last-child{transform:rotate(180deg)}
 .studio-grouped-tools{margin-inline-start:13px;padding-inline-start:7px;border-inline-start:1px solid rgba(173,215,212,.24);display:flex;flex-direction:column;gap:2px}.studio-grouped-tools button{font-size:12px!important}.studio-grouped-tools button svg{opacity:.75}
+
+/* Login is shown only in API mode, scoped to avoid changes to the existing SANA UI. */
+.sana-auth-shell {min-height:100vh;display:flex;align-items:center;justify-content:center;padding:26px;background:var(--cream);color:var(--deep)}
+.sana-auth-card {width:min(440px,100%);padding:32px;border-radius:22px;background:var(--paper);border:1px solid rgba(34,76,80,.18);box-shadow:0 15px 45px rgba(21,42,44,.12);text-align:center}
+.sana-auth-card>img {width:140px;height:auto;max-height:95px;object-fit:contain}
+.sana-auth-card h1 {font-size:1.55rem;margin:12px 0 8px;color:inherit}
+.sana-auth-card>p {opacity:.75;margin:0 0 22px}
+.sana-auth-card form {text-align:start;display:grid;gap:14px}
+.sana-auth-card label {display:grid;gap:7px;font-weight:600;font-size:.92rem}
+.sana-auth-card input {width:100%;min-height:44px;border:1px solid #b8c9c7;background:#fff;border-radius:11px;padding:10px 13px;color:#213c40;font:inherit}
+.sana-auth-card input:focus-visible,.sana-auth-card button:focus-visible,.sana-signout:focus-visible {outline:2px solid #41938d;outline-offset:2px}
+.sana-auth-submit {margin-top:5px;background:#0f4c5c;color:#fff;border:0;border-radius:11px;min-height:46px;cursor:pointer;font:inherit;font-weight:700}
+.sana-auth-submit:disabled {opacity:.55;cursor:wait}
+.sana-auth-switch {border:0;background:transparent;cursor:pointer;color:#0f4c5c;font:inherit;margin-top:13px;padding:5px}
+.sana-auth-error {color:#ad2525;text-align:start;font-size:.9rem;overflow-wrap:anywhere}
+.sana-signout {background:transparent;border:1px solid currentColor;border-radius:9px;padding:7px 10px;color:inherit;font:inherit;cursor:pointer;white-space:nowrap}

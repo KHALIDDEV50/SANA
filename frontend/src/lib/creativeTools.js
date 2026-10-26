@@ -3,8 +3,9 @@
  * In demo mode boards are stored in localStorage and never presented as server-saved.
  */
 import {API_MODE,api,diagramIdFor} from './data';
-// The backend has no moodboard API yet, so moodboards stay in this browser in every mode.
-export const MOODBOARD_API=false;
+// Use the real MoodboardController whenever Spring Boot API mode is active.
+// Local uploads are clearly marked localOnly (backend currently supports verified Openverse images).
+export const MOODBOARD_API=API_MODE;
 const STORE='sana-special-tools-v3';
 const LOCAL_IMAGES='sana-local-mood-images-v4';
 const localPhotos=()=>{try{return JSON.parse(localStorage.getItem(LOCAL_IMAGES))||{}}catch{return {}}};
@@ -20,6 +21,11 @@ const id=()=>Date.now()*100+Math.floor(Math.random()*99);
 const body=(method,data)=>({method,body:JSON.stringify(data)});
 const scope=(projectId)=>{const db=load();if(!db[projectId])db[projectId]={boards:[],scenes:[],choices:[],fighters:[],variables:[]};return [db,db[projectId]]};
 export const creativeTools={
+ async saveBranchLayout(project,nodes){const outputId=await diagramIdFor(project,'BRANCHING_STORY');if(API_MODE)return api(`/api/v1/branching/update/${outputId}/layout/nodes/${nodes.map(n=>n.branchingNodeId).join(',')}`,body('PUT',nodes.map(n=>({positionX:n.positionX,positionY:n.positionY}))));const [db,s]=scope(project.id);s.scenes=s.scenes.map(n=>({...n,...nodes.find(m=>m.branchingNodeId===n.branchingNodeId)}));save(db)},
+ async updateVariable(project,variableId,name,initialValue){const id=await diagramIdFor(project,'BRANCHING_STORY');if(API_MODE)return api(`/api/v1/branching/update/${id}/variables/${variableId}`,body('PUT',{name,initialValue}));const [db,s]=scope(project.id);const v=s.variables.find(v=>v.id===variableId);if(v)Object.assign(v,{name,initialValue});save(db)},
+ async unlinkFighter(project,characterId){const id=await diagramIdFor(project,'STORY_MAP');if(API_MODE)return api(`/api/v1/character-balance/${id}/characters/${characterId}/profile`,{method:'DELETE'});const [db,s]=scope(project.id);const f=s.fighters.find(f=>String(f.id??f.characterId)===String(characterId));if(f){f.characterProfileId=null;f.characterProfileName=null;save(db)}},
+ async renameBoard(projectId,boardId,title){if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/update/${boardId}/title`,body('PUT',{title}));const [db,s]=scope(projectId);const board=s.boards.find(b=>String(b.id)===String(boardId));if(!board)throw Error('Moodboard not found');board.title=title;save(db);return board;},
+ async editLabel(projectId,boardId,itemId,data){if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/update/${boardId}/labels/${itemId}`,body('PUT',data));const [db,s]=scope(projectId);const item=s.boards.find(b=>String(b.id)===String(boardId))?.items.find(i=>String(i.id)===String(itemId));if(!item?.label)throw Error('Note not found');item.label={...item.label,...data};save(db);return item;},
  async boards(projectId){if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/get/project/${projectId}`);return scope(projectId)[1].boards.map(({id,title})=>({id,title,projectId}));},
  async addBoard(projectId,title){if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/add/${projectId}`,body('POST',{title}));const [db,s]=scope(projectId);const board={id:id(),title,projectId,items:[]};s.boards.push(board);save(db);return board},
  async board(projectId,boardId){if(MOODBOARD_API){const b=await api(`/api/v1/creativity/moodboard/get/${boardId}`);return {...b,items:[...(b.items||[]),...localItems(boardId)]}}return scope(projectId)[1].boards.find(b=>String(b.id)===String(boardId))||null},
@@ -44,5 +50,24 @@ export const creativeTools={
  async updateFighter(project,characterId,data){const outputId=await diagramIdFor(project,'STORY_MAP');if(API_MODE)return api(`/api/v1/character-balance/${outputId}/characters/update/${characterId}`,body('PUT',data));const [db,s]=scope(project.id);const fighter=s.fighters.find(f=>(f.id??f.characterId)===characterId);if(!fighter)throw Error('Character not found');Object.assign(fighter,data);save(db)},
  async deleteFighter(project,characterId){const outputId=await diagramIdFor(project,'STORY_MAP');if(API_MODE)return api(`/api/v1/character-balance/${outputId}/characters/delete/${characterId}`,{method:'DELETE'});const [db,s]=scope(project.id);s.fighters=s.fighters.filter(f=>(f.id??f.characterId)!==characterId);save(db)},
  async linkFighter(project,characterId,profileId){const outputId=await diagramIdFor(project,'STORY_MAP');if(API_MODE)return api(`/api/v1/character-balance/${outputId}/characters/${characterId}/profile/${profileId}`,{method:'PUT'});const [db,s]=scope(project.id);const fighter=s.fighters.find(f=>String(f.id||f.characterId)===String(characterId));if(fighter){const profile=project.elements?.find(e=>String(e.entityId||e.id)===String(profileId));fighter.characterProfileId=profileId;fighter.characterProfileName=profile?.name||null;save(db);}},
- async analyzeFighters(project){const outputId=await diagramIdFor(project,'STORY_MAP');if(API_MODE)return api(`/api/v1/character-balance/${outputId}/analyze`);const fighters=scope(project.id)[1].fighters||[];const ready=fighters.filter(f=>['attack','defense','speed','rangeStat','stamina','special'].every(k=>Number.isFinite(Number(f[k]))));const total=f=>['attack','defense','speed','rangeStat','stamina','special'].reduce((n,k)=>n+Number(f[k]),0);const avg=ready.length?ready.reduce((n,f)=>n+total(f),0)/ready.length:null;return {totalCharacters:fighters.length,analyzedCharacters:ready.length,averagePoints:avg==null?null:Math.round(avg*10)/10,notes:ready.length<2?['Only one or no characters have complete stats. Group comparison requires at least two.']:['Equal total points do not guarantee actual gameplay balance.'],characters:ready.map(f=>({characterId:f.id,name:f.name,totalPoints:total(f),differenceFromAverage:Math.round((total(f)-avg)*10)/10,warnings:ready.length>1&&Math.abs(total(f)-avg)>avg*.1?['Total points differ from the group average by more than 10%']:[]}))}}
+ async analyzeFighters(project){const outputId=await diagramIdFor(project,'STORY_MAP');if(API_MODE)return api(`/api/v1/character-balance/${outputId}/analyze`);const fighters=scope(project.id)[1].fighters||[];const ready=fighters.filter(f=>['attack','defense','speed','rangeStat','stamina','special'].every(k=>f[k]!=null&&f[k]!==''&&Number.isFinite(Number(f[k]))));const total=f=>['attack','defense','speed','rangeStat','stamina','special'].reduce((n,k)=>n+Number(f[k]),0);const avg=ready.length?ready.reduce((n,f)=>n+total(f),0)/ready.length:null;return {totalCharacters:fighters.length,analyzedCharacters:ready.length,averagePoints:avg==null?null:Math.round(avg*10)/10,notes:ready.length<2?['Only one or no characters have complete stats. Group comparison requires at least two.']:['Equal total points do not guarantee actual gameplay balance.'],characters:ready.map(f=>({characterId:f.id,name:f.name,totalPoints:total(f),differenceFromAverage:Math.round((total(f)-avg)*10)/10,warnings:ready.length>1&&Math.abs(total(f)-avg)>avg*.1?['Total points differ from the group average by more than 10%']:[]}))}}
 };
+
+
+// Creativity-only AI moodboard calls. Kept with the existing moodboard data API.
+const moodboardAIPath = id => `/api/projects/${encodeURIComponent(id)}/creativity/moodboard-ai`;
+const moodboardRequest = (method, body) => ({method, headers:{'X-Sana-Moodboard':'1'}, body:JSON.stringify(body)});
+export const moodboardAi = {
+ generate:(id,prompt,language)=>api(`${moodboardAIPath(id)}/drafts`,moodboardRequest('POST',{prompt,language})),
+ get:(id,draft)=>api(`${moodboardAIPath(id)}/drafts/${encodeURIComponent(draft)}`,{headers:{'X-Sana-Moodboard':'1'}}),
+ approve:(id,draft)=>api(`${moodboardAIPath(id)}/drafts/${encodeURIComponent(draft)}/approve`,moodboardRequest('POST',{version:1})),
+ reject:(id,draft)=>api(`${moodboardAIPath(id)}/drafts/${encodeURIComponent(draft)}/reject`,moodboardRequest('POST',{version:1}))
+};
+
+export function moodboardReferenceUrl(value) {
+ try {
+  const url=new URL(value),host=url.hostname.toLowerCase();
+  return url.protocol==='https:'&&!url.username&&!url.password&&host.includes('.')
+   && !/^[\d.]+$/.test(host)&&!host.endsWith('.localhost')&&!host.endsWith('.local')&&!host.endsWith('.internal') ? url.href:null;
+ } catch {return null}
+}
