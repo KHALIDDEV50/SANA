@@ -22,6 +22,12 @@ public class AIRunResponseDTO {
     private ExecutionStatus status;
     private String modelName;
     private LocalDateTime createdAt;
+    // Safe request metadata lets the owner resume a clarification after reloading.
+    // Never include webhook URLs, transport keys, or callback credentials here.
+    private String prompt;
+    private String diagramType;
+    private String businessToolType;
+    private Object businessInput;
     private String statusUrl;
     private String executionId;
     private AIDispatchStatus dispatchStatus;
@@ -34,7 +40,7 @@ public class AIRunResponseDTO {
     private N8nCallbackDTO.Failure error;
 
     public AIRunResponseDTO(Integer interactionId, String requestId, Integer projectId, Integer outputId,
-            Integer baseRevision, String task, ExecutionStatus status, String modelName, LocalDateTime createdAt) {
+                            Integer baseRevision, String task, ExecutionStatus status, String modelName, LocalDateTime createdAt) {
         this.interactionId = interactionId; this.requestId = requestId; this.projectId = projectId; this.outputId = outputId;
         this.baseRevision = baseRevision; this.task = task; this.status = status; this.modelName = modelName; this.createdAt = createdAt;
     }

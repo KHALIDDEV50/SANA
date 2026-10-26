@@ -7,4 +7,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @Configuration
 @EnableScheduling
 @EnableConfigurationProperties(N8nProperties.class)
-public class N8nConfig {}
+public class N8nConfig {
+
+}

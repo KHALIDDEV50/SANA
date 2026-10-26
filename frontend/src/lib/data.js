@@ -8,12 +8,12 @@ const clone = value => JSON.parse(JSON.stringify(value));
 const makeId = () => Date.now() * 100 + Math.floor(Math.random()*100);
 const examples = [
  {id:101,name:'مدينة أركان',description:'في مدينة تختفي منها الذكريات، تبحث ليان عن الحقيقة وراء مكتبة لا يتذكر أحد وجودها.',domain:'writing',status:'ACTIVE',createdAt:'2026-10-01',updatedAt:'2026-10-22',elements:[
-  {id:1001,type:'characters',name:'ليان',description:'بطلة تبحث عن ذكريات عائلتها.',role:'بطلة',age:24,x:110,y:115},
-  {id:1002,type:'characters',name:'راشد',description:'أمين المكتبة الغامض.',role:'مساعد',age:45,x:445,y:105},
-  {id:1003,type:'worlds',name:'عالم أركان',description:'عالم تتحكم فيه الذاكرة.',x:770,y:140},
-  {id:1004,type:'locations',name:'مكتبة الذكريات',description:'مكتبة سرية.',x:410,y:335},
-  {id:1005,type:'rules',name:'قانون الذاكرة',description:'كل سحر يفقد صاحبه ذكرى.',x:770,y:425},
-  {id:1006,type:'events',name:'اكتشاف المكتبة',description:'أول دليل للغز.',presentationOrder:1,x:90,y:425}],
+   {id:1001,type:'characters',name:'ليان',description:'بطلة تبحث عن ذكريات عائلتها.',role:'بطلة',age:24,x:110,y:115},
+   {id:1002,type:'characters',name:'راشد',description:'أمين المكتبة الغامض.',role:'مساعد',age:45,x:445,y:105},
+   {id:1003,type:'worlds',name:'عالم أركان',description:'عالم تتحكم فيه الذاكرة.',x:770,y:140},
+   {id:1004,type:'locations',name:'مكتبة الذكريات',description:'مكتبة سرية.',x:410,y:335},
+   {id:1005,type:'rules',name:'قانون الذاكرة',description:'كل سحر يفقد صاحبه ذكرى.',x:770,y:425},
+   {id:1006,type:'events',name:'اكتشاف المكتبة',description:'أول دليل للغز.',presentationOrder:1,x:90,y:425}],
   relations:[{id:1,source:1001,target:1004,type:'VISITS',label:'تبحث عن'},{id:2,source:1002,target:1004,type:'LIVES_IN',label:'يحرس'},{id:3,source:1004,target:1006,type:'CONNECTED_TO',label:'مكان الحدث'}]},
  {id:102,name:'بوابة الرمال',description:'لعبة مغامرات عربية مستوحاة من الصحراء.',domain:'games',status:'ACTIVE',createdAt:'2026-10-05',updatedAt:'2026-10-20',elements:[{id:2001,type:'characters',name:'سهيل',description:'رحالة شجاع',role:'بطل',age:23,x:180,y:160},{id:2002,type:'worlds',name:'الصحراء',description:'مدن منسية',x:510,y:200}],relations:[]},
  {id:103,name:'معمارية سنا',description:'تصميم مكونات النظام وروابطها.',domain:'technology',status:'DRAFT',createdAt:'2026-10-10',updatedAt:'2026-10-20',elements:[{id:3001,type:'application',name:'REST API',description:'Spring Boot',x:135,y:180},{id:3002,type:'service',name:'خدمة المشروع',description:'Project Service',x:430,y:180},{id:3003,type:'database',name:'قاعدة البيانات',description:'MySQL',x:750,y:180}],relations:[{id:3011,source:3001,target:3002,type:'CONNECTS_TO',label:'يتواصل مع'},{id:3012,source:3002,target:3003,type:'CONNECTS_TO',label:'يخزن في'}]},
@@ -126,28 +126,33 @@ async function writeApiNode(projectId,type,values,oldId){
  const outputId=p.activeOutputId;
  const x=Number(values.x??existing?.x??140),y=Number(values.y??existing?.y??135);
  if(p.storyMap){
-   if(!CREATIVE_TYPES.includes(type))throw new Error('Story maps hold characters, worlds, locations, rules and events only');
-   const payload={positionX:x,positionY:y,...(type==='events'?{title:values.name}:{name:values.name}),description:values.description||'—',notes:values.notes||''};
-   // Keep advanced text fields already stored by the backend when editing.
-   for(const field of ['aliases','appearance','traits','strengths','weaknesses','skills','history','goals','fears','innerConflict','secrets','characterValues','characterArc','lore','atmosphere','scope','conditions','exceptions','consequences','inWorldTime'])if(existing?.raw?.[field]!=null)payload[field]=existing.raw[field];
-   if(type==='characters'){payload.shortDescription=values.description||'—';payload.role=values.role||existing?.role||'OTHER';payload.age=Number(values.age)||Number(existing?.age)||18;payload.writerNotes=values.notes||'';}
-   if(type==='locations'){payload.locationType=values.locationType||'';payload.narrativeSignificance=values.description||'';}
-   if(type==='events'){payload.eventType=values.eventType||'';payload.presentationOrder=Number(values.presentationOrder)||1;payload.chronologicalOrder=values.chronologicalOrder?Number(values.chronologicalOrder):null;}
-   await api(`/api/v1/${entityPaths[type]}/${existing?`update/${existing.entityId}`:`add/${outputId}`}`,json(existing?'PUT':'POST',payload));
+  if(!CREATIVE_TYPES.includes(type))throw new Error('Story maps hold characters, worlds, locations, rules and events only');
+  const payload={positionX:x,positionY:y,...(type==='events'?{title:values.name}:{name:values.name}),description:values.description||'—',notes:values.notes||''};
+  // Keep advanced text fields already stored by the backend when editing.
+  for(const field of ['aliases','appearance','traits','strengths','weaknesses','skills','history','goals','fears','innerConflict','secrets','characterValues','characterArc','lore','atmosphere','scope','conditions','exceptions','consequences','inWorldTime'])if(existing?.raw?.[field]!=null)payload[field]=existing.raw[field];
+  if(type==='characters'){payload.shortDescription=values.description||'—';payload.role=values.role||existing?.role||'OTHER';payload.age=Number(values.age)||Number(existing?.age)||18;payload.writerNotes=values.notes||'';}
+  if(type==='locations'){payload.locationType=values.locationType||'';payload.narrativeSignificance=values.description||'';}
+  if(type==='events'){payload.eventType=values.eventType||'';payload.presentationOrder=Number(values.presentationOrder)||1;payload.chronologicalOrder=values.chronologicalOrder?Number(values.chronologicalOrder):null;}
+  await api(`/api/v1/${entityPaths[type]}/${existing?`update/${existing.entityId}`:`add/${outputId}`}`,json(existing?'PUT':'POST',payload));
  }else{
-   // Keep properties this form does not show (for example ERD attributes or AI-added fields)
-   const data={...(existing?.properties||{})};delete data.label;
-   data.description=values.description||'';if(values.notes)data.notes=values.notes;else delete data.notes;
-   const backendType=toBackendType(type);
-   if(backendType==='ENTITY'&&!Array.isArray(data.attributes))data.attributes=[{name:'id',dataType:'INT',primaryKey:true,nullable:false}];
-   const body={type:backendType,label:values.name,positionX:x,positionY:y,data};
-   await api(existing?`/api/v1/diagram/node/update/${outputId}/${existing.nodeId}${revision(p)}`:`/api/v1/diagram/node/add/${outputId}${revision(p)}`,json(existing?'PUT':'POST',body));
+  // Keep properties this form does not show (for example ERD attributes or AI-added fields)
+  const data={...(existing?.properties||{})};delete data.label;
+  data.description=values.description||'';if(values.notes)data.notes=values.notes;else delete data.notes;
+  const backendType=toBackendType(type);
+  if(backendType==='ENTITY'&&!Array.isArray(data.attributes))data.attributes=[{name:'id',dataType:'INT',primaryKey:true,nullable:false}];
+  const body={type:backendType,label:values.name,positionX:x,positionY:y,data};
+  await api(existing?`/api/v1/diagram/node/update/${outputId}/${existing.nodeId}${revision(p)}`:`/api/v1/diagram/node/add/${outputId}${revision(p)}`,json(existing?'PUT':'POST',body));
  }
  return getApiProject(projectId);
 }
 
 // ---------- AI (n8n through the backend) ----------
+// Structured Business reports share the same persisted AI run lifecycle.
+export const businessApi={
+ execute:body=>api('/api/business/tools',json('POST',body)),
+};
 export const aiApi={
+ history:projectId=>api(`/api/projects/${projectId}/ai/requests`),
  start:(projectId,body)=>api(`/api/projects/${projectId}/ai/requests`,json('POST',body)),
  status:statusUrl=>api(statusUrl),
  proposal:(projectId,proposalId)=>api(`/api/projects/${projectId}/ai/proposals/${proposalId}`),
@@ -156,6 +161,8 @@ export const aiApi={
 };
 
 export const repository={
+ // Resolve a tool's own diagram without changing the user's open diagram.
+ ensureDiagram:(project,diagramType)=>diagramIdFor(project,diagramType),
  async list(){return API_MODE?(await getApiProjects()).map(projectWithCounts):load().map(projectWithCounts)},
  async get(id){return API_MODE?getApiProject(id):load().find(p=>String(p.id)===String(id))||null},
  async createProject(payload){
