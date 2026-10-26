@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import java.util.List;
 
 // AI requests and proposal review for every domain. The domain comes from the stored project.
 @RestController
@@ -32,6 +33,14 @@ public class AIRequestController {
         ownershipService.checkProject(user, projectId);
 
         return ResponseEntity.status(202).body(aiRequestService.start(projectId, request));
+    }
+
+    // Restore the latest 50 managed requests, including reports and pending proposals.
+    @GetMapping("/requests")
+    public ResponseEntity<List<AIRunResponseDTO>> listRequests(
+            @AuthenticationPrincipal User user, @PathVariable Integer projectId) {
+        ownershipService.checkProject(user, projectId);
+        return ResponseEntity.ok(aiRequestService.listRuns(projectId));
     }
 
     // Poll the state and result of a request

@@ -30,5 +30,8 @@ public interface AIInteractionRepository extends JpaRepository<AIInteraction, In
     @Query("SELECT r.id FROM AIInteraction r WHERE r.requestId IS NOT NULL AND r.status IN (com.example.sana.Enums.ExecutionStatus.PENDING, com.example.sana.Enums.ExecutionStatus.RUNNING) AND (r.deadlineAt <= :now OR (r.dispatchStatus = com.example.sana.Enums.AIDispatchStatus.IN_FLIGHT AND r.dispatchLeaseUntil <= :now)) ORDER BY r.id")
     List<Integer> findExpired(@Param("now") LocalDateTime now, Pageable page);
 
+    // Read managed history through the owning project; do not expose legacy CRUD.
+    List<AIInteraction> findTop50ByProject_IdAndRequestIdIsNotNullOrderByIdDesc(Integer projectId);
+
     AIInteraction findAIInteractionById(Integer id);
 }
