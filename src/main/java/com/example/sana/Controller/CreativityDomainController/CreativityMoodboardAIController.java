@@ -2,6 +2,9 @@ package com.example.sana.Controller.CreativityDomainController;
 
 import com.example.sana.DTO.CreativityDomainDTOs.MoodboardAIDTO.*;
 import com.example.sana.Service.CreativityDomainServices.MoodboardAIService;
+import com.example.sana.Service.OwnershipService;
+import com.example.sana.Model.User;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,26 +20,34 @@ import java.util.UUID;
 @RequestMapping("/api/projects/{projectId}/creativity/moodboard-ai")
 public class CreativityMoodboardAIController {
     private final MoodboardAIService service;
+    private final OwnershipService ownershipService;
 
     @GetMapping("/capabilities")
-    public Map<String, Object> capabilities() { return Map.of("configured", service.configured(), "imagesVisuallyAnalyzed", false); }
+    public Map<String, Object> capabilities(@AuthenticationPrincipal User user, @PathVariable Integer projectId) {
+        ownershipService.checkProject(user, projectId);
+        return Map.of("configured", service.configured(), "imagesVisuallyAnalyzed", false);
+    }
 
     @PostMapping("/drafts")
-    public Preview generate(@PathVariable Integer projectId, @Valid @RequestBody Generate body, HttpServletRequest request) {
+    public Preview generate(@AuthenticationPrincipal User user, @PathVariable Integer projectId, @Valid @RequestBody Generate body, HttpServletRequest request) {
+        ownershipService.checkProject(user, projectId);
         return service.generate(projectId, body, session(request));
     }
     @GetMapping("/drafts/{draftId}")
-    public Preview get(@PathVariable Integer projectId, @PathVariable UUID draftId, HttpServletRequest request) {
+    public Preview get(@AuthenticationPrincipal User user, @PathVariable Integer projectId, @PathVariable UUID draftId, HttpServletRequest request) {
+        ownershipService.checkProject(user, projectId);
         return service.get(projectId, draftId.toString(), session(request));
     }
     @PostMapping("/drafts/{draftId}/approve")
-    public Saved approve(@PathVariable Integer projectId, @PathVariable UUID draftId,
+    public Saved approve(@AuthenticationPrincipal User user, @PathVariable Integer projectId, @PathVariable UUID draftId,
                          @Valid @RequestBody Decision body, HttpServletRequest request) {
+        ownershipService.checkProject(user, projectId);
         return service.approve(projectId, draftId.toString(), session(request));
     }
     @PostMapping("/drafts/{draftId}/reject")
-    public ResponseEntity<Void> reject(@PathVariable Integer projectId, @PathVariable UUID draftId,
+    public ResponseEntity<Void> reject(@AuthenticationPrincipal User user, @PathVariable Integer projectId, @PathVariable UUID draftId,
                                       @Valid @RequestBody Decision body, HttpServletRequest request) {
+        ownershipService.checkProject(user, projectId);
         service.reject(projectId, draftId.toString(), session(request)); return ResponseEntity.noContent().build();
     }
     private String session(HttpServletRequest request) {

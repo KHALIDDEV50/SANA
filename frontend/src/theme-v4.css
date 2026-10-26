@@ -58,3 +58,19 @@ body,.app{background:#f3efe8;color:#243d42}
 .modal-as-drawer .form-field input,.modal-as-drawer .form-field textarea,.modal-as-drawer .form-field select{background:#fffefb;border-color:#d9ded7;color:#243f45}
 .studio-tools-toggle{margin-top:9px;border-top:1px solid rgba(193,222,218,.15)!important;padding-top:15px!important}.studio-tools-toggle>svg:last-child{margin-inline-start:auto;color:#b4d6d0;transition:transform .15s}.studio-tools-toggle.opened>svg:last-child{transform:rotate(180deg)}
 .studio-grouped-tools{margin-inline-start:13px;padding-inline-start:7px;border-inline-start:1px solid rgba(173,215,212,.24);display:flex;flex-direction:column;gap:2px}.studio-grouped-tools button{font-size:12px!important}.studio-grouped-tools button svg{opacity:.75}
+
+/* Login is shown only in API mode, scoped to avoid changes to the existing SANA UI. */
+.sana-auth-shell {min-height:100vh;display:flex;align-items:center;justify-content:center;padding:26px;background:var(--bg,#f7f7f4);color:var(--ink,#19373b)}
+.sana-auth-card {width:min(440px,100%);padding:32px;border-radius:22px;background:var(--surface,#fff);border:1px solid rgba(34,76,80,.18);box-shadow:0 15px 45px rgba(21,42,44,.12);text-align:center}
+.sana-auth-card>img {width:140px;height:auto;max-height:95px;object-fit:contain}
+.sana-auth-card h1 {font-size:1.55rem;margin:12px 0 8px;color:inherit}
+.sana-auth-card>p {opacity:.75;margin:0 0 22px}
+.sana-auth-card form {text-align:start;display:grid;gap:14px}
+.sana-auth-card label {display:grid;gap:7px;font-weight:600;font-size:.92rem}
+.sana-auth-card input {width:100%;min-height:44px;border:1px solid #b8c9c7;background:#fff;border-radius:11px;padding:10px 13px;color:#213c40;font:inherit}
+.sana-auth-card input:focus-visible,.sana-auth-card button:focus-visible,.sana-signout:focus-visible {outline:2px solid #41938d;outline-offset:2px}
+.sana-auth-submit {margin-top:5px;background:#0f4c5c;color:#fff;border:0;border-radius:11px;min-height:46px;cursor:pointer;font:inherit;font-weight:700}
+.sana-auth-submit:disabled {opacity:.55;cursor:wait}
+.sana-auth-switch {border:0;background:transparent;cursor:pointer;color:#0f4c5c;font:inherit;margin-top:13px;padding:5px}
+.sana-auth-error {color:#ad2525;text-align:start;font-size:.9rem;overflow-wrap:anywhere}
+.sana-signout {background:transparent;border:1px solid currentColor;border-radius:9px;padding:7px 10px;color:inherit;font:inherit;cursor:pointer;white-space:nowrap}

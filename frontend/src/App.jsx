@@ -7,7 +7,7 @@ import {
   Plus,Search,Settings2,ShieldCheck, Sparkles,Sun,Trash2,Upload,Users, WandSparkles, Workflow, X, ZoomIn,ZoomOut,CheckCircle2,
   PenLine,Eye,History, PanelRightClose, CircleDot, RotateCcw, Copy, Info, BookMarked, Image as ImageIcon, GitBranch, GraduationCap, Send
 } from 'lucide-react';
-import {API_MODE,repository,TYPES,elementTypes,aiApi} from './lib/data';
+import {API_MODE,repository,TYPES,elementTypes,aiApi,authApi} from './lib/data';
 import {TEMPLATE_CATALOG,typesForDomain,domainGroup,findTemplate} from './lib/templates';
 import {tr} from './lib/i18n';
 import {Moodboard,BranchingNarrative,GameBalance} from './components/CreativeExtras';
@@ -237,7 +237,7 @@ function Studio({t,lang,project,tab,onTab,onBack,onAdd,onEdit,onDelete,onRelatio
 function Footer({t,lang,onNavigate}){return <footer className="footer"><div className="main-shell footer-inner"><div className="footer-brand"><img src="/sana-logo.webp" alt="SANA"/><span>{t('copyright')}</span></div><div className="footer-links"><button onClick={()=>onNavigate('home')}>{t('home')}</button><button onClick={()=>onNavigate('projects')}>{t('projects')}</button><button onClick={()=>onNavigate('tools')}>{t('tools')}</button><button onClick={()=>onNavigate('library')}>{t('library')}</button></div><small>© 2026 SANA · MADE WITH ✦</small></div></footer>}
 function SettingsPage({t,lang,onLanguage,onNew}){return <div className="main-shell inner-page page-enter"><div className="page-intro"><span className="eyebrow"><span className="eyebrow-dot"/>SANA PREFERENCES</span><h1>{t('settings')}</h1><p>{t('helpText')}</p></div><div className="settings-grid"><section className="settings-card"><Globe2 size={26}/><h2>{t('language')}</h2><p>{lang==='ar'?'اختر لغة عرض الواجهة واتجاهها.':'Choose the language and reading direction.'}</p><div className="language-choice"><button className={lang==='ar'?'active':''} onClick={()=>onLanguage('ar')}>العربية</button><button className={lang==='en'?'active':''} onClick={()=>onLanguage('en')}>English</button></div></section><section className="settings-card"><ShieldCheck size={26}/><h2>{t('help')}</h2><p>{t('helpText')}</p><span className="mode-indicator"><span className="live-dot"/>{API_MODE?t('apiMode'):t('demoMode')}</span></section></div></div>}
 
-function App(){
+function App({onLogout}){
  const [moodboardFocus,setMoodboardFocus]=useState(null);
  const [lang,setLang]=useState(()=>localStorage.getItem('sana-lang')||'ar');const [route,setRoute]=useState(parseRoute);const [projects,setProjects]=useState([]);const [project,setProject]=useState(null);const [loading,setLoading]=useState(true);const [modal,setModal]=useState(null);const [busy,setBusy]=useState(false);const [toast,setToast]=useState(null);const [aiOpen,setAiOpen]=useState(false);const [mobileMenu,setMobileMenu]=useState(false);const importRef=useRef(null);
  const t=useCallback(key=>CUSTOM_TRANSLATIONS[lang]?.[key]||EXTRA_TRANSLATIONS[lang]?.[key]||humanize(tr(lang,key)),[lang]);
@@ -272,7 +272,69 @@ function App(){
  if(route.page==='studio')return project&&String(project.id)===String(route.id)?<Studio t={t} lang={lang} project={project} moodboardFocus={moodboardFocus} tab={route.tab} onTab={tab=>navigate('studio',project.id,tab)} onBack={()=>navigate('projects')} onAdd={(initialType,position)=>setModal({kind:'element',initialType,position})} onEdit={initial=>setModal({kind:'element',initial})} onDelete={initial=>setModal({kind:'confirm',what:'element',initial})} onRelation={()=>setModal({kind:'relation'})} onEditProject={initial=>setModal({kind:'project',initial})} onMove={move} onExport={exportProject} onOpenAI={()=>setAiOpen(true)} onDeleteRelation={initial=>setModal({kind:'confirm',what:'relation',initial})} onDiagram={switchDiagram} onNewDiagram={newDiagram}/>:<div className="main-shell inner-page"><Empty icon={FolderOpen} title={t('notFound')} description={t('apiError')} action={<Btn onClick={()=>navigate('projects')}>{t('back')}</Btn>}/></div>;
  return <div className="main-shell inner-page"><Empty title={t('notFound')} action={<Btn onClick={()=>navigate('home')}>{t('home')}</Btn>}/></div>;
  };
- return <div className="app" dir={lang==='ar'?'rtl':'ltr'}><div className="top-ribbon"><span><Sparkles size={12}/> SANA · {t('brandTagline')}</span><span>{API_MODE?t('apiMode'):t('demoMode')}</span></div><header className="site-header"><div className="main-shell nav-wrap"><Logo onClick={()=>navigate('home')}/><nav className={`nav-links ${mobileMenu?'nav-open':''}`} aria-label="Main navigation">{[['home','home'],['projects','projects'],['tools','tools'],['library','library']].map(([page,key])=><button key={page} className={route.page===page?'active':''} onClick={()=>navigate(page)}>{t(key)}</button>)}</nav><div className="nav-side"><button className="language-toggle" onClick={()=>setLang(lang==='ar'?'en':'ar')} aria-label={t('language')}><Globe2 size={17}/><span>{lang==='ar'?'EN':'عربي'}</span></button><IconButton className="nav-settings" label={t('settings')} onClick={()=>navigate('settings')}><Settings2 size={19}/></IconButton><button className="nav-cta" onClick={()=>openNew()}><Plus size={17}/><span>{t('newProject')}</span></button><IconButton className="mobile-toggle" label={t('menu')} onClick={()=>setMobileMenu(m=>!m)}>{mobileMenu?<X size={21}/>:<Menu size={21}/>}</IconButton></div></div></header><div className="app-body">{loading&&projects.length===0?<div className="loading-view"><img src="/sana-logo.webp" alt="SANA"/><div className="loading-line"/></div>:main()}</div>{route.page!=='studio'&&<Footer t={t} lang={lang} onNavigate={navigate}/>}<Toast toast={toast} onClose={()=>setToast(null)}/>{modal?.kind==='project'&&<ProjectModal t={t} lang={lang} busy={busy} initial={modal.initial||modal.seed} onClose={()=>setModal(null)} onSave={saveProject}/>}{modal?.kind==='element'&&<ElementModal t={t} lang={lang} busy={busy} initial={modal.initial} initialType={modal.initialType} position={modal.position} availableTypes={elementTypes(project)} onClose={()=>setModal(null)} onSave={saveElement}/>}{modal?.kind==='relation'&&<RelationModal t={t} lang={lang} busy={busy} project={project} elements={project?.elements||[]} onClose={()=>setModal(null)} onSave={addRelation}/>}{modal?.kind==='confirm'&&<ConfirmModal t={t} lang={lang} busy={busy} onCancel={()=>setModal(null)} onConfirm={deleteThing} description={modal.what==='project'?`${t('confirmDelete')} — ${modal.initial.name}`:`${t('confirmDelete')} — ${modal.initial.name||modal.initial.label||modal.initial.type||''}`}/>}{aiOpen&&<><div className="side-shade" onClick={()=>setAiOpen(false)}/>{API_MODE&&project&&route.page==='studio'?<AIPanel t={t} lang={lang} project={project} onClose={()=>setAiOpen(false)} onApplied={aiApplied} onMoodboardSaved={async boardId=>{setMoodboardFocus({projectId:project.id,boardId});navigate('studio',project.id,'moodboard')}}/>:<AISidebar t={t} lang={lang} onClose={()=>setAiOpen(false)}/>}</>}<input ref={importRef} type="file" hidden accept=".json,application/json" onChange={e=>{importFile(e.target.files?.[0]);e.target.value=''}} /></div>
+ return <div className="app" dir={lang==='ar'?'rtl':'ltr'}><div className="top-ribbon"><span><Sparkles size={12}/> SANA · {t('brandTagline')}</span><span>{API_MODE?t('apiMode'):t('demoMode')}</span></div><header className="site-header"><div className="main-shell nav-wrap"><Logo onClick={()=>navigate('home')}/><nav className={`nav-links ${mobileMenu?'nav-open':''}`} aria-label="Main navigation">{[['home','home'],['projects','projects'],['tools','tools'],['library','library']].map(([page,key])=><button key={page} className={route.page===page?'active':''} onClick={()=>navigate(page)}>{t(key)}</button>)}</nav><div className="nav-side"><button className="language-toggle" onClick={()=>setLang(lang==='ar'?'en':'ar')} aria-label={t('language')}><Globe2 size={17}/><span>{lang==='ar'?'EN':'عربي'}</span></button>{API_MODE&&<button type="button" className="sana-signout" onClick={onLogout}>{lang==='ar'?'تسجيل الخروج':'Sign out'}</button>}<IconButton className="nav-settings" label={t('settings')} onClick={()=>navigate('settings')}><Settings2 size={19}/></IconButton><button className="nav-cta" onClick={()=>openNew()}><Plus size={17}/><span>{t('newProject')}</span></button><IconButton className="mobile-toggle" label={t('menu')} onClick={()=>setMobileMenu(m=>!m)}>{mobileMenu?<X size={21}/>:<Menu size={21}/>}</IconButton></div></div></header><div className="app-body">{loading&&projects.length===0?<div className="loading-view"><img src="/sana-logo.webp" alt="SANA"/><div className="loading-line"/></div>:main()}</div>{route.page!=='studio'&&<Footer t={t} lang={lang} onNavigate={navigate}/>}<Toast toast={toast} onClose={()=>setToast(null)}/>{modal?.kind==='project'&&<ProjectModal t={t} lang={lang} busy={busy} initial={modal.initial||modal.seed} onClose={()=>setModal(null)} onSave={saveProject}/>}{modal?.kind==='element'&&<ElementModal t={t} lang={lang} busy={busy} initial={modal.initial} initialType={modal.initialType} position={modal.position} availableTypes={elementTypes(project)} onClose={()=>setModal(null)} onSave={saveElement}/>}{modal?.kind==='relation'&&<RelationModal t={t} lang={lang} busy={busy} project={project} elements={project?.elements||[]} onClose={()=>setModal(null)} onSave={addRelation}/>}{modal?.kind==='confirm'&&<ConfirmModal t={t} lang={lang} busy={busy} onCancel={()=>setModal(null)} onConfirm={deleteThing} description={modal.what==='project'?`${t('confirmDelete')} — ${modal.initial.name}`:`${t('confirmDelete')} — ${modal.initial.name||modal.initial.label||modal.initial.type||''}`}/>}{aiOpen&&<><div className="side-shade" onClick={()=>setAiOpen(false)}/>{API_MODE&&project&&route.page==='studio'?<AIPanel t={t} lang={lang} project={project} onClose={()=>setAiOpen(false)} onApplied={aiApplied} onMoodboardSaved={async boardId=>{setMoodboardFocus({projectId:project.id,boardId});navigate('studio',project.id,'moodboard')}}/>:<AISidebar t={t} lang={lang} onClose={()=>setAiOpen(false)}/>}</>}<input ref={importRef} type="file" hidden accept=".json,application/json" onChange={e=>{importFile(e.target.files?.[0]);e.target.value=''}} /></div>
 }
 
-createRoot(document.getElementById('root')).render(<App/>);
+// API-mode authentication is established before App mounts and makes project requests.
+// Keep the existing demo mode completely unchanged.
+function SanaAuthGate(){
+ const [user,setUser]=useState(null);
+ const [checking,setChecking]=useState(API_MODE);
+ const [registering,setRegistering]=useState(false);
+ const [name,setName]=useState('');
+ const [email,setEmail]=useState('');
+ const [password,setPassword]=useState('');
+ const [busy,setBusy]=useState(false);
+ const [error,setError]=useState('');
+ const [lang,setLang]=useState(()=>localStorage.getItem('sana-lang')||'ar');
+ const ar=lang==='ar';
+ useEffect(()=>{
+  if(!API_MODE)return;
+  let active=true;
+  if(!authApi.hasCredentials()){setChecking(false);return;}
+  authApi.me().then(me=>{if(active)setUser(me)}).catch(()=>{if(active)authApi.forget()})
+    .finally(()=>{if(active)setChecking(false)});
+  return ()=>{active=false};
+ },[]);
+ useEffect(()=>{
+  if(!API_MODE)return;
+  const unauthorized=()=>{authApi.forget();setUser(null);setPassword('');setError(ar?'انتهى تسجيل الدخول. ادخلي مرة ثانية.':'Please sign in again.');};
+  window.addEventListener('sana-unauthorized',unauthorized);
+  return ()=>window.removeEventListener('sana-unauthorized',unauthorized);
+ },[ar]);
+ const submit=async e=>{
+  e.preventDefault();if(busy)return;
+  setBusy(true);setError('');
+  try{
+   const me=registering?await authApi.register(name.trim(),email.trim(),password):await authApi.login(email.trim(),password);
+   setPassword('');setUser(me);
+  }catch(err){setError(err.message||'Authentication failed')}
+  finally{setBusy(false)}
+ };
+ const logout=async()=>{
+  await authApi.logout();
+  setUser(null);setPassword('');
+  window.location.hash='/home';
+ };
+ if(!API_MODE)return <App/>;
+ if(checking)return <main className="sana-auth-shell" dir={ar?'rtl':'ltr'}><div className="sana-auth-card"><img src="/sana-logo.webp" alt="SANA"/><p>{ar?'جاري التحقق من الحساب...':'Checking your account...'}</p></div></main>;
+ if(user)return <App key={user.id} onLogout={logout}/>;
+ return <main className="sana-auth-shell" dir={ar?'rtl':'ltr'}>
+  <section className="sana-auth-card" aria-label={ar?'تسجيل الدخول إلى سنا':'SANA sign in'}>
+   <img src="/sana-logo.webp" alt="SANA"/>
+   <h1>{registering?(ar?'إنشاء حساب':'Create account'):(ar?'أهلًا بك في سنا':'Welcome to SANA')}</h1>
+   <p>{ar?'أفكارك ومشاريعك في مساحتك الخاصة.':'Your ideas and projects in one private workspace.'}</p>
+   <form onSubmit={submit}>
+    {registering&&<label>{ar?'الاسم':'Name'}<input autoComplete="name" required maxLength={150} value={name} onChange={e=>setName(e.target.value)}/></label>}
+    <label>{ar?'البريد الإلكتروني':'Email'}<input type="email" autoComplete="username" required maxLength={255} value={email} onChange={e=>setEmail(e.target.value)}/></label>
+    <label>{ar?'كلمة المرور':'Password'}<input type="password" autoComplete={registering?'new-password':'current-password'} required minLength={registering?8:1} value={password} onChange={e=>setPassword(e.target.value)}/></label>
+    {error&&<p className="sana-auth-error" role="alert">{error}</p>}
+    <button className="sana-auth-submit" disabled={busy} type="submit">{busy?(ar?'جاري التحقق...':'Working...'):registering?(ar?'إنشاء الحساب':'Create account'):(ar?'دخول':'Sign in')}</button>
+   </form>
+   <button type="button" className="sana-auth-switch" onClick={()=>{setRegistering(x=>!x);setError('')}}>{registering?(ar?'لديك حساب؟ تسجيل الدخول':'Have an account? Sign in'):(ar?'ليس لديك حساب؟ إنشاء حساب':'New here? Create an account')}</button>
+   <button type="button" className="sana-auth-switch" onClick={()=>setLang(x=>x==='ar'?'en':'ar')}>{ar?'English':'العربية'}</button>
+  </section>
+ </main>;
+}
+
+createRoot(document.getElementById('root')).render(<SanaAuthGate/>);
