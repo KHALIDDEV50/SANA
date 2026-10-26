@@ -39,3 +39,6 @@ docs/
 .mcp.json
 .codex/
 .claude/
+
+### Server secrets (deployment) ###
+/.env

@@ -40,6 +40,8 @@ public class Configuration {
                 )
 
                 .authorizeHttpRequests(auth -> auth
+                        // The React frontend files (built into static/) load before the user logs in
+                        .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/*.png", "/*.webp", "/*.svg").permitAll()
                         // Anyone can create an account
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
                         // n8n is not a user: N8nCallbackFilter checks its own X-Sana-Callback-Key
