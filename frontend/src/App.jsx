@@ -298,7 +298,6 @@ const move = async (id, x, y) => {
  const importFile=async file=>{if(!file)return;try{const json=JSON.parse(await file.text());const p=await repository.importProject(json);await refresh();notice(t('imported'));navigate('studio',p.id)}catch(e){notice(`${t('importError')}: ${e.message}`,true)}};
  const previewDelete=async initial=>{if(!API_MODE){setModal({kind:'confirm',what:'element',initial});return;}try{const impact=await repository.deleteImpact(project.id,initial);setModal({kind:'confirm',what:'element',initial,impact})}catch(e){notice(e.message,true)}};
  const openNew=(seed)=>{if(route.page!=='ai-start')sessionStorage.removeItem('sana-ai-pending');setModal({kind:'project',seed})};
- const main=()=>{
 const main = () => {
   if(route.page==='home')return <Landing projects={projects} t={t} lang={lang} onNavigate={navigate} onNew={()=>openNew()} onAI={()=>navigate('ai-start')} onOpen={id=>navigate('studio',id)}/>;
   if(route.page==='projects')return <Projects user={user} projects={projects} t={t} lang={lang} onNew={()=>openNew()} onOpen={id=>navigate('studio',id)} onEdit={initial=>setModal({kind:'project',initial})} onDelete={initial=>setModal({kind:'confirm',what:'project',initial})} onImport={()=>importRef.current?.click()}/>;
@@ -312,7 +311,7 @@ const main = () => {
         API_MODE&&project&&route.page==='studio'
           ? (project.domain==='business'
               ? <BusinessPanel key={`${project.id}:${project.activeOutputId}`} t={t} lang={lang} project={project} onClose={()=>setAiOpen(false)} onApplied={aiApplied}/>
-              : <AIPanel t={t} project={project} onClose={()=>setAiOpen(false)} onApplied={aiApplied}/>)
+              : <AIPanel key={project.id} t={t} lang={lang} project={project} onClose={()=>setAiOpen(false)} onApplied={aiApplied} onMoodboardSaved={async boardId=>{setMoodboardFocus({projectId:project.id,boardId});navigate('studio',project.id,'moodboard')}}/>)
           : <AISidebar t={t} lang={lang} onClose={()=>setAiOpen(false)}/>
       }>
         <Studio
@@ -361,7 +360,7 @@ return <div className="app" dir={lang==='ar'?'rtl':'ltr'}>
           <Globe2 size={17}/>
           <span>{lang==='ar'?'EN':'عربي'}</span>
         </button>
-        {API_MODE&&<button type="button" className="sana-signout" onClick={logout}>{lang==='ar'?'تسجيل الخروج':'Sign out'}</button>}
+        {API_MODE&&<button type="button" className="sana-signout" onClick={onLogout}>{lang==='ar'?'تسجيل الخروج':'Sign out'}</button>}
         <IconButton className="nav-settings" label={t('settings')} onClick={()=>navigate('settings')}>
           <Settings2 size={19}/>
         </IconButton>
@@ -389,6 +388,54 @@ return <div className="app" dir={lang==='ar'?'rtl':'ltr'}>
   {modal?.kind==='confirm'&&<ConfirmModal t={t} lang={lang} busy={busy} onCancel={()=>setModal(null)} onConfirm={deleteThing} impact={modal.impact} description={modal.what==='project'?`${t('confirmDelete')} — ${modal.initial.name}`:`${t('confirmDelete')} — ${modal.initial.name||modal.initial.label||modal.initial.type||''}`}/>}
   <input ref={importRef} type="file" hidden accept=".json,application/json" onChange={e=>{importFile(e.target.files?.[0]);e.target.value=''}} />
 </div>;
+}
+
+// API-mode authentication is established before App mounts and makes project requests.
+// Keep the existing demo mode completely unchanged.
+function SanaAuthGate(){
+ const [user,setUser]=useState(null);
+ const [checking,setChecking]=useState(API_MODE);
+ const [registering,setRegistering]=useState(false);
+ const [name,setName]=useState('');
+ const [email,setEmail]=useState('');
+ const [password,setPassword]=useState('');
+ const [busy,setBusy]=useState(false);
+ const [error,setError]=useState('');
+ const [lang,setLang]=useState(()=>localStorage.getItem('sana-lang')||'ar');
+ const ar=lang==='ar';
+ useEffect(()=>{document.documentElement.lang=lang;document.documentElement.dir=ar?'rtl':'ltr';localStorage.setItem('sana-lang',lang)},[lang,ar]);
+ useEffect(()=>{
+  if(!API_MODE)return;
+  let active=true;
+  if(!authApi.hasCredentials()){setChecking(false);return;}
+  authApi.me().then(me=>{if(active)setUser(me)}).catch(()=>{if(active)authApi.forget()})
+    .finally(()=>{if(active)setChecking(false)});
+  return ()=>{active=false};
+ },[]);
+ useEffect(()=>{
+  if(!API_MODE)return;
+  const unauthorized=()=>{authApi.forget();setUser(null);setLang(localStorage.getItem('sana-lang')||'ar');setPassword('');setError(ar?'انتهى تسجيل الدخول. ادخلي مرة ثانية.':'Please sign in again.');};
+  window.addEventListener('sana-unauthorized',unauthorized);
+  return ()=>window.removeEventListener('sana-unauthorized',unauthorized);
+ },[ar]);
+ const submit=async e=>{
+  e.preventDefault();if(busy)return;
+  setBusy(true);setError('');
+  try{
+   const me=registering?await authApi.register(name.trim(),email.trim(),password):await authApi.login(email.trim(),password);
+   setPassword('');setUser(me);
+  }catch(err){setError(err.message||'Authentication failed')}
+  finally{setBusy(false)}
+ };
+ const logout=async()=>{
+  await authApi.logout();setLang(localStorage.getItem('sana-lang')||'ar');
+  setUser(null);setPassword('');
+  window.location.hash='/home';
+ };
+ if(!API_MODE)return <App/>;
+ if(checking)return <main className="sana-auth-shell" dir={ar?'rtl':'ltr'}><div className="sana-auth-card"><img src="/sana-logo.webp" alt="SANA"/><p>{ar?'جاري التحقق من الحساب...':'Checking your account...'}</p></div></main>;
+ if(user)return <App key={user.id} user={user} onLogout={logout}/>;
+ return <AccountExperience {...{lang,setLang,registering,setRegistering,name,setName,email,setEmail,password,setPassword,busy,error,setError,submit}}/>;
 }
 
 createRoot(document.getElementById('root')).render(<SanaAuthGate/>);
