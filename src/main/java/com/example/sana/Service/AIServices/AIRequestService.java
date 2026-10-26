@@ -218,6 +218,20 @@ public class AIRequestService {
         return toResponse(aiInteractionRepository.save(run));
     }
 
+    // Runs and reports already belong to Project and User in the existing ERD.
+    // Return DTOs so the frontend can restore pending runs and saved results.
+    @Transactional(readOnly = true)
+    public List<AIRunResponseDTO> listRuns(Integer projectId) {
+        if (projectId == null || projectId <= 0) {
+            throw new ApiException("Valid project ID is required");
+        }
+        projectRepository.findById(projectId)
+                .orElseThrow(() -> new ApiException("Project not found"));
+        return aiInteractionRepository
+                .findTop50ByProject_IdAndRequestIdIsNotNullOrderByIdDesc(projectId)
+                .stream().map(run -> toResponse(run, false)).toList();
+    }
+
     // Get the current state of one AI request
     @Transactional(readOnly = true)
     public AIRunResponseDTO getRun(Integer projectId, UUID requestId) {
@@ -293,11 +307,26 @@ public class AIRequestService {
     }
 
     private AIRunResponseDTO toResponse(AIInteraction run) {
+        return toResponse(run, true);
+    }
+
+    // History lists omit report/graph bodies; selecting an entry loads the full run.
+    private AIRunResponseDTO toResponse(AIInteraction run, boolean includeResult) {
 
         AIRunResponseDTO response = new AIRunResponseDTO(run.getId(), run.getRequestId(), run.getProject().getId(),
                 run.getOutputId(), run.getBaseRevision(), run.getActionType(), run.getStatus(), run.getModelName(), run.getCreatedAt());
 
         response.setStatusUrl("/api/projects/" + run.getProject().getId() + "/ai/requests/" + run.getRequestId());
+        response.setPrompt(includeResult ? run.getPromptSummary() : null);
+        if (run.getRequestJson() != null) {
+            AIWorkflowRequestDTO snapshot = aiJson.read(run.getRequestJson(), AIWorkflowRequestDTO.class);
+            response.setDiagramType(snapshot.getDiagramType());
+            if ("BUSINESS".equals(snapshot.getDomain()) && snapshot.getContext() != null) {
+                Object tool = snapshot.getContext().get("businessToolType");
+                response.setBusinessToolType(tool == null ? null : tool.toString());
+                if (includeResult) response.setBusinessInput(snapshot.getContext().get("businessInput"));
+            }
+        }
         response.setExecutionId(run.getExecutionId());
         response.setDispatchStatus(run.getDispatchStatus());
         response.setAcceptedAt(run.getAcceptedAt());
@@ -311,7 +340,7 @@ public class AIRequestService {
                     response.setProposalReviewStatus(proposal.getStatus() == ProposalStatus.APPROVED ? "ACCEPTED" : proposal.getStatus().name()));
         }
 
-        if (run.getStatus() == ExecutionStatus.COMPLETED && run.getResponseJson() != null) {
+        if (includeResult && run.getStatus() == ExecutionStatus.COMPLETED && run.getResponseJson() != null) {
             response.setResult(aiJson.read(run.getResponseJson(), N8nCallbackDTO.Result.class));
         }
 

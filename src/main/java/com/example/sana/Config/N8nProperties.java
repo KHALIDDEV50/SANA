@@ -37,6 +37,33 @@ public class N8nProperties {
 
     @PostConstruct
     public void validateEnabledConfiguration() {
+
+        // Temporary diagnostics: never print secret values.
+        boolean webhookPresent = webhookUrl != null && !webhookUrl.isBlank();
+        boolean requestKeyPresent = requestKey != null && !requestKey.isBlank();
+        boolean callbackKeyPresent = callbackKey != null && !callbackKey.isBlank();
+
+        boolean webhookValid = false;
+
+        try {
+            URI uri = URI.create(webhookUrl);
+            webhookValid =
+                    ("https".equals(uri.getScheme()) || "http".equals(uri.getScheme()))
+                            && uri.getHost() != null
+                            && uri.getUserInfo() == null
+                            && uri.getFragment() == null;
+        } catch (RuntimeException ignored) {
+            // Report an invalid URL without exposing its value.
+        }
+
+        System.out.println("n8n enabled: " + isEnabled());
+        System.out.println("Webhook configured: " + webhookPresent);
+        System.out.println("Webhook format valid: " + webhookValid);
+        System.out.println("Request key configured: " + requestKeyPresent);
+        System.out.println("Callback key configured: " + callbackKeyPresent);
+        System.out.println("Keys are different: "
+                + (requestKeyPresent && callbackKeyPresent
+                && !requestKey.equals(callbackKey)));
         if (!isEnabled()) return;
         try {
             URI uri = URI.create(webhookUrl);
