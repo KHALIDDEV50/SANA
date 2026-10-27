@@ -127,7 +127,7 @@ function AIStartPage({t,lang,onTemplates,onNew,projects,onContinue,canCreateProj
  const [idea,setIdea]=useState(''),[selected,setSelected]=useState(''),[suggestion,setSuggestion]=useState(null),[choice,setChoice]=useState(null);
  const [changing,setChanging]=useState(false),[options,setOptions]=useState({}),[error,setError]=useState('');
  // idle -> classifying -> suggested -> creating -> drawing -> (Studio) | clarify | advice | failed
- const [stage,setStage]=useState('idle'),[clarification,setClarification]=useState(null),[answer,setAnswer]=useState(''),[advice,setAdvice]=useState('');
+ const [stage,setStage]=useState('idle'),[clarification,setClarification]=useState(null),[answer,setAnswer]=useState(''),[advice,setAdvice]=useState(''),[fixing,setFixing]=useState(false);
  const created=useRef(null),turns=useRef([]),alive=useRef(true);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
  const say=(ar,en)=>lang==='ar'?ar:en;
@@ -150,14 +150,24 @@ function AIStartPage({t,lang,onTemplates,onNew,projects,onContinue,canCreateProj
  const fullPrompt=()=>[idea.trim(),...turns.current.map(turn=>`${say('سؤال','Question')}: ${turn.question}\n${say('جواب','Answer')}: ${turn.answer}`)].join('\n\n').slice(0,10000);
  // Ask SANA - AI Gateway to draw the diagram, wait for it, and apply the result
  async function draw(){
-  const project=created.current;setStage('drawing');setError('');
+  const project=created.current;setStage('drawing');setError('');setFixing(false);
   try{
-   const body={task:'CREATE',prompt:fullPrompt(),diagramType:choice.diagramType};
-   if(['writing','games'].includes(project.domain))body.conversationHistory=[];
-   let run=await aiApi.start(project.id,body,project.domain);
-   // The backend gives n8n 3 minutes; poll every 2 seconds a little longer than that
-   for(let i=0;i<120&&alive.current&&['PENDING','RUNNING'].includes(run.status);i++){await new Promise(r=>setTimeout(r,2000));run=await aiApi.status(run.statusUrl)}
-   if(!alive.current)return;
+   let run,feedback='';
+   for(let attempt=1;attempt<=2;attempt++){
+    const body={task:'CREATE',prompt:(fullPrompt()+feedback).slice(0,10000),diagramType:choice.diagramType};
+    if(['writing','games'].includes(project.domain))body.conversationHistory=[];
+    run=await aiApi.start(project.id,body,project.domain);
+    // The backend gives n8n 3 minutes; poll every 2 seconds a little longer than that
+    for(let i=0;i<120&&alive.current&&['PENDING','RUNNING'].includes(run.status);i++){await new Promise(r=>setTimeout(r,2000));run=await aiApi.status(run.statusUrl)}
+    if(!alive.current)return;
+    // The diagram broke a rule: ask the AI once more and tell it exactly which rule
+    if(run.status==='FAILED'&&run.error?.code==='INVALID_PROPOSAL'&&attempt<2){
+     feedback=`\n\nYour previous diagram for this request was rejected: ${run.error.message}. Draw it again and follow the graph rules in the context exactly.`;
+     setFixing(true);continue;
+    }
+    break;
+   }
+   setFixing(false);
    if(run.status!=='COMPLETED')throw new Error(run.error?.message||say('لم تكمل سنا الرسم. حاول مرة أخرى.','SANA could not finish the diagram. Please try again.'));
    const result=run.result;
    if(result.type==='CLARIFICATION'){setClarification({message:result.message,question:result.clarification?.question||'',answers:result.clarification?.suggestedAnswers||[]});setAnswer('');setStage('clarify');return}
@@ -210,7 +220,9 @@ function AIStartPage({t,lang,onTemplates,onNew,projects,onContinue,canCreateProj
    </div>}
    {(stage==='creating'||stage==='drawing')&&<div className="ai-start-progress" role="status"><span className="ai-start-progress-dot"/>{stage==='creating'
     ?say('جارٍ إنشاء المشروع...','Creating your project...')
-    :say('سنا ترسم مخططك الآن... قد يستغرق ذلك دقيقة. ستنتقل إليه تلقائيًا عند اكتماله.','SANA is drawing your diagram... this can take a minute. You will be taken to it when it is ready.')}</div>}
+    :fixing
+     ?say('سنا تصحّح المخطط ليوافق القواعد... لحظات وتنتقل إليه.','SANA is fixing the diagram to follow the rules... almost there.')
+     :say('سنا ترسم مخططك الآن... قد يستغرق ذلك دقيقة. ستنتقل إليه تلقائيًا عند اكتماله.','SANA is drawing your diagram... this can take a minute. You will be taken to it when it is ready.')}</div>}
    {stage==='clarify'&&clarification&&<div className="ai-start-clarify">
     {clarification.message&&<p>{clarification.message}</p>}
     <strong>{clarification.question}</strong>

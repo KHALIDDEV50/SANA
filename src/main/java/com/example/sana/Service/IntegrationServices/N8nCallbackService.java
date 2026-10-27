@@ -42,7 +42,15 @@ public class N8nCallbackService {
         if (!run.getRequestId().equals(request.getRequestId()) || !run.getProject().getId().equals(request.getProjectId())
                 || !Objects.equals(run.getOutputId(), request.getOutputId()) || !Objects.equals(run.getBaseRevision(), request.getBaseRevision())
                 || !run.getActionType().equals(request.getTask().name())) throw new ApiException("AI request metadata is inconsistent");
-        validateResult(callback, request);
+        // A result that breaks the diagram rules is the AI's mistake, not a broken callback. Record it as a failed run
+        // with the reason right away, so the user does not wait for the timeout and can ask the AI to fix it.
+        String invalidResult = null;
+        try {
+            validateResult(callback, request);
+        } catch (ApiException e) {
+            if (callback.status() != N8nCallbackDTO.CallbackStatus.COMPLETED) throw e;
+            invalidResult = e.getMessage();
+        }
         String hash = json.hash(callback);
         if (AIRunLifecycle.terminal(run)) {
             if (hash.equals(run.getCallbackHash())) return true;
@@ -60,7 +68,10 @@ public class N8nCallbackService {
         run.setCompletedAt(LocalDateTime.now());
         run.setDispatchStatus(AIDispatchStatus.TERMINAL);
         run.setDispatchLeaseUntil(null); run.setNextDispatchAt(null);
-        if (callback.status() == N8nCallbackDTO.CallbackStatus.FAILED) {
+        if (invalidResult != null) {
+            String reason = "The AI result broke a diagram rule: " + invalidResult;
+            AIRunLifecycle.fail(run, ExecutionStatus.FAILED, "INVALID_PROPOSAL", reason.length() > 500 ? reason.substring(0, 500) : reason);
+        } else if (callback.status() == N8nCallbackDTO.CallbackStatus.FAILED) {
             // Raw provider/tool error text can contain credentials; do not persist or expose it.
             String code = Set.of("INVALID_AI_RESULT", "AI_EXECUTION_FAILED", "WORKFLOW_FAILED", "MODEL_UNAVAILABLE", "TOOL_FAILED", "EXECUTION_TIMEOUT").contains(callback.error().code())
                     ? callback.error().code() : "WORKFLOW_FAILED";
