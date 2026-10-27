@@ -27,13 +27,13 @@ public class WorldRule {
     @NotEmpty(message = "description cannot be empty")
     @Column(columnDefinition = "text not null")
     private String description;
-    @Column(columnDefinition = "varchar(50)")
+    @Column(columnDefinition = "text")
     private String scope;
-    @Column(columnDefinition = "varchar(50)")
+    @Column(columnDefinition = "text")
     private String conditions;
-    @Column(columnDefinition = "varchar(50)")
+    @Column(columnDefinition = "text")
     private String exceptions;
-    @Column(columnDefinition = "varchar(50)")
+    @Column(columnDefinition = "text")
     private String consequences;
     @Column(columnDefinition = "text")
     private String notes;

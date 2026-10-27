@@ -79,6 +79,26 @@ export const creativeTools={
  async addLabel(projectId,boardId,text,pos){const data={text,positionX:pos.x,positionY:pos.y,color:'#39322c',backgroundColor:'#fff0ce',fontSize:17};if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/add/${boardId}/labels`,body('POST',data));const [db,s]=scope(projectId);const board=s.boards.find(b=>b.id===boardId);board.items.push({id:id(),type:'MOODBOARD_LABEL',label:{text,color:data.color,backgroundColor:data.backgroundColor,fontSize:17},positionX:pos.x,positionY:pos.y});save(db);return board},
  async moveBoardItem(projectId,boardId,itemId,x,y){if(MOODBOARD_API && Number(itemId)<0){replacePhoto(boardId,itemId,i=>({...i,positionX:x,positionY:y}));return;}if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/update/${boardId}/items/${itemId}/position`,body('PUT',{positionX:x,positionY:y}));const [db,s]=scope(projectId);const item=s.boards.find(b=>b.id===boardId)?.items.find(i=>i.id===itemId);if(item){item.positionX=x;item.positionY=y;save(db)}},
  async deleteBoardItem(projectId,boardId,itemId){if(MOODBOARD_API && Number(itemId)<0){dropPhoto(boardId,itemId);return;}if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/delete/${boardId}/items/${itemId}`,{method:'DELETE'});const [db,s]=scope(projectId);const board=s.boards.find(b=>b.id===boardId);board.items=board.items.filter(i=>i.id!==itemId);save(db)},
+ // Existing Spring Boot APIs keep speaker links separate from scene text.
+ // Reading the graph exposes the saved speakerCharacterId for each projectNodeId.
+ async branchSpeakers(project){
+  if(!API_MODE)return {};
+  const outputId=await diagramIdFor(project,'BRANCHING_STORY');
+  const response=await api(`/api/v1/diagram/graph/get/${outputId}`);
+  return Object.fromEntries((response?.graph?.nodes||[])
+   .filter(node=>node.id!=null&&node.properties?.speakerCharacterId!=null)
+   .map(node=>[String(node.id),String(node.properties.speakerCharacterId)]));
+ },
+ async linkSpeaker(project,nodeId,characterId){
+  const outputId=await diagramIdFor(project,'BRANCHING_STORY');
+  if(!API_MODE)throw new Error('Speaker linking requires the backend');
+  return api(`/api/v1/branching/link/${outputId}/nodes/${nodeId}/speaker/${characterId}`,{method:'PUT'});
+ },
+ async unlinkSpeaker(project,nodeId){
+  const outputId=await diagramIdFor(project,'BRANCHING_STORY');
+  if(!API_MODE)throw new Error('Speaker linking requires the backend');
+  return api(`/api/v1/branching/unlink/${outputId}/nodes/${nodeId}/speaker`,{method:'DELETE'});
+ },
  async branching(project){const outputId=await diagramIdFor(project,'BRANCHING_STORY');if(API_MODE)return api(`/api/v1/branching/get/${outputId}/map`);const s=scope(project.id)[1];return {nodes:s.scenes.map(n=>({...n})),choices:s.choices.map(c=>({...c}))}},
  async addScene(project,{title,content,type,positionX,positionY}){const outputId=await diagramIdFor(project,'BRANCHING_STORY');if(API_MODE)return api(`/api/v1/branching/add/${outputId}/nodes`,body('POST',{title,content,type,positionX,positionY}));const [db,s]=scope(project.id);s.scenes.push({branchingNodeId:id(),title,content,type,positionX,positionY});save(db)},
  async updateScene(project,node){const outputId=await diagramIdFor(project,'BRANCHING_STORY');const nodeId=node.branchingNodeId;const data={title:node.title,content:node.content,type:node.type,positionX:node.positionX,positionY:node.positionY};if(API_MODE)return api(`/api/v1/branching/update/${outputId}/nodes/${nodeId}`,body('PUT',data));const [db,s]=scope(project.id);s.scenes=s.scenes.map(n=>n.branchingNodeId===nodeId?{...n,...data}:n);save(db)},

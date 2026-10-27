@@ -167,10 +167,14 @@ async function getApiProject(id){
  }
  const remembered=storage.get(activeDiagramKey(id));
  const oldWithNodes=oldOutputs.find(o=>o.outputType==='CREATIVITY'&&o.representationType==='GRAPH'&&((Array.isArray(o.nodes)&&o.nodes.length>0)||(legacySearchCache.get(o.id)||[]).length>0));
- let active=diagrams.find(d=>String(d.id)===remembered)||
-   (oldWithNodes&&diagrams.find(d=>d.id===oldWithNodes.id))||
-   diagrams.find(d=>d.outputType===PRIMARY_DIAGRAM[domain])||
-   diagrams.find(d=>d.outputType!=='BRANCHING_STORY');
+ // The branching editor has its own selected-output key. Never use an older
+ // BRANCHING_STORY preference as the project's character/story canvas.
+ // Otherwise STORY_MAP characters appear to vanish after opening an AI tree.
+ const canvasDiagrams=diagrams.filter(d=>d.outputType!=='BRANCHING_STORY');
+ let active=canvasDiagrams.find(d=>String(d.id)===remembered)||
+   (oldWithNodes&&canvasDiagrams.find(d=>d.id===oldWithNodes.id))||
+   canvasDiagrams.find(d=>d.outputType===PRIMARY_DIAGRAM[domain])||
+   canvasDiagrams[0]||diagrams[0];
  if(!active){
    // Never write to the database on opening a project. Creating diagrams is an
    // explicit action via the New Diagram control.
