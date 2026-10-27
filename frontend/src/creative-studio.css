@@ -1,4 +1,6 @@
 /* Screen-scoped studio styles. The landing scene and its original styles stay intact. */
+/* Defaults for the variables App.jsx sets per element (style={{'--sana-character-accent': ...}}) */
+:root{--sana-character-accent:#9875B5;--sana-character-tint:#F4ECFA;--swatch:transparent}
 .spark-auth{display:grid!important;grid-template-columns:minmax(0,1.1fr) minmax(370px,.9fr);padding:0!important;min-height:100dvh;background:#f6f1e8!important;align-items:stretch!important}
 .spark-auth-universe{position:relative;overflow:hidden;background:radial-gradient(ellipse at 25% 20%,#236f72 0,transparent 55%),linear-gradient(145deg,#103f47,#062b34);color:#fff8e8;display:flex;flex-direction:column;justify-content:space-between;padding:56px;min-height:680px}
 .spark-auth-universe>img{width:160px;object-fit:contain;position:relative;z-index:1}.spark-auth-story{position:relative;z-index:1;max-width:520px;padding-top:240px}.spark-auth-story>span{font-size:11px;color:#e3c794;letter-spacing:2px}.spark-auth-story h1{font-size:clamp(36px,4vw,66px);line-height:1.4;margin:20px 0}.spark-auth-story p{color:#c6dcd6;line-height:2;font-size:17px}
