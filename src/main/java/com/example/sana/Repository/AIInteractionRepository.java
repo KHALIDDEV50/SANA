@@ -2,6 +2,7 @@ package com.example.sana.Repository;
 
 import com.example.sana.Model.AIInteraction;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 
 import java.util.Optional;
 import java.util.List;
@@ -34,4 +35,9 @@ public interface AIInteractionRepository extends JpaRepository<AIInteraction, In
     List<AIInteraction> findTop50ByProject_IdAndRequestIdIsNotNullOrderByIdDesc(Integer projectId);
 
     AIInteraction findAIInteractionById(Integer id);
+
+    // Remove a project's AI requests before the project is deleted
+    @Modifying
+    @Query("DELETE FROM AIInteraction r WHERE r.project.id = :projectId")
+    void deleteAllByProjectId(@Param("projectId") Integer projectId);
 }
