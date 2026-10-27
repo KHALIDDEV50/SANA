@@ -265,7 +265,28 @@ async function writeApiNode(projectId,type,values,oldId){
 }
 
 // ---------- AI (n8n through the backend) ----------
+// "Start with SANA AI": the backend asks n8n which domain and diagram fit an idea; nothing is created yet.
+const QUICK_START_DOMAIN={TECHNOLOGY:'technology',BUSINESS:'business',EDUCATION:'education',WRITING:'writing',GAMES:'games'};
+export const quickStartApi={
+ async classify(idea,lang){
+  const suggestion=await api('/api/v1/ai/quick-start/classify',json('POST',{idea,language:lang==='en'?'en':'ar'}));
+  return {...suggestion,domain:QUICK_START_DOMAIN[suggestion.category]||'writing'};
+ },
+ // Diagram types the user may switch to in each domain (branching stories have their own Studio tab)
+ async diagramOptions(){
+  const types=await diagramTypes(),options={};
+  for(const domain of Object.values(QUICK_START_DOMAIN))options[domain]=types.filter(t=>t.domain===backendDomain(domain)&&t.diagramType!=='BRANCHING_STORY').map(t=>t.diagramType);
+  return options;
+ },
+};
+// Business tools (structured reports) are executed by the backend's Business tool endpoint.
+export const businessApi={
+ execute:body=>api('/api/business/tools',json('POST',body)),
+};
 export const aiApi={
+ history:projectId=>api(`/api/projects/${projectId}/ai/requests`),
+ // The same requests with their prompts and answers, to rebuild the AI panel's chat
+ chat:projectId=>api(`/api/projects/${projectId}/ai/requests?messages=true`),
  start:(projectId,body,domain)=>api(
   ['writing','games'].includes(domain)?`/api/projects/${projectId}/creativity/ai/requests`:`/api/projects/${projectId}/ai/requests`,
   json('POST',body)),
@@ -276,6 +297,8 @@ export const aiApi={
 };
 
 export const repository={
+ // Resolve a tool's own diagram without changing the user's open diagram; create it when missing.
+ ensureDiagram:(project,diagramType)=>diagramIdFor(project,diagramType,true),
  async linkLocation(id,kind,target){return api(`/api/v1/location/update/${id}/${kind}/${target}`,{method:'PUT'})},
  async renameDiagram(projectId,title){const p=await getApiProject(projectId);await api(`/api/v1/diagram/update/${p.activeOutputId}${revision(p)}`,json('PUT',{title,diagramType:p.activeType}));return getApiProject(projectId)},
  async deleteDiagram(projectId){const p=await getApiProject(projectId);await api(`/api/v1/diagram/delete/${p.activeOutputId}${revision(p)}`,{method:'DELETE'});return getApiProject(projectId)},

@@ -252,6 +252,29 @@ public class AIRequestService {
                 .stream().map(run -> toResponse(run, false)).toList();
     }
 
+    // The AI panel's chat history: the latest 50 requests with their prompts and answers.
+    // Proposal graphs and Business inputs are left out; the pending proposal is loaded on its own.
+    @Transactional(readOnly = true)
+    public List<AIRunResponseDTO> listChat(Integer projectId) {
+        if (projectId == null || projectId <= 0) {
+            throw new ApiException("Valid project ID is required");
+        }
+        projectRepository.findById(projectId)
+                .orElseThrow(() -> new ApiException("Project not found"));
+        return aiInteractionRepository
+                .findTop50ByProject_IdAndRequestIdIsNotNullOrderByIdDesc(projectId)
+                .stream().map(run -> {
+                    AIRunResponseDTO response = toResponse(run, true);
+                    N8nCallbackDTO.Result result = response.getResult();
+                    if (result != null && result.proposal() != null) {
+                        response.setResult(new N8nCallbackDTO.Result(result.type(), result.message(), result.modelName(),
+                                result.clarification(), null));
+                    }
+                    response.setBusinessInput(null);
+                    return response;
+                }).toList();
+    }
+
     // Get the current state of one AI request
     @Transactional(readOnly = true)
     public AIRunResponseDTO getRun(Integer projectId, UUID requestId) {

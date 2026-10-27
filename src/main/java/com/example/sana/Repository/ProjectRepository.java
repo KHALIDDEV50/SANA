@@ -14,6 +14,8 @@ import java.util.List;
 @Repository
 public interface ProjectRepository extends JpaRepository<Project, Integer> {
 
+    long countByOwner_Id(Integer ownerId);
+
     Project findProjectById(Integer id);
 
     List<Project> findAllByOwner_Id(Integer ownerId);
@@ -23,5 +25,7 @@ public interface ProjectRepository extends JpaRepository<Project, Integer> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Project p WHERE p.id = :projectId")
     Optional<Project> findByIdForUpdate(@Param("projectId") Integer projectId);
+
+
 
 }

@@ -40,22 +40,27 @@ public class Configuration {
                 )
 
                 .authorizeHttpRequests(auth -> auth
-                        // The React frontend files (built into static/) load before the user logs in
-                        .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/*.png", "/*.webp", "/*.svg").permitAll()
-                        // Anyone can create an account
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
-                        // n8n is not a user: N8nCallbackFilter checks its own X-Sana-Callback-Key
-                        .requestMatchers(HttpMethod.POST, "/api/integrations/n8n/ai/callback").permitAll()
+                                // The React frontend files (built into static/) load before the user logs in
+                                .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/*.png", "/*.webp", "/*.svg").permitAll()
+                                // Anyone can create an account
+                                .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
 
-                        // Lists of every user's data and the old generic CRUD are for admins only
-                        .requestMatchers("/api/v1/user/**").hasAuthority("ADMIN")
-                        .requestMatchers("/api/v1/ai-interaction/**", "/api/v1/change-proposal/**", "/api/v1/change-proposal-item/**", "/api/v1/tool-run/**").hasAuthority("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/project/get", "/api/v1/project-output/get", "/api/v1/node/get", "/api/v1/edge/get",
-                                "/api/v1/record/get", "/api/v1/project-understanding/get", "/api/v1/tech/architecture/get",
-                                "/api/v1/character-profile/get", "/api/v1/world/get", "/api/v1/location/get", "/api/v1/world-rule/get", "/api/v1/story-event/get").hasAuthority("ADMIN")
+                                // n8n is not a user: N8nCallbackFilter checks its own X-Sana-Callback-Key
+                                .requestMatchers(HttpMethod.POST, "/api/integrations/n8n/ai/callback").permitAll()
 
-                        // Everything else needs a login; controllers check that the data belongs to the user
-                        .anyRequest().authenticated()
+                                // Payment addition: Moyasar notifications do not use user login.
+                                // BillingService verifies the callback token and retrieves the invoice from Moyasar.
+                                .requestMatchers(HttpMethod.POST, "/api/billing/callbacks/*/*").permitAll()
+
+                                // Lists of every user's data and the old generic CRUD are for admins only
+                                .requestMatchers("/api/v1/user/**").hasAuthority("ADMIN")
+                                .requestMatchers("/api/v1/ai-interaction/**", "/api/v1/change-proposal/**", "/api/v1/change-proposal-item/**", "/api/v1/tool-run/**").hasAuthority("ADMIN")
+                                .requestMatchers(HttpMethod.GET, "/api/v1/project/get", "/api/v1/project-output/get", "/api/v1/node/get", "/api/v1/edge/get",
+                                        "/api/v1/record/get", "/api/v1/project-understanding/get", "/api/v1/tech/architecture/get",
+                                        "/api/v1/character-profile/get", "/api/v1/world/get", "/api/v1/location/get", "/api/v1/world-rule/get", "/api/v1/story-event/get").hasAuthority("ADMIN")
+
+                                // Everything else needs a login; controllers check that the data belongs to the user
+                                .anyRequest().authenticated()
                 )
                 .logout(logout -> logout
                         .logoutUrl("/api/v1/auth/logout")
