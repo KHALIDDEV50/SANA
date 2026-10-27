@@ -34,7 +34,11 @@ build/
 .vscode/
 
 ### Local only ###
-src/test/**
+# Older local test suites stay out of git; the JUnit tests directly in src/test/java/com/example/sana/ are submitted
+src/test/java/com/example/sana/Controller/
+src/test/java/com/example/sana/Integration/
+src/test/java/com/example/sana/Model/
+src/test/java/com/example/sana/Service/
 docs/
 .mcp.json
 .codex/
