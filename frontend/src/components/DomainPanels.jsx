@@ -4,17 +4,16 @@ import {tr} from '../lib/i18n';
 import {moodboardReferenceUrl} from '../lib/creativeTools';
 const request=(method,data)=>({method,body:JSON.stringify(data)});
 const tools=['BUSINESS_MODEL_BUILDER','TARGET_AUDIENCE_BUILDER','SWOT_ANALYZER','COMPETITOR_ANALYSIS','RISK_ANALYZER'];
-export default function DomainPanels({project,lang}){
+export default function DomainPanels({project,lang,mode}){
  const t=k=>tr(lang,k),ar=lang==='ar';
  const creative=['writing','games'].includes(project.domain);
- const available=creative?[['books','inspiration'],['timeline','timeline']]:project.domain==='business'?[['business','businessReports'],['indicators','saudiIndicators']]:[];
- const [tab,setTab]=useState(available[0]?.[0]||'');
+ const available=creative?[['timeline','timeline']]:project.domain==='business'?[['business','businessReports'],['indicators','saudiIndicators']]:[];
+ const [tab,setTab]=useState(mode==='timeline'?'timeline':available[0]?.[0]||'');
  const [error,setError]=useState(''),[busy,setBusy]=useState(false),[query,setQuery]=useState(''),[books,setBooks]=useState([]),[book,setBook]=useState(null),[tool,setTool]=useState(tools[0]),[input,setInput]=useState(''),[report,setReport]=useState(null),[indicators,setIndicators]=useState(null),[timeline,setTimeline]=useState([]),[order,setOrder]=useState('presentation');
  const alive=useRef(true);useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
  async function act(fn){setBusy(true);setError('');try{await fn()}catch(e){if(alive.current)setError(e.message)}finally{if(alive.current)setBusy(false)}}
  if(!API_MODE)return <section className="spark-panel"><p>{t('noBackend')}</p></section>;
- return <section className="spark-domain-panels"><header><span className="eyebrow">SANA</span><h1>{creative?t('inspiration'):t('businessReports')}</h1></header><nav className="spark-panel-tabs">{available.map(([id,key])=><button key={id} className={tab===id?'selected':''} onClick={()=>setTab(id)}>{t(key)}</button>)}</nav>{error&&<p role="alert" className="ux-error">{error}</p>}
- {tab==='books'&&<div className="spark-panel"><form className="toolbar" onSubmit={e=>{e.preventDefault();act(async()=>{const r=await api(`/api/v1/creativity/books/search?keyword=${encodeURIComponent(query)}&maxResults=12&startIndex=0`);setBooks(r.books||[]);setBook(null)})}}><input required value={query} onChange={e=>setQuery(e.target.value)} placeholder={t('search')}/><button className="btn btn-primary" disabled={busy}>{t('search')}</button></form><div className="spark-books">{books.map(b=><article key={b.id}>{moodboardReferenceUrl(b.thumbnail)&&<img src={moodboardReferenceUrl(b.thumbnail)} alt="" loading="lazy" referrerPolicy="no-referrer" onError={e=>{e.currentTarget.hidden=true}}/>}<h3>{b.title}</h3><p>{b.authors?.join('، ')}</p><small>{b.publishedDate}</small><button onClick={()=>act(async()=>setBook(await api(`/api/v1/creativity/books/get/${encodeURIComponent(b.id.replace('/works/',''))}`)))}>{t('description')}</button>{moodboardReferenceUrl(b.previewLink)&&<a href={moodboardReferenceUrl(b.previewLink)} target="_blank" rel="noopener noreferrer">Open Library ↗</a>}</article>)}</div>{book&&<article><h2>{book.title}</h2><p>{book.description}</p></article>}</div>}
+ return <section className="spark-domain-panels"><header><span className="eyebrow">SANA</span><h1>{creative?(ar?'التسلسل الزمني':'Timeline'):t('businessReports')}</h1></header>{!creative&&<nav className="spark-panel-tabs">{available.map(([id,key])=><button key={id} className={tab===id?'selected':''} onClick={()=>setTab(id)}>{t(key)}</button>)}</nav>}{error&&<p role="alert" className="ux-error">{error}</p>}
  {tab==='timeline'&&<div className="spark-panel"><div className="toolbar"><select value={order} onChange={e=>setOrder(e.target.value)}>{['presentation','chronological'].map(k=><option key={k} value={k}>{t(k)}</option>)}</select><button className="btn btn-primary" disabled={busy||!project.activeOutputId||!project.storyMap} onClick={()=>act(async()=>setTimeline(await api(`/api/v1/story-event/timeline/${order}/${project.activeOutputId}`)))}>{t('refresh')}</button></div><ol className="spark-timeline">{(Array.isArray(timeline)?timeline:[]).map((e,i)=><li key={e.id||i}><strong>{e.title}</strong><p>{e.description}</p><small>{e.inWorldTime||e[`${order}Order`]||'—'}</small></li>)}</ol></div>}
  {tab==='business'&&<form className="spark-panel" onSubmit={e=>{e.preventDefault();act(async()=>{const inputJson=JSON.stringify({description:input});let run=await api('/api/business/tools',request('POST',{projectId:project.id,outputId:project.activeOutputId,baseRevision:project.graphRevision,toolType:tool,inputJson}));setReport(null);for(let i=0;i<120&&alive.current&&['PENDING','RUNNING'].includes(run.status);i++){await new Promise(r=>setTimeout(r,2000));if(!alive.current)return;run=await aiApi.status(run.statusUrl)}if(!alive.current)return;if(run.status!=='COMPLETED')throw Error(run.error?.message||run.status);setReport(run.result)})}}><label className="form-field"><span>{t('businessReports')}</span><select value={tool} onChange={e=>setTool(e.target.value)}>{tools.map((k,i)=><option key={k} value={k}>{ar?['نموذج العمل','الجمهور المستهدف','تحليل SWOT','تحليل المنافسين','تحليل المخاطر'][i]:k.replaceAll('_',' ')}</option>)}</select></label><label className="form-field"><span>{t('reportInput')}</span><textarea required maxLength={15000} rows={5} value={input} onChange={e=>setInput(e.target.value)}/></label><button className="btn btn-primary" disabled={busy||!project.activeOutputId}>{t(busy?'awaitingResult':'runReport')}</button>{report&&<Report value={report} lang={lang}/>}</form>}
  {tab==='indicators'&&<section className="spark-panel"><p>{ar?'بيانات مرجعية من البنك الدولي؛ ليست تحليل سوق أو بيانات يستهلكها AI تلقائيًا.':'World Bank reference data, not market analysis or automatically supplied AI context.'}</p><button className="btn btn-primary" disabled={busy} onClick={()=>act(async()=>setIndicators(await api('/api/v1/external/world-bank/saudi-indicators')))}>{t('refresh')}</button>{indicators&&<Report value={indicators} lang={lang}/>}</section>}
@@ -22,6 +21,59 @@ export default function DomainPanels({project,lang}){
 }
 function Report({value,lang}){if(typeof value==='string'&&/^[\[{]/.test(value.trim())){try{const parsed=JSON.parse(value);return <Report value={parsed} lang={lang}/>}catch{}}if(value==null)return null;if(typeof value!=='object')return <p className="spark-report-value">{String(value)}</p>;if(Array.isArray(value))return <ul>{value.map((v,i)=><li key={i}><Report value={v} lang={lang}/></li>)}</ul>;return <dl className="spark-report">{Object.entries(value).map(([k,v])=><div key={k}><dt>{tr(lang,k).replaceAll('_',' ')}</dt><dd><Report value={v}/></dd></div>)}</dl>}
 
+
+/** Separate, project-aware book inspiration tool. Open Library remains the authoritative source. */
+export function BookInspiration({project,lang}){
+ const ar=lang==='ar',say=(a,b)=>ar?a:b;
+ const [query,setQuery]=useState(''),[focus,setFocus]=useState(''),[results,setResults]=useState([]),[selected,setSelected]=useState(null);
+ const [draft,setDraft]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const mounted=useRef(true);
+ useEffect(()=>{mounted.current=true;return()=>{mounted.current=false}},[]);
+ const base=`/api/projects/${project.id}/creativity/assist`;
+ if(!API_MODE)return <section className="spark-panel"><p>{say("هذه الأداة تحتاج اتصالًا بالخادم.","Connect the backend to use this tool.")}</p></section>;
+ const pause=ms=>new Promise(done=>setTimeout(done,ms));
+ async function search(e){e.preventDefault();setBusy(true);setError('');setSelected(null);
+  try{const r=await api(`/api/v1/creativity/books/search?keyword=${encodeURIComponent(query.trim())}&maxResults=18&startIndex=0`);if(mounted.current)setResults(r.books||[])}
+  catch(e){if(mounted.current)setError(e.message)}finally{if(mounted.current)setBusy(false)}
+ }
+ async function inspire(){setBusy(true);setError('');setDraft(null);
+  try{
+   let next=await api(`${base}/books`,{method:'POST',body:JSON.stringify({focus:focus.trim()})});
+   if(mounted.current)setDraft(next);
+   for(let attempts=0;attempts<55&&mounted.current&&!['PENDING','FAILED','APPLIED'].includes(next.status);attempts++){
+    await pause(2000);if(!mounted.current)return;
+    next=await api(`${base}/drafts/${encodeURIComponent(next.draftId)}`);
+    if(mounted.current)setDraft(next);
+   }
+   if(mounted.current&&!['PENDING','FAILED'].includes(next.status))setError(say('انتهى الانتظار؛ أعيدي المحاولة لاحقًا.','Timed out; try again later.'));
+   if(next.status==='FAILED'&&mounted.current)setError(next.error||'AI request failed');
+  }catch(e){if(mounted.current)setError(e.message)}finally{if(mounted.current)setBusy(false)}
+ }
+ const card=(book,reason)=>{const url=moodboardReferenceUrl(book.previewLink),cover=moodboardReferenceUrl(book.thumbnail);
+  return <article key={book.id} className="sana-book-card">
+   <div className="sana-book-cover">{cover?<img src={cover} loading="lazy" alt="" referrerPolicy="no-referrer" onError={e=>{e.currentTarget.style.visibility='hidden'}}/>:<div className="sana-book-cover-empty">📖</div>}</div>
+   <div className="sana-book-info"><h3>{book.title}</h3><p>{(book.authors||[]).join('، ')||say('مؤلف غير محدد','Unknown author')}</p><small>{book.publishedDate||'—'}</small>
+    {reason&&<p className="sana-book-reason">✦ {reason}</p>}
+    <div className="sana-book-links"><button type="button" onClick={async()=>{setError('');try{setSelected(await api(`/api/v1/creativity/books/get/${encodeURIComponent(book.id)}`))}catch(e){setError(e.message)}}}>{say('عن الكتاب','About the book')}</button>
+     {url&&<a href={url} target="_blank" rel="noopener noreferrer">Open Library ↗</a>}</div></div>
+  </article>;
+ };
+ return <section className="ux-tool-page sana-books-page" dir={ar?'rtl':'ltr'}>
+  <header className="ux-tool-head"><div className="ux-tool-heading"><span className="ux-tool-icon">📚</span><div><small>SANA · CREATIVE LIBRARY</small><h1>{say('الكتب الملهمة','Inspiring books')}</h1><p>{say('مراجع حقيقية تساعدك تطوّرين قصتك وعالمك.','Real books to inspire your story and world.')}</p></div></div></header>
+  <div className="sana-book-inspire"><h2>✦ {say('خلّي سنا تختار لمشروعك','Let SANA recommend books')}</h2><p>{say('سنا تقرأ شخصيات مشروعك وعالمه وحبكته، وتختار من نتائج Open Library الحقيقية.','SANA reads your story and selects verified Open Library books.')}</p>
+   <label>{say('تبين تركز على شيء معيّن؟ (اختياري)','Optional focus')}<textarea rows={2} maxLength={350} value={focus} onChange={e=>setFocus(e.target.value)} placeholder={say('مثل: كتب تساعدني أكتب حبكة تحقيق غامضة','e.g. psychological mystery and clues')}/></label>
+   <button className="btn btn-primary" type="button" disabled={busy} onClick={inspire}>{busy?say('سنا تبحث وتقرأ النتائج...','SANA is researching...'):say('اقترحي كتبًا من مشروعي ✨','Find books for my project ✨')}</button>
+   {draft&&<p role="status" className="sana-quiet">{draft.status==='SEARCH_PLANNING'?say('سنا تفهم المشروع...','Reading project...'):draft.status==='SELECTING'?say('سنا تقارن الكتب المتاحة...','Evaluating verified books...'):draft.status==='PENDING'?say('هذه ترشيحات سنا.','Here are SANA’s suggestions.'):draft.status==='FAILED'?draft.error:''}</p>}
+  </div>
+  {error&&<p className="ux-error" role="alert">{error}</p>}
+  {draft?.status==='PENDING'&&<section className="sana-book-section"><h2>{say('اختيارات سنا لمشروعك','SANA recommendations')}</h2><p>{draft.summary}</p><div className="sana-book-grid">{(draft.books||[]).map(p=>card(p.book,p.reason))}</div>{!draft.books?.length&&<p>{say('ما لقيت كتب مناسبة كفاية من النتائج. جرّبي وصفًا آخر.','No sufficiently relevant books found.')}</p>}</section>}
+  <section className="sana-book-section"><h2>{say('ابحثي بنفسك','Search the library')}</h2><form className="sana-book-search" onSubmit={search}><input required maxLength={200} value={query} onChange={e=>setQuery(e.target.value)} placeholder={say('عنوان، مؤلف، أو موضوع...','Title, author, or topic...')}/><button type="submit" className="btn btn-primary" disabled={busy}>{say('بحث','Search')}</button></form>
+   <div className="sana-book-grid">{results.map(b=>card(b,null))}</div>
+  </section>
+  {selected&&<section className="sana-book-detail"><button type="button" onClick={()=>setSelected(null)}>× {say('إغلاق','Close')}</button><h2>{selected.title}</h2><p>{selected.description||say('لا يوجد وصف متاح لهذا الكتاب.','No description available.')}</p></section>}
+  <p className="sana-quiet">{say('الترشيحات للقراءة والإلهام، وليست نسخًا أو إعادة إنتاج لمحتوى الكتب.','Recommendations are for inspiration, not reproduction.')}</p>
+ </section>;
+}
 
 // Project Understanding is an OPTIONAL AI context, not a required project setup step.
 // UI uses ordinary lines; preserve existing complex JSON records without changing their structure.

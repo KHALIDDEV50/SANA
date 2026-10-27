@@ -7,7 +7,7 @@ import {
   Plus,Search,Settings2,ShieldCheck, Sparkles,Sun,Trash2,Upload,Users, WandSparkles, Workflow, X, ZoomIn,ZoomOut,CheckCircle2,
   PenLine,Eye,History, PanelRightClose, CircleDot, RotateCcw, Copy, Info, BookMarked, Image as ImageIcon, GitBranch, GraduationCap, Send
 } from 'lucide-react';
-import {API_MODE,repository,TYPES,elementTypes,aiApi,authApi,quickStartApi} from './lib/data';
+import {API_MODE,repository,TYPES,elementTypes,aiApi,authApi,selectedBranchingDiagram,rememberBranchingOutput} from './lib/data';
 import {TEMPLATE_CATALOG,typesForDomain,domainGroup,findTemplate} from './lib/templates';
 import {tr} from './lib/i18n';
 import {Moodboard,BranchingNarrative,GameBalance} from './components/CreativeExtras';
@@ -21,7 +21,7 @@ import './creative-studio.css';
 import AccountExperience from './components/AccountExperience';
 import StudioWorkspace,{useDialogFocus} from './components/StudioWorkspace';
 import {DiagramNodeContent,DiagramPropertiesEditor,graphPresentation,organizedGraph,edgeEndpoints,techEdgeEndpoints,techNodeBounds} from './components/DiagramPresentation';
-import DomainPanels,{ProjectSummary} from './components/DomainPanels';
+import DomainPanels,{ProjectSummary,BookInspiration} from './components/DomainPanels';
 import AdminStudio from './components/AdminStudio';
 import BillingExperience from './components/BillingExperience';
 import {billingApi,billingEnabled,membershipLimit} from './lib/billing';
@@ -120,120 +120,9 @@ function LibraryPage({t,lang,onNew,initialDomain='all'}){
  const shown=TEMPLATE_CATALOG.filter(item=>domain==='all'||item.group===domain);
  return <div className="main-shell inner-page page-enter"><div className="page-intro"><span className="eyebrow">SANA · TEMPLATE LIBRARY</span><h1>{t('templatesTitle')}</h1><p>{t('templatesSubtitle')}</p></div><div className="template-filter" role="group" aria-label={t('domain')}>{groups.map(([id,key])=><button key={id} className={domain===id?'active':''} onClick={()=>setDomain(id)}>{t(key)}</button>)}</div><div className="template-grid">{shown.map(item=>{const Icon=item.group==='technology'?Code2:item.group==='business'?BriefcaseBusiness:item.group==='education'?GraduationCap:item.domain==='games'?Gamepad2:BookOpen;return <article className={`template-card template-${item.group}`} key={item.id}><div className="template-preview"><span className="template-corner">SANA / {item.group.toUpperCase()}</span><Icon size={42} strokeWidth={1.5}/><span className="template-ornament">✦</span></div><div className="template-body"><DomainPill domain={item.domain} t={t}/><h3>{lang==='ar'?item.ar:item.en}</h3><p>{lang==='ar'?item.arDesc:item.enDesc}</p><Btn icon={ArrowUpLeft} onClick={()=>onNew({templateId:item.id,domain:item.domain,name:lang==='ar'?item.ar:item.en,description:lang==='ar'?item.arDesc:item.enDesc})}>{t('startProject')}</Btn></div></article>})}</div></div>
 }
-// "Start with SANA AI": the idea goes straight to the AI, which suggests the domain, diagram and project name.
-// After the user accepts, this page creates the project, lets the AI draw the diagram and applies it,
-// and opens the Studio only when the diagram is ready.
-function AIStartPage({t,lang,onTemplates,onNew,projects,onContinue,canCreateProject,onReady}){
- const [idea,setIdea]=useState(''),[selected,setSelected]=useState(''),[suggestion,setSuggestion]=useState(null),[choice,setChoice]=useState(null);
- const [changing,setChanging]=useState(false),[options,setOptions]=useState({}),[error,setError]=useState('');
- // idle -> classifying -> suggested -> creating -> drawing -> (Studio) | clarify | advice | failed
- const [stage,setStage]=useState('idle'),[clarification,setClarification]=useState(null),[answer,setAnswer]=useState(''),[advice,setAdvice]=useState(''),[fixing,setFixing]=useState(false);
- const created=useRef(null),turns=useRef([]),alive=useRef(true);
- useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
- const say=(ar,en)=>lang==='ar'?ar:en;
- const working=['classifying','creating','drawing'].includes(stage),locked=working||Boolean(created.current);
- async function submit(e){
-  e.preventDefault();setError('');
-  if(selected){onContinue(selected,idea);return}
-  // Without the backend (demo mode) fall back to the manual new-project form
-  if(!API_MODE){sessionStorage.setItem('sana-ai-pending',idea);onNew({description:idea,aiFirst:true});return}
-  setStage('classifying');
-  try{
-   const [result,diagramOptions]=await Promise.all([quickStartApi.classify(idea,lang),quickStartApi.diagramOptions()]);
-   if(!alive.current)return;
-   setOptions(diagramOptions);setSuggestion(result);setChanging(false);
-   setChoice({domain:result.domain,diagramType:result.diagramType,name:result.projectName});setStage('suggested');
-  }catch(err){if(alive.current){setError(err.message||say('تعذر على سنا فهم الفكرة الآن. حاول مرة أخرى.','SANA could not read the idea right now. Please try again.'));setStage('idle')}}
- }
- const changeDomain=domain=>setChoice(c=>({...c,domain,diagramType:(options[domain]||[])[0]||c.diagramType}));
- // The idea plus the answers to any clarification questions so far
- const fullPrompt=()=>[idea.trim(),...turns.current.map(turn=>`${say('سؤال','Question')}: ${turn.question}\n${say('جواب','Answer')}: ${turn.answer}`)].join('\n\n').slice(0,10000);
- // Ask SANA - AI Gateway to draw the diagram, wait for it, and apply the result
- async function draw(){
-  const project=created.current;setStage('drawing');setError('');setFixing(false);
-  try{
-   let run,feedback='';
-   for(let attempt=1;attempt<=2;attempt++){
-    const body={task:'CREATE',prompt:(fullPrompt()+feedback).slice(0,10000),diagramType:choice.diagramType};
-    if(['writing','games'].includes(project.domain))body.conversationHistory=[];
-    run=await aiApi.start(project.id,body,project.domain);
-    // The backend gives n8n 3 minutes; poll every 2 seconds a little longer than that
-    for(let i=0;i<120&&alive.current&&['PENDING','RUNNING'].includes(run.status);i++){await new Promise(r=>setTimeout(r,2000));run=await aiApi.status(run.statusUrl)}
-    if(!alive.current)return;
-    // The diagram broke a rule: ask the AI once more and tell it exactly which rule
-    if(run.status==='FAILED'&&run.error?.code==='INVALID_PROPOSAL'&&attempt<2){
-     feedback=`\n\nYour previous diagram for this request was rejected: ${run.error.message}. Draw it again and follow the graph rules in the context exactly.`;
-     setFixing(true);continue;
-    }
-    break;
-   }
-   setFixing(false);
-   if(run.status!=='COMPLETED')throw new Error(run.error?.message||say('لم تكمل سنا الرسم. حاول مرة أخرى.','SANA could not finish the diagram. Please try again.'));
-   const result=run.result;
-   if(result.type==='CLARIFICATION'){setClarification({message:result.message,question:result.clarification?.question||'',answers:result.clarification?.suggestedAnswers||[]});setAnswer('');setStage('clarify');return}
-   if(result.type!=='PROPOSAL'||!run.proposalId){setAdvice(result.message||'');setStage('advice');return}
-   // The user already accepted the suggestion, so the proposed diagram is applied directly
-   const applied=await aiApi.accept(project.id,run.proposalId);
-   await repository.setActiveDiagram(project.id,applied.outputId);
-   if(alive.current)onReady(project.id);
-  }catch(err){if(alive.current){setError(err.message);setStage('failed')}}
- }
- async function accept(){
-  if(!choice.name.trim()){setError(say('اكتب اسم المشروع.','Enter a project name.'));return}
-  setError('');
-  if(!created.current){
-   if(!await canCreateProject())return;
-   setStage('creating');
-   try{created.current=await repository.createProject({name:choice.name.trim(),description:idea.trim().slice(0,5000),domain:choice.domain,aiFirst:true})}
-   catch(err){if(alive.current){setError(err.message);setStage('suggested')}return}
-  }
-  await draw();
- }
- function answerClarification(text){
-  const value=String(text||'').trim();if(!value||!clarification)return;
-  turns.current=[...turns.current,{question:clarification.question,answer:value}];setClarification(null);draw();
- }
- const domains=['technology','business','education','writing','games'].filter(d=>(options[d]||[]).length);
- const openProject=()=>onReady(created.current.id);
- return <div className="main-shell ai-start-page page-enter"><div className="ai-start-visual"><div className="ai-start-orbit"/><div className="spark-ai-starfield" aria-hidden="true"><i>✦</i><i>✧</i><i>✦</i><i>✧</i><i>✦</i></div><div className="spark-ai-core" aria-hidden="true"/><img src="/sana-logo.webp" alt="SANA"/><span><Sparkles size={21}/> SANA · {t('spark')}</span><div className="spark-ai-vision"><span>01 · {t('spark')}</span><span>02 · {t('explore')}</span><span>03 · {t('shape')}</span></div></div><div className="ai-start-content"><span className="eyebrow">SANA · CREATIVE JOURNEY</span><h1>{t('sparkHeadline')}</h1><p>{t('startIdea')}</p><div className="spark-ai-journey">{['spark','explore','shape','create'].map(k=><span key={k}>{t(k)}</span>)}</div>
-  <form className="spark-ai-entry" onSubmit={submit}>
-   <textarea rows={4} maxLength={6000} required disabled={locked} value={idea} onChange={e=>{setIdea(e.target.value);setSuggestion(null);setStage('idle')}} placeholder={t('aiAsk')}/>
-   <select aria-label={t('chooseProject')} disabled={locked} value={selected} onChange={e=>{setSelected(e.target.value);setSuggestion(null);setStage('idle')}}><option value="">{t('newProject')}</option>{projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
-   <p className="ai-start-small">{selected
-    ?say('ستنتقل الفكرة كما كتبتها إلى مساعد سنا في هذا المشروع. بعدها تراجعها وتبدأ الإنشاء.','Your idea will be carried to SANA in this project. Review it there before starting.')
-    :say('سترسل سنا فكرتك للذكاء الاصطناعي ليقترح المجال والمخطط المناسبين، ثم ترسمه لك بعد موافقتك.','SANA AI will suggest the right domain and diagram for your idea, then draw it once you accept.')}</p>
-   {!suggestion&&<Btn type="submit" icon={Sparkles} disabled={working}>{stage==='classifying'?say('سنا تفكّر...','SANA is thinking...'):selected?t('continueWithAI'):say('أرسل إلى سنا','Send to SANA AI')}</Btn>}
-  </form>
-  {suggestion&&choice&&<section className="ai-start-suggestion" aria-live="polite">
-   <strong><Sparkles size={16}/> {say('سنا تقترح','SANA suggests')}</strong>
-   {changing&&!locked
-    ?<div className="ai-start-suggestion-fields">
-      <label>{say('المجال','Domain')}<select value={choice.domain} onChange={e=>changeDomain(e.target.value)}>{domains.map(d=><option key={d} value={d}>{t(d)}</option>)}</select></label>
-      <label>{say('المخطط','Diagram')}<select value={choice.diagramType} onChange={e=>setChoice(c=>({...c,diagramType:e.target.value}))}>{(options[choice.domain]||[]).map(type=><option key={type} value={type}>{t(`diagram_${type}`)}</option>)}</select></label>
-     </div>
-    :<dl><div><dt>{say('المجال','Domain')}</dt><dd>{t(choice.domain)}</dd></div><div><dt>{say('المخطط','Diagram')}</dt><dd>{t(`diagram_${choice.diagramType}`)}</dd></div></dl>}
-   <label>{say('اسم المشروع','Project name')}<input value={choice.name} maxLength={100} disabled={locked} onChange={e=>setChoice(c=>({...c,name:e.target.value}))}/></label>
-   {suggestion.reason&&<p>{suggestion.reason}</p>}
-   {stage==='suggested'&&<div className="ai-start-suggestion-actions">
-    <Btn variant="ghost" onClick={()=>setChanging(v=>!v)}>{changing?say('تم','Done'):say('تغيير','Change')}</Btn>
-    <Btn icon={Sparkles} onClick={accept}>{say('اقبل وارسم','Accept and draw')}</Btn>
-   </div>}
-   {(stage==='creating'||stage==='drawing')&&<div className="ai-start-progress" role="status"><span className="ai-start-progress-dot"/>{stage==='creating'
-    ?say('جارٍ إنشاء المشروع...','Creating your project...')
-    :fixing
-     ?say('سنا تصحّح المخطط ليوافق القواعد... لحظات وتنتقل إليه.','SANA is fixing the diagram to follow the rules... almost there.')
-     :say('سنا ترسم مخططك الآن... قد يستغرق ذلك دقيقة. ستنتقل إليه تلقائيًا عند اكتماله.','SANA is drawing your diagram... this can take a minute. You will be taken to it when it is ready.')}</div>}
-   {stage==='clarify'&&clarification&&<div className="ai-start-clarify">
-    {clarification.message&&<p>{clarification.message}</p>}
-    <strong>{clarification.question}</strong>
-    {clarification.answers.length>0&&<div className="ai-start-clarify-answers">{clarification.answers.map(a=><button type="button" key={a} onClick={()=>answerClarification(a)}>{a}</button>)}</div>}
-    <form onSubmit={e=>{e.preventDefault();answerClarification(answer)}}><input value={answer} onChange={e=>setAnswer(e.target.value)} placeholder={say('اكتب إجابتك','Type your answer')} maxLength={1500}/><Btn type="submit" icon={Send}>{say('أرسل','Send')}</Btn></form>
-   </div>}
-   {stage==='advice'&&<div className="ai-start-clarify"><p>{advice}</p><div className="ai-start-suggestion-actions"><Btn onClick={draw} icon={RotateCcw} variant="ghost">{say('حاول الرسم مرة أخرى','Try drawing again')}</Btn><Btn onClick={openProject} icon={FolderOpen}>{say('افتح المشروع','Open project')}</Btn></div></div>}
-   {stage==='failed'&&<div className="ai-start-suggestion-actions"><Btn variant="ghost" icon={FolderOpen} onClick={openProject}>{say('افتح المشروع','Open project')}</Btn><Btn icon={RotateCcw} onClick={draw}>{say('حاول مرة أخرى','Try again')}</Btn></div>}
-  </section>}
-  {error&&<p role="alert" className="ai-start-error">{error}</p>}
-  <div className="ai-start-actions"><Btn icon={LayoutTemplate} variant="outline-dark" onClick={onTemplates}>{t('templateRoute')}</Btn></div></div></div>
+function AIStartPage({t,lang,onTemplates,onNew,projects,onContinue}){
+ const [idea,setIdea]=useState(''),[selected,setSelected]=useState('');
+ return <div className="main-shell ai-start-page page-enter"><div className="ai-start-visual"><div className="ai-start-orbit"/><div className="spark-ai-starfield" aria-hidden="true"><i>✦</i><i>✧</i><i>✦</i><i>✧</i><i>✦</i></div><div className="spark-ai-core" aria-hidden="true"/><img src="/sana-logo.webp" alt="SANA"/><span><Sparkles size={21}/> SANA · {t('spark')}</span><div className="spark-ai-vision"><span>01 · {t('spark')}</span><span>02 · {t('explore')}</span><span>03 · {t('shape')}</span></div></div><div className="ai-start-content"><span className="eyebrow">SANA · CREATIVE JOURNEY</span><h1>{t('sparkHeadline')}</h1><p>{t('startIdea')}</p><div className="spark-ai-journey">{['spark','explore','shape','create'].map(k=><span key={k}>{t(k)}</span>)}</div><form className="spark-ai-entry" onSubmit={e=>{e.preventDefault();if(selected)onContinue(selected,idea);else{sessionStorage.setItem('sana-ai-pending',idea);onNew({description:idea,aiFirst:true})}}}><textarea rows={4} maxLength={6000} required value={idea} onChange={e=>setIdea(e.target.value)} placeholder={t('aiAsk')}/><select aria-label={t('chooseProject')} value={selected} onChange={e=>setSelected(e.target.value)}><option value="">{t('newProject')}</option>{projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select><p className="ai-start-small">{lang==='ar'?'ستنتقل الفكرة كما كتبتها إلى مساعد سنا بعد اختيار المشروع أو إنشائه. بعدها تراجعها وتبدأ الإنشاء.':'Your idea will be carried to SANA after choosing or creating a project. Review it there before starting.'}</p><Btn type="submit" icon={Sparkles}>{t('continueWithAI')}</Btn></form><div className="ai-start-actions"><Btn icon={LayoutTemplate} variant="outline-dark" onClick={onTemplates}>{t('templateRoute')}</Btn></div></div></div>
 }
 function AISidebar({t,lang,onClose}){return <aside className="ai-sidebar"><div className="ai-side-head"><div className="ai-gem"><Sparkles size={23}/></div><div><strong>{t('ai')}</strong><span>{t('aiSoon')}</span></div><IconButton onClick={onClose} label={t('close')}><X size={18}/></IconButton></div><div className="ai-body"><span className="ai-avatar"><img src="/sana-logo.webp" alt="SANA" /></span><div className="ai-message">{lang==='ar'?'مرحبًا! أنا سنا، مساعدك الإبداعي. ✨':'Hello! I’m SANA, your creative companion. ✨'}<br/><br/>{t('aiNotice')}</div><div className="ai-ideas"><span>{lang==='ar'?'قريبًا يمكنك أن تطلب:':'Soon you can ask:'}</span>{(lang==='ar'?['طوّر لي هذه الشخصية','هل في قصتي تعارض؟','اقترح حدثًا جديدًا']:['Develop this character','Find plot contradictions','Suggest a new event']).map(text=><div key={text}><Sparkles size={13}/>{text}</div>)}</div></div><div className="ai-bottom"><div className="fake-input"><LockKeyhole size={16}/>{t('aiPlaceholder')}</div><small>{t('aiSoon')}</small></div></aside>}
 function ElementTile({element,t,onEdit,onDelete,onFocus}){const Icon=ICONS[element.type]||FileText;return <article className="element-tile"><div className={`element-tile-icon ${COLORS[element.type]}`}><Icon size={20}/></div><div className="element-tile-main"><small>{t(element.type)}</small><h3>{element.name}</h3><p>{element.description||'—'}</p></div><div className="element-tools"><IconButton label={t('edit')} onClick={()=>onEdit(element)}><Edit3 size={15}/></IconButton><IconButton label={t('viewMap')} onClick={()=>onFocus(element.id)}><Network size={15}/></IconButton><IconButton label={t('delete')} onClick={()=>onDelete(element)}><Trash2 size={15}/></IconButton></div></article>}
@@ -277,10 +166,28 @@ function DiagramBar({t,project,onDiagram,onNewDiagram}){
   <Btn variant="soft" disabled={!project.activeOutputId} onClick={async()=>{const title=window.prompt(t('renameDiagram'),project.diagrams?.find(d=>d.id===project.activeOutputId)?.title||'');if(title?.trim())try{await repository.renameDiagram(project.id,title.trim());onDiagram(project.activeOutputId)}catch(e){window.alert(e.message)}}}>{t('renameDiagram')}</Btn><Btn variant="ghost" disabled={!project.activeOutputId} onClick={async()=>{if(window.confirm(t('deleteDiagram')))try{await repository.deleteDiagram(project.id);onDiagram(null)}catch(e){window.alert(e.message)}}}>{t('deleteDiagram')}</Btn><Btn variant="soft" icon={Plus} disabled={!newType} onClick={()=>onNewDiagram(`${project.name} · ${t(`diagram_${newType}`)}`,newType)}>{t('newDiagram')}</Btn>
  </div>
 }
+// Requests for a brand-new character must go through STORY_MAP approval before
+// the branching editor creates scenes. A name appearing in dialogue is NOT a character profile.
+function requestsNewStoryCharacter(value){
+ const text=String(value||'').toLowerCase().replace(/[إأآ]/g,'ا').replace(/ة/g,'ه').replace(/[\u064b-\u065f]/g,'').replace(/\s+/g,' ');
+ if(/بدون شخصيه جديده|لا (?:تضيف|تنشئ|تخترع) شخصيه|without (?:a )?new character|no new character/.test(text))return false;
+ return /شخصيه.{0,22}جديده|شخصيه.{0,22}(?:غير موجوده|مو موجوده)|(?:اضيف|ضيف|انشئ|اصنع|ابتكر).{0,28}شخصيه|(?:new character|create a character|add a character|introduce a character|create new npc|add new npc)/i.test(text);
+}
+function characterOnlyRequest(value){
+ const text=String(value||'').toLowerCase().replace(/[إأآ]/g,'ا').replace(/ة/g,'ه');
+ return requestsNewStoryCharacter(text)&&!/نهايه|حوار|مشهد|شجره|قصه|ending|dialogue|scene|branch|story/i.test(text);
+}
 // SANA AI panel (API mode): advice on the open diagram, an edit of it, or a new diagram. Proposals are applied only on Accept.
-function AIPanel({t,lang,project,onClose,onApplied,onMoodboardSaved}){
- const [task,setTask]=useState(sessionStorage.getItem(`sana-ai-seed-${project.id}`)?'CREATE':project.activeOutputId?'ADVISE':'CREATE'),[diagramType,setDiagramType]=useState(project.diagramTypes?.[0]||project.activeType),[prompt,setPrompt]=useState(()=>sessionStorage.getItem(`sana-ai-seed-${project.id}`)||''),[messages,setMessages]=useState([]),[proposal,setProposal]=useState(null),[busy,setBusy]=useState(false);
+function AIPanel({t,lang,project,onClose,onApplied,onMoodboardSaved,onNewCharacter,branchingMode=false}){
+ const existingBranch=project.diagrams?.find(d=>d.outputType==='BRANCHING_STORY');
+ const [task,setTask]=useState(branchingMode?(existingBranch?'EDIT':'CREATE'):sessionStorage.getItem(`sana-ai-seed-${project.id}`)?'CREATE':project.activeOutputId?'ADVISE':'CREATE'),[diagramType,setDiagramType]=useState(branchingMode?'BRANCHING_STORY':project.diagramTypes?.[0]||project.activeType),[prompt,setPrompt]=useState(()=>branchingMode?sessionStorage.getItem(`sana-branching-pending-${project.id}`)||'':sessionStorage.getItem(`sana-ai-seed-${project.id}`)||''),[messages,setMessages]=useState([]),[proposal,setProposal]=useState(null),[busy,setBusy]=useState(false);
  const [moodboardPreview,setMoodboardPreview]=useState(null),[moodboardQuestion,setMoodboardQuestion]=useState(null),[moodboardError,setMoodboardError]=useState('');
+ // New story characters are AI-proposed on STORY_MAP, reviewed independently,
+ // and are never auto-written by the branching-story AI.
+ const [characterDraft,setCharacterDraft]=useState(false);
+ const [pendingCharacterIdea,setPendingCharacterIdea]=useState('');
+ const approvedCharacterRequest=useRef(null);
+ useEffect(()=>{if(branchingMode){setDiagramType('BRANCHING_STORY');setTask(project.diagrams?.some(d=>d.outputType==='BRANCHING_STORY')?'EDIT':'CREATE')}},[branchingMode,project.id]);
  const moodText=(ar,en)=>lang==='ar'?ar:en;
  const alive=useRef(true);useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
  const say=(role,text,extra={})=>setMessages(m=>[...m,{role,text:role==='error'?publicError(text,lang):text,...extra}]);
@@ -314,53 +221,44 @@ function AIPanel({t,lang,project,onClose,onApplied,onMoodboardSaved}){
   }catch(e){if(alive.current)setMoodboardError(e.message);}
   finally{if(alive.current)setBusy(false);}
  }
- // Chat messages for a finished run; the same shape say() produces
- const runMessages=run=>{
-  if(run.status==='FAILED'||run.status==='TIMED_OUT')return [{role:'error',text:publicError(run.error?.message||moodText('تعذر إكمال الطلب، حاول مرة أخرى.','Could not complete the request. Please try again.'),lang)}];
-  if(run.status!=='COMPLETED'||!run.result)return [{role:'error',text:publicError(t('aiStillRunning'),lang)}];
-  const result=run.result;
-  if(result.type==='CLARIFICATION')return [{role:'ai',text:`${result.message}\n\n${result.clarification?.question||''}`,answers:result.clarification?.suggestedAnswers||[],kind:'CLARIFICATION'}];
-  return [{role:'ai',text:result.message,kind:result.type}];
- };
- // Rebuild the chat from the saved AI requests, so a page reload does not lose it.
- // A pending proposal comes back with Accept/Reject, and a request that is still running is followed again.
- useEffect(()=>{
-  if(!API_MODE)return;
-  let cancelled=false;
-  (async()=>{
-   try{
-    const runs=(await aiApi.chat(project.id)).filter(run=>run.prompt&&!run.prompt.startsWith('SANA_MOODBOARD_PLAN')&&!run.businessToolType).reverse();
-    if(cancelled||!alive.current||!runs.length)return;
-    const restored=[];
-    for(const run of runs){
-     // Quick start adds a note for the AI when it retries a rejected diagram; it is not part of what the user wrote
-     restored.push({role:'user',text:run.prompt.split('\n\nYour previous diagram for this request was rejected:')[0]});
-     if(['PENDING','RUNNING'].includes(run.status))continue;
-     restored.push(...runMessages(run));
-     if(run.proposalReviewStatus==='ACCEPTED')restored.push({role:'ai',text:t('aiAccepted')});
-     if(run.proposalReviewStatus==='REJECTED')restored.push({role:'ai',text:t('aiRejected')});
-    }
-    // Keep anything the user typed while the history was loading
-    setMessages(current=>[...restored,...current]);
-    const latest=runs[runs.length-1];
-    if(['PENDING','RUNNING'].includes(latest.status)){
-     setBusy(true);
-     try{const run=await waitFor(latest);if(!cancelled&&alive.current)await showRun(run)}finally{if(alive.current)setBusy(false)}
-    }else{
-     const pending=[...runs].reverse().find(run=>run.proposalId&&run.proposalReviewStatus==='PENDING');
-     if(pending){const preview=await aiApi.proposal(project.id,pending.proposalId);if(!cancelled&&alive.current)setProposal(current=>current||preview)}
-    }
-   }catch{/* The chat still works without its history */}
-  })();
-  return()=>{cancelled=true};
- },[project.id]);
- // Show a finished run in the chat, and its proposal for review
- async function showRun(run){
-  runMessages(run).forEach(m=>setMessages(list=>[...list,m]));
-  if(run.status==='COMPLETED'&&run.result?.type==='PROPOSAL'&&run.proposalId)setProposal(await aiApi.proposal(project.id,run.proposalId));
- }
  // Poll the request every 2 seconds until n8n has answered (the backend gives up after 3 minutes)
  async function waitFor(run){let current=run;for(let i=0;i<120&&alive.current&&['PENDING','RUNNING'].includes(current.status);i++){await new Promise(r=>setTimeout(r,2000));current=await aiApi.status(current.statusUrl)}return current}
+ // Explicit approval starts a *separate* STORY_MAP character proposal.
+ // The existing review/accept endpoint saves the character only after approval.
+ async function proposeApprovedCharacter(idea){
+  if(busy||proposal||!branchingMode)return;
+  if(idea)setPendingCharacterIdea(idea);
+  const story=project.diagrams?.find(d=>d.outputType==='STORY_MAP');
+  if(!story){say('notice',moodText('لا توجد خريطة قصة لاستقبال الشخصية؛ افتحي نموذج إضافتها بدلًا من ذلك.','There is no story map for a new character. Use the character form instead.'));onNewCharacter(idea);return;}
+  setBusy(true);
+  say('notice',moodText('بموافقتك، سأطلب من سنا تجهيز شخصية جديدة للمراجعة في خريطة القصة. لن تُحفظ قبل قبولك للمقترح.','With your permission, SANA will draft a character in the story map for review. Nothing is saved before acceptance.'));
+  try{
+   const request=await aiApi.start(project.id,{
+    task:'EDIT',outputId:story.id,conversationHistory:[],
+    prompt:`The user explicitly approved drafting ONE new project character for a dialogue tree. Add only a new CHARACTER node to the existing STORY_MAP. Preserve EVERY existing node, edge, ID, coordinate and graph property unchanged. No other modifications, no deletions, no new edges. Infer a fitting properties.label, nonempty properties.shortDescription, properties.role (up to 50 characters), and positive integer properties.age from the established story and this user request: ${idea}. Return a full PROPOSAL graph for review. Do not claim it was saved.`
+   },project.domain);
+   const run=await waitFor(request);
+   if(!alive.current)return;
+   if(run.status!=='COMPLETED'||run.result?.type!=='PROPOSAL'||!run.proposalId){
+    say('notice',moodText('سنا ما جهزت مقترح شخصية قابلًا للحفظ. تقدرين تجرّبين مجددًا أو تضيفينها بالنموذج.','SANA did not return a reviewable character. Try again or use the form.'));
+    return;
+   }
+   const draft=await aiApi.proposal(project.id,run.proposalId);
+   const changes=Array.isArray(draft?.changes)?draft.changes:[];
+   const onlyNewCharacters=String(draft.outputId)===String(story.id) && changes.length>0 &&
+    changes.every(change=>change.operation==='CREATE'&&change.targetType==='NODE'&&change.after?.type==='CHARACTER');
+   if(!onlyNewCharacters){
+    await aiApi.reject(project.id,run.proposalId);
+    say('notice',moodText('رفضتُ المسودة لأنها قد تغيّر عناصر غير الشخصية الجديدة. لم يُحفظ شيء.','I rejected the draft because it included changes beyond the new character. Nothing was saved.'));
+    return;
+   }
+   setPendingCharacterIdea(idea);
+   setCharacterDraft(true);
+   setProposal(draft);
+   say('ai',moodText('جهزت لك سنا شخصية جديدة. راجعي بياناتها أدناه واضغطي «موافقة» فقط إذا ناسبتك. بعدها نرجع لنكمل الحوار.','SANA drafted a new character. Review the proposal below and approve it only if it fits. Then continue the dialogue.'));
+  }catch(err){if(alive.current)say('error',err.message)}
+  finally{if(alive.current)setBusy(false)}
+ }
  async function send(e){
   e?.preventDefault();const text=prompt.trim();if(!text||busy)return;
   // Intercept only Creativity moodboards, before graph checks or proposal resets.
@@ -374,40 +272,80 @@ function AIPanel({t,lang,project,onClose,onApplied,onMoodboardSaved}){
   setMoodboardQuestion(null);
   // The opt-in development demo can exercise routing without a backend.
   if(!API_MODE){say('notice',moodText('المساعد غير متاح في وضع المعاينة.','The assistant is unavailable in preview mode.'));return;}
-  if(project.legacyCreative&&task!=='CREATE'){
+  if(project.legacyCreative&&!branchingMode&&task!=='CREATE'){
     say('error', t('legacyDiagramAiWarning'));
     return;
   }
   if(proposal){say('notice',moodText('راجعي المقترح الحالي أولًا.','Review the current proposal first.'));return;}
-  if(task!=='CREATE'&&!project.activeOutputId){say('error',moodText('اختاري مخططًا أولًا.','Select a diagram first.'));return;}
-  sessionStorage.removeItem(`sana-ai-seed-${project.id}`);setBusy(true);say('user',text);setPrompt('');
+  // Never let a new-character request skip its separate reviewed STORY_MAP proposal.
+  // The branching graph only stores scenes/choices and cannot create a CharacterProfile.
+  if(branchingMode&&requestsNewStoryCharacter(text)&&approvedCharacterRequest.current?.request!==text){
+   setPendingCharacterIdea(text);
+   say('user',text);setPrompt('');
+   say('ai',moodText('قبل إضافة المشهد، لازم نحفظ الشخصية الجديدة في خريطة الشخصيات. أقدر أجهز لك مقترح الشخصية وتوافقين عليه أولًا، وبعدها نكمل الحوار.','Before creating the scene, I need to draft the new character in the Story Map for your approval. Then we can continue the dialogue.'),{characterApproval:true,sourcePrompt:text});
+   return;
+  }
+  const branchOutputId=branchingMode?selectedBranchingDiagram(project)?.id:null;
+  if(task!=='CREATE'&&!(branchingMode?branchOutputId:project.activeOutputId)){say('error',moodText('أنشئ شجرة الحوارات أولًا أو اختاري إنشاء شجرة جديدة.','Create a dialogue tree first or choose to create a new one.'));return;}
+  sessionStorage.removeItem(`sana-ai-seed-${project.id}`);if(branchingMode)sessionStorage.removeItem(`sana-branching-pending-${project.id}`);setBusy(true);say('user',text);setPrompt('');
   try{
    const creativity=['writing','games'].includes(project.domain);
    // The dedicated Creativity API accepts conversation turns; other domains stay untouched.
    const history=creativity?messages.filter(m=>m.role==='user'||m.role==='ai')
      .slice(-12).map(m=>({role:m.role==='ai'?'assistant':'user',content:m.text.slice(0,1500)})):[];
-   const body=task==='CREATE'?{task,prompt:text,diagramType}:{task,prompt:text,outputId:project.activeOutputId};
+   const approvedCharacter=branchingMode&&approvedCharacterRequest.current?.request===text?approvedCharacterRequest.current:null;
+   const modelPrompt=approvedCharacter
+    ? `${text}\n\nProject character approval is complete: the character "${approvedCharacter.name}" was approved and saved in STORY_MAP. Retrieve updated context.projectCharacters and reuse its real ID as speakerCharacterId when that character speaks. Do not invent another character or add a duplicate. If this character is not found in projectCharacters, ask for clarification instead of proposing a graph.`
+    : text;
+   const body=task==='CREATE'?{task,prompt:modelPrompt,diagramType:branchingMode?'BRANCHING_STORY':diagramType}:{task,prompt:modelPrompt,outputId:branchingMode?branchOutputId:project.activeOutputId};
    if(creativity)body.conversationHistory=history;
    const run=await waitFor(await aiApi.start(project.id,body,project.domain));if(!alive.current)return;
-   await showRun(run);
+   if(run.status==='FAILED'||run.status==='TIMED_OUT'){say('error',run.error?.message||moodText('تعذر إكمال الطلب، حاول مرة أخرى.','Could not complete the request. Please try again.'));return}
+   if(run.status!=='COMPLETED'){say('error',t('aiStillRunning'));return}
+   const result=run.result;
+   if(result.type==='CLARIFICATION'){
+    const clarificationText=[result.message,result.clarification?.question,...(result.clarification?.suggestedAnswers||[])].join(' ');
+    const needsCharacter=branchingMode&&/شخصي|character/i.test(clarificationText)&&/إضا[فف]|أنش|اصنع|موافق|إذن|approval|add|creat|save/i.test(clarificationText);
+    say('ai',`${result.message}\n\n${result.clarification?.question||''}`,{answers:result.clarification?.suggestedAnswers||[],kind:'CLARIFICATION',characterApproval:needsCharacter,sourcePrompt:text});
+   }
+   else say('ai',result.message,{kind:result.type});
+   if(result.type==='PROPOSAL'&&run.proposalId)setProposal(await aiApi.proposal(project.id,run.proposalId));
   }catch(err){say('error',err.message)}finally{if(alive.current)setBusy(false)}
  }
  async function decide(accept){
   setBusy(true);
   try{
-   if(accept){const r=await aiApi.accept(project.id,proposal.proposalId);setProposal(null);say('ai',t('aiAccepted'));await onApplied(r.outputId)}
-   else{await aiApi.reject(project.id,proposal.proposalId);setProposal(null);say('ai',t('aiRejected'))}
+   if(accept){
+    const characterOnly=characterDraft;
+    const r=await aiApi.accept(project.id,proposal.proposalId);
+    if(branchingMode&&!characterOnly)rememberBranchingOutput(project.id,r.outputId);
+    setProposal(null);setCharacterDraft(false);
+    if(branchingMode&&!characterOnly)setTask('EDIT');
+    if(characterOnly){
+     const created=proposal.changes.filter(c=>c.operation==='CREATE'&&c.targetType==='NODE'&&c.after?.type==='CHARACTER');
+     const name=created[0]?.after?.properties?.label||created[0]?.after?.label||'';
+     approvedCharacterRequest.current={request:pendingCharacterIdea,name};
+     setPrompt(characterOnlyRequest(pendingCharacterIdea)?'':pendingCharacterIdea);
+     setPendingCharacterIdea('');
+     say('notice',characterOnlyRequest(pendingCharacterIdea)
+      ? moodText('انحفظت الشخصية في خريطة القصة. النهاية السابقة ما تغيرت؛ افتحي مشهدها واختاري الشخصية في حقل المتحدث لربطهما.','The character is saved in the Story Map. Your existing ending is unchanged; open the scene and choose the character as its speaker.')
+      : moodText('انحفظت الشخصية الجديدة في خريطة القصة. طلب الحوار السابق جاهز؛ اضغطي إرسال، وسنا بتستخدم الشخصية المحفوظة.','The new character is saved in the Story Map. Your dialogue request is ready; send it to reuse the saved character.'));
+    }else say('ai',t('aiAccepted'));
+    await onApplied(r.outputId,{characterOnly});
+   }
+   else{await aiApi.reject(project.id,proposal.proposalId);setProposal(null);setCharacterDraft(false);setPendingCharacterIdea('');say('ai',t('aiRejected'))}
   }catch(err){say('error',err.message)}finally{setBusy(false)}
  }
  const counts=proposal?['CREATE','UPDATE','DELETE'].map(op=>[op,proposal.changes.filter(c=>c.operation===op).length]):[];
  const changeLabel=c=>(c.after||c.before)?.properties?.label||(c.after||c.before)?.label||c.targetType;
  return <aside className="ai-sidebar">
-  <div className="ai-side-head"><div className="ai-gem"><Sparkles size={23}/></div><div><strong>{t('ai')}</strong><span>{t(`diagram_${project.activeType}`)}</span></div><IconButton onClick={onClose} label={t('close')}><X size={18}/></IconButton></div>
+  <div className="ai-side-head"><div className="ai-gem"><Sparkles size={23}/></div><div><strong>{t('ai')}</strong><span>{branchingMode?(lang==='ar'?'شجرة الحوارات':'Dialogue tree'):t(`diagram_${project.activeType}`)}</span></div><IconButton onClick={onClose} label={t('close')}><X size={18}/></IconButton></div>
   <div className="ai-body" style={{overflowY:'auto'}}>
    {messages.length===0&&<div className="ai-message">{sessionStorage.getItem(`sana-ai-seed-${project.id}`)?(lang==='ar'?'وصلت فكرتك! راجع النص الجاهز بالأسفل واضغط «إرسال» لتبدأ سنا بمساعدتك.':'Your idea is ready below. Review it and press Send to begin with SANA.'):project.legacyCreative?t('legacyDiagramAiWarning'):t('aiIntro')}</div>}
    {messages.map((m,i)=><div key={i} className="ai-message" style={{whiteSpace:'pre-wrap',...(m.role==='user'?{opacity:.75}:{}),...(m.role==='error'?{color:'#b42318'}:{})}}>
     {m.kind&&<small className="spark-result-kind">{m.kind==='ADVICE'?(lang==='ar'?'نصيحة':'Advice'):m.kind==='CLARIFICATION'?(lang==='ar'?'توضيح':'Clarification'):(lang==='ar'?'مقترح':'Proposal')}</small>}{m.role==='user'||m.role==='moodboard-user'?'› ':''}{m.text}
-    {m.answers?.length>0&&<div className="ai-ideas">{m.answers.map(a=><div key={a} role="button" tabIndex={0} style={{cursor:'pointer'}} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setPrompt(p=>(p?p+'\n':'')+a)}}} onClick={()=>setPrompt(p=>(p?p+'\n':'')+a)}><Sparkles size={13}/>{a}</div>)}</div>}
+    {m.characterApproval&&<div className="ai-ideas"><Btn disabled={busy||Boolean(proposal)} onClick={()=>proposeApprovedCharacter(m.sourcePrompt||'')}>{moodText('أوافق، خلي سنا تقترح الشخصية للمراجعة','I approve — let SANA draft the character')}</Btn><Btn variant="ghost" disabled={busy||Boolean(proposal)} onClick={()=>onNewCharacter(m.sourcePrompt||'')}>{moodText('أبي أضيف الشخصية بنفسي','I prefer to add it myself')}</Btn></div>}
+    {m.answers?.length>0&&<div className="ai-ideas">{m.answers.map(a=><div key={a} role="button" tabIndex={0} style={{cursor:'pointer'}} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();if(m.characterApproval&&/أوافق|approve/i.test(a))proposeApprovedCharacter(m.sourcePrompt||'');else setPrompt(p=>(p?p+'\n':'')+a)}}} onClick={()=>{if(m.characterApproval&&/أوافق|approve/i.test(a))proposeApprovedCharacter(m.sourcePrompt||'');else setPrompt(p=>(p?p+'\n':'')+a)}}><Sparkles size={13}/>{a}</div>)}</div>}
    </div>)}
    {moodboardQuestion&&<div className="ai-message creativity-mood-chat-notice" role="status"><p>{moodText('هل تقصدين إنشاء لوحة إلهام فقط؟ الطلب غير واضح أو يجمع أكثر من مهمة؛ لم يُرسل بعد.','Do you mean to create only a moodboard? This request is ambiguous or combines tasks; it has not been sent.')}</p><div className="modal-actions"><Btn variant="ghost" disabled={busy} onClick={()=>previewMoodboard(moodboardQuestion)}>{moodText('لوحة إلهام فقط','Moodboard only')}</Btn><Btn variant="ghost" onClick={()=>{setPrompt(moodboardQuestion);setMoodboardQuestion(null);}}>{moodText('تعديل رسالتي','Edit my message')}</Btn><Btn variant="ghost" onClick={()=>setMoodboardQuestion(null)}>{moodText('إلغاء','Cancel')}</Btn></div></div>}
    {moodboardPreview&&<MoodboardChatPreview key={moodboardPreview.draftId} preview={moodboardPreview} lang={lang} busy={busy} error={moodboardError} renderActions={()=> <><Btn variant="ghost" disabled={busy} onClick={()=>decideMoodboard(false)}>{t('aiReject')}</Btn><Btn icon={Check} disabled={busy} onClick={()=>decideMoodboard(true)}>{moodText('موافقة وحفظ','Approve and save')}</Btn></>}/>}
@@ -421,24 +359,24 @@ function AIPanel({t,lang,project,onClose,onApplied,onMoodboardSaved}){
   <form className="ai-bottom" onSubmit={send}>
    <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:6}}>
     <select value={task} onChange={e=>setTask(e.target.value)} aria-label={t('aiTask')}>{['ADVISE','EDIT','CREATE'].map(k=><option key={k} value={k}>{t(`aiTask_${k}`)}</option>)}</select>
-    {task==='CREATE'&&<select value={diagramType} onChange={e=>setDiagramType(e.target.value)} aria-label={t('diagram')}>{(project.diagramTypes||[]).map(k=><option key={k} value={k}>{t(`diagram_${k}`)}</option>)}</select>}
+    {task==='CREATE'&&(branchingMode?<span className="sana-ai-target-tag">{moodText('شجرة الحوارات','Dialogue tree')}</span>:<select value={diagramType} onChange={e=>setDiagramType(e.target.value)} aria-label={t('diagram')}>{(project.diagramTypes||[]).map(k=><option key={k} value={k}>{t(`diagram_${k}`)}</option>)}</select>)}
    </div>
    <textarea rows={3} value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder={t('aiAsk')} style={{width:'100%'}} onKeyDown={e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))send(e)}}/>
    <Btn type="submit" icon={Send} disabled={busy||!prompt.trim()}>{busy?t('aiWorking'):t('aiSend')}</Btn>
   </form>
  </aside>
 }
-function Studio({t,lang,project,tab,onTab,onBack,onAdd,onEdit,onDelete,onRelation,onEditProject,onMove,onExport,onOpenAI,onDeleteRelation,onDiagram,onNewDiagram,moodboardFocus}){
- const [query,setQuery]=useState(''),[focus,setFocus]=useState(null),[localTab,setLocalTab]=useState(''),[toolsOpen,setToolsOpen]=useState(false),[boardMode,setBoardMode]=useState('board');const currentTab=tab==='integrations'&&!['writing','games','business'].includes(project.domain)?'overview':tab||'map';useEffect(()=>{if(!['map','overview'].includes(currentTab))setToolsOpen(true)},[currentTab]);const elements=(project.elements||[]).filter(e=>(currentTab==='overview'||currentTab==='map'||e.type===currentTab)&&`${e.name} ${e.description}`.toLowerCase().includes(query.toLowerCase()));const hasExtraTools=['writing','games','business'].includes(project.domain);const specialTabs=[...(hasExtraTools?['integrations']:[]),...(['writing','games'].includes(project.domain)?['moodboard',...(project.domain==='games'?['branching','balance']:[])]:[])];const tabs=['map','overview',...elementTypes(project),...specialTabs];
- const tabIcon={integrations:Compass,overview:LayoutDashboard,...ICONS,map:Network,moodboard:ImageIcon,branching:GitBranch,balance:Gamepad2,swot_strength:ShieldCheck,swot_weakness:ShieldCheck,swot_opportunity:Sparkles,swot_threat:ShieldCheck,
+function Studio({t,lang,project,tab,onTab,onBack,onAdd,onEdit,onDelete,onRelation,onEditProject,onMove,onExport,onOpenAI,onDeleteRelation,onDiagram,onNewDiagram,moodboardFocus,branchRefreshKey}){
+ const [query,setQuery]=useState(''),[focus,setFocus]=useState(null),[localTab,setLocalTab]=useState(''),[toolsOpen,setToolsOpen]=useState(false),[boardMode,setBoardMode]=useState('board');const currentTab=tab==='integrations'&&!['writing','games','business'].includes(project.domain)?'overview':tab||'map';useEffect(()=>{if(!['map','overview'].includes(currentTab))setToolsOpen(true)},[currentTab]);const elements=(project.elements||[]).filter(e=>(currentTab==='overview'||currentTab==='map'||e.type===currentTab)&&`${e.name} ${e.description}`.toLowerCase().includes(query.toLowerCase()));const hasExtraTools=project.domain==='business';const specialTabs=[...(hasExtraTools?['integrations']:[]),...(['writing','games'].includes(project.domain)?['books','timeline','moodboard',...(project.domain==='games'?['branching','balance']:[])]:[])];const tabs=['map','overview',...elementTypes(project),...specialTabs];
+ const tabIcon={integrations:Compass,books:BookOpen,timeline:History,overview:LayoutDashboard,...ICONS,map:Network,moodboard:ImageIcon,branching:GitBranch,balance:Gamepad2,swot_strength:ShieldCheck,swot_weakness:ShieldCheck,swot_opportunity:Sparkles,swot_threat:ShieldCheck,
  risk:ShieldCheck,risk_cause:Network,risk_mitigation:CheckCircle2,competitor:BriefcaseBusiness,competitor_product:Boxes,competitor_feature:Sparkles,
  target_audience:Target,customer_persona:Users};const viewMap=id=>{setFocus(id);onTab('map')};
- return <div className="studio-page page-enter"><div className="studio-topbar"><button onClick={onBack} className="breadcrumb-link"><FolderOpen size={16}/>{t('projects')}</button><span className="breadcrumb-sep">/</span><strong>{project.name}</strong></div><div className="studio-layout"><aside className="studio-sidebar"><div className="studio-identity"><span className="studio-monogram"><Sparkles size={23}/></span><div><strong>{t('studio')}</strong><small>SANA WORKSPACE</small></div></div><div className="studio-nav-label">{lang==='ar'?'لوحة المشروع':'PROJECT SPACE'}</div><div className="studio-nav">{['map','overview'].map(k=>{const Icon=tabIcon[k]||Layers3;return <button key={k} className={currentTab===k?'selected':''} onClick={()=>{setQuery('');onTab(k)}}><Icon size={18}/><span>{t(k)}</span></button>})}<button type="button" className={`studio-tools-toggle ${toolsOpen?'opened':''}`} onClick={()=>setToolsOpen(x=>!x)} aria-expanded={toolsOpen}><Layers3 size={18}/><span>{lang==='ar'?'أدوات المشروع':'Project tools'}</span><ChevronDown size={17}/></button>{toolsOpen&&<div className="studio-grouped-tools">{tabs.filter(k=>!['map','overview'].includes(k)).map(k=>{const Icon=tabIcon[k];return <button key={k} className={currentTab===k?'selected':''} onClick={()=>{setQuery('');onTab(k)}}><Icon size={18}/><span>{k==='integrations'?(project.domain==='business'?(lang==='ar'?'تحليلات إضافية':'Additional analysis'):(lang==='ar'?'الإلهام والمراجع':'Inspiration & references')):t(k)}</span>{!['moodboard','branching','balance','integrations'].includes(k)&&<small>{project.elements?.filter(e=>e.type===k).length||0}</small>}</button>})}</div>}</div><div className="sidebar-ai-call" onClick={onOpenAI} role="button" tabIndex={0} onKeyDown={e=>e.key==='Enter'&&onOpenAI()}><div className="ai-icon"><Sparkles size={21}/></div><strong>{t('ai')}</strong><p>{API_MODE?t('aiCardLive'):(lang==='ar'?'مساحة المساعد جاهزة، والربط قريبًا.':'Your AI companion is coming soon.')}</p><span>{API_MODE?t('aiOpen'):t('aiSoon')} <ArrowUpLeft size={15}/></span></div></aside><main className="studio-main">{!specialTabs.includes(currentTab)&&<div className="studio-intro"><div><span className="eyebrow"><span className="eyebrow-dot"/>{t(project.domain==='games'?'games':domainGroup(project.domain))}</span><h1>{currentTab==='overview'?project.name:currentTab==='map'&&project.domain==='technology'?(TECH_DIAGRAM_LABELS[project.activeType]||'Technology Diagram'):t(currentTab)}</h1><p>{currentTab==='overview'?(project.description||t('workspaceSubtitle')):currentTab==='map'&&project.domain==='technology'?(lang==='ar'?'اسحب العناصر لتغيير ترتيبها، وحدد عنصرًا لتعديل خصائصه أو إنشاء علاقة.':'Drag components, inspect properties and connect relationships'):currentTab==='map'?t('dragHint'):t('workspaceSubtitle')}</p></div><DomainPill domain={project.domain} t={t}/></div>}
+ return <div className="studio-page page-enter"><div className="studio-topbar"><button onClick={onBack} className="breadcrumb-link"><FolderOpen size={16}/>{t('projects')}</button><span className="breadcrumb-sep">/</span><strong>{project.name}</strong></div><div className="studio-layout"><aside className="studio-sidebar"><div className="studio-identity"><span className="studio-monogram"><Sparkles size={23}/></span><div><strong>{t('studio')}</strong><small>SANA WORKSPACE</small></div></div><div className="studio-nav-label">{lang==='ar'?'لوحة المشروع':'PROJECT SPACE'}</div><div className="studio-nav">{['map','overview'].map(k=>{const Icon=tabIcon[k]||Layers3;return <button key={k} className={currentTab===k?'selected':''} onClick={()=>{setQuery('');onTab(k)}}><Icon size={18}/><span>{t(k)}</span></button>})}<button type="button" className={`studio-tools-toggle ${toolsOpen?'opened':''}`} onClick={()=>setToolsOpen(x=>!x)} aria-expanded={toolsOpen}><Layers3 size={18}/><span>{lang==='ar'?'أدوات المشروع':'Project tools'}</span><ChevronDown size={17}/></button>{toolsOpen&&<div className="studio-grouped-tools">{tabs.filter(k=>!['map','overview'].includes(k)).map(k=>{const Icon=tabIcon[k];return <button key={k} className={currentTab===k?'selected':''} onClick={()=>{setQuery('');onTab(k)}}><Icon size={18}/><span>{k==='integrations'?(project.domain==='business'?(lang==='ar'?'تحليلات إضافية':'Additional analysis'):(lang==='ar'?'أدوات إضافية':'Extra tools')):k==='books'?(lang==='ar'?'الكتب الملهمة':'Inspiring books'):k==='timeline'?(lang==='ar'?'التسلسل الزمني':'Timeline'):t(k)}</span>{!['moodboard','branching','balance','integrations'].includes(k)&&<small>{project.elements?.filter(e=>e.type===k).length||0}</small>}</button>})}</div>}</div><div className="sidebar-ai-call" onClick={onOpenAI} role="button" tabIndex={0} onKeyDown={e=>e.key==='Enter'&&onOpenAI()}><div className="ai-icon"><Sparkles size={21}/></div><strong>{t('ai')}</strong><p>{API_MODE?t('aiCardLive'):(lang==='ar'?'مساحة المساعد جاهزة، والربط قريبًا.':'Your AI companion is coming soon.')}</p><span>{API_MODE?t('aiOpen'):t('aiSoon')} <ArrowUpLeft size={15}/></span></div></aside><main className="studio-main">{!specialTabs.includes(currentTab)&&<div className="studio-intro"><div><span className="eyebrow"><span className="eyebrow-dot"/>{t(project.domain==='games'?'games':domainGroup(project.domain))}</span><h1>{currentTab==='overview'?project.name:currentTab==='map'&&project.domain==='technology'?(TECH_DIAGRAM_LABELS[project.activeType]||'Technology Diagram'):t(currentTab)}</h1><p>{currentTab==='overview'?(project.description||t('workspaceSubtitle')):currentTab==='map'&&project.domain==='technology'?(lang==='ar'?'اسحب العناصر لتغيير ترتيبها، وحدد عنصرًا لتعديل خصائصه أو إنشاء علاقة.':'Drag components, inspect properties and connect relationships'):currentTab==='map'?t('dragHint'):t('workspaceSubtitle')}</p></div><DomainPill domain={project.domain} t={t}/></div>}
  {currentTab!=='map'&&<div className="sana-workspace-utilities sana-workspace-utilities-compact">
   <IconButton label={t('projectSettings')} onClick={()=>onEditProject(project)}><Settings2 size={18}/></IconButton>
   <Btn icon={Download} variant="outline-dark" onClick={onExport}>{lang==='ar'?'تصدير المخطط':'Export diagram'}</Btn>
  </div>}
- {currentTab==='integrations'?<StudioToolBoundary key={`${project.id}-${currentTab}`} lang={lang}><DomainPanels project={project} lang={lang}/></StudioToolBoundary>:currentTab==='moodboard'?<Moodboard project={project} lang={lang} initialBoardId={moodboardFocus?.projectId===project.id?moodboardFocus.boardId:null}/>:currentTab==='branching'?<BranchingNarrative project={project} lang={lang}/>:currentTab==='balance'?<GameBalance project={project} lang={lang}/>:currentTab==='overview'?<><div className="studio-stats"><Stat shade="stat-teal" icon={Layers3} num={project.elements?.length||0} label={t('creativeElements')}/><Stat shade="stat-gold" icon={Network} num={project.relations?.length||0} label={t('connectedIdeas')}/><Stat shade="stat-rose" icon={History} num={dateLabel(project.updatedAt,lang)} label={t('lastEdited')}/></div><SectionTitle title={t('recentElements')} description={t('workspaceSubtitle')} action={<Btn variant="soft" onClick={()=>onAdd(elementTypes(project)[0])} icon={Plus}>{t('add')}</Btn>}/>{elements.length?<div className="elements-grid">{elements.slice(0,6).map(el=><ElementTile key={el.id} element={el} t={t} onEdit={onEdit} onDelete={onDelete} onFocus={viewMap}/>)}</div>:<Empty icon={Sparkles} title={t('emptyElements')} description={t('emptyElementsBody')} action={<Btn icon={Plus} onClick={()=>onAdd(elementTypes(project)[0])}>{t('add')}</Btn>}/>}<div className="overview-link-card"><span className="overview-link-icon"><Network size={29}/></span><div><h3>{t('map')}</h3><p>{t('featureMapsBody')}</p></div><Btn variant="outline-dark" onClick={()=>onTab('map')}>{t('viewMap')}</Btn></div></>:currentTab==='map'?<><div className="map-section-bar sana-map-tools" role="toolbar" aria-label={lang==='ar'?'أدوات المخطط':'Diagram tools'}>
+ {currentTab==='books'?<BookInspiration project={project} lang={lang}/>:currentTab==='timeline'?<DomainPanels project={project} lang={lang} mode="timeline"/>:currentTab==='integrations'?<StudioToolBoundary key={`${project.id}-${currentTab}`} lang={lang}><DomainPanels project={project} lang={lang}/></StudioToolBoundary>:currentTab==='moodboard'?<Moodboard project={project} lang={lang} onOpenAI={onOpenAI} initialBoardId={moodboardFocus?.projectId===project.id?moodboardFocus.boardId:null}/>:currentTab==='branching'?<BranchingNarrative key={`${project.id}-${branchRefreshKey}`} project={project} lang={lang} onOpenAI={onOpenAI}/>:currentTab==='balance'?<GameBalance project={project} lang={lang}/>:currentTab==='overview'?<><div className="studio-stats"><Stat shade="stat-teal" icon={Layers3} num={project.elements?.length||0} label={t('creativeElements')}/><Stat shade="stat-gold" icon={Network} num={project.relations?.length||0} label={t('connectedIdeas')}/><Stat shade="stat-rose" icon={History} num={dateLabel(project.updatedAt,lang)} label={t('lastEdited')}/></div><SectionTitle title={t('recentElements')} description={t('workspaceSubtitle')} action={<Btn variant="soft" onClick={()=>onAdd(elementTypes(project)[0])} icon={Plus}>{t('add')}</Btn>}/>{elements.length?<div className="elements-grid">{elements.slice(0,6).map(el=><ElementTile key={el.id} element={el} t={t} onEdit={onEdit} onDelete={onDelete} onFocus={viewMap}/>)}</div>:<Empty icon={Sparkles} title={t('emptyElements')} description={t('emptyElementsBody')} action={<Btn icon={Plus} onClick={()=>onAdd(elementTypes(project)[0])}>{t('add')}</Btn>}/>}<div className="overview-link-card"><span className="overview-link-icon"><Network size={29}/></span><div><h3>{t('map')}</h3><p>{t('featureMapsBody')}</p></div><Btn variant="outline-dark" onClick={()=>onTab('map')}>{t('viewMap')}</Btn></div></>:currentTab==='map'?<><div className="map-section-bar sana-map-tools" role="toolbar" aria-label={lang==='ar'?'أدوات المخطط':'Diagram tools'}>
   {API_MODE&&<DiagramBar t={t} project={project} onDiagram={onDiagram} onNewDiagram={onNewDiagram}/>}
   <div className="sana-map-tools-actions">
    <Btn onClick={onRelation} icon={Link2}>{t('newRelation')}</Btn>
@@ -452,6 +390,7 @@ function SettingsPage({t,lang,onLanguage,onNew,onMembership}){return <div classN
 
 function App({onLogout,user}){
  const [moodboardFocus,setMoodboardFocus]=useState(null);
+ const [branchRefreshKey,setBranchRefreshKey]=useState(0);
  const [lang,setLang]=useState(()=>localStorage.getItem('sana-lang')||'ar');const [route,setRoute]=useState(parseRoute);const [projects,setProjects]=useState([]);const [project,setProject]=useState(null);const [loading,setLoading]=useState(true);const [modal,setModal]=useState(null);const [busy,setBusy]=useState(false);const [toast,setToast]=useState(null);const [aiOpen,setAiOpen]=useState(false);const [mobileMenu,setMobileMenu]=useState(false);const importRef=useRef(null);
  const t=useCallback(key=>humanize(tr(lang,key)),[lang]);
  const notice=(message,error=false)=>setToast({message:error?publicError(message,lang):message,error});
@@ -470,19 +409,29 @@ function App({onLogout,user}){
    const newNode=id||p?.elements?.find(e=>e.type==='characters'&&!project.elements.some(old=>String(old.id)===String(e.id)))?.id;
    if(newNode!=null)saveCharacterColor(project.id,newNode,values.characterColor);
   }
-  setProject(p);await refresh();notice(t('saved'))
+  setProject(p);await refresh();notice(t('saved'));
+  if(type==='characters'&&sessionStorage.getItem(`sana-branching-pending-${project.id}`)){navigate('studio',project.id,'branching');setAiOpen(true)}
  });
  const deleteThing=()=>perform(async()=>{if(modal.what==='project')return repository.removeProject(modal.initial.id);if(modal.what==='relation')return repository.removeRelation(project.id,modal.initial);return repository.removeElement(project.id,modal.initial)},async p=>{if(modal.what==='project'){await refresh();if(route.page==='studio')navigate('projects')}else{setProject(p);await refresh()}notice(t('deleted'))});
  const addRelation=data=>perform(()=>data.id?repository.updateRelation(project.id,data):repository.createRelation(project.id,data),async p=>{setProject(p);await refresh();notice(t('relationSaved'))});
  const move=async(id,x,y)=>{try{await repository.moveNode(project.id,id,x,y);setProject(await repository.get(project.id))}catch(e){notice(e.message,true);throw e}};
  const switchDiagram=outputId=>perform(()=>repository.setActiveDiagram(project.id,outputId),p=>setProject(p));
  const newDiagram=(title,diagramType)=>perform(()=>repository.addDiagram(project.id,title,diagramType),async p=>{setProject(p);await refresh();notice(t('saved'))});
- const aiApplied=async outputId=>{try{const p=outputId?await repository.setActiveDiagram(project.id,outputId):await repository.get(project.id);setProject(p);await refresh()}catch(e){notice(e.message,true)}};
+ const aiApplied=async (outputId,{characterOnly=false}={})=>{try{
+  const branchResult=route.page==='studio'&&route.tab==='branching';
+  // A character proposal targets STORY_MAP. Never remember its ID as a BRANCHING_STORY output.
+  if(branchResult&&!characterOnly)rememberBranchingOutput(project.id,outputId);
+  const p=branchResult?await repository.get(project.id):(outputId?await repository.setActiveDiagram(project.id,outputId):await repository.get(project.id));
+  setProject(p);
+  if(branchResult&&!characterOnly)setBranchRefreshKey(k=>k+1);
+  await refresh();
+ }catch(e){notice(e.message,true)}};
+ const addApprovedStoryCharacter=async idea=>{try{const story=project.diagrams?.find(d=>d.outputType==='STORY_MAP');if(!story){notice(lang==='ar'?'أنشئ خريطة قصة أولًا لإضافة الشخصية.':'Create a story map first to add a character.',true);return;}if(idea)sessionStorage.setItem(`sana-branching-pending-${project.id}`,idea);const p=await repository.setActiveDiagram(project.id,story.id);setProject(p);setAiOpen(false);navigate('studio',project.id,'map');setModal({kind:'element',initialType:'characters'});}catch(e){notice(e.message,true)}};
  const exportProject=()=>{if(!project)return;const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`sana-${String(project.name).replace(/[\\/:*?"<>|]/g,'-')}.json`;a.click();URL.revokeObjectURL(url);notice(project.domain==='technology'?(lang==='ar'?'تم تصدير المخطط':'Diagram exported'):t('export'))};
  const importFile=async file=>{if(!file)return;try{const json=JSON.parse(await file.text());const p=await repository.importProject(json);await refresh();notice(t('imported'));navigate('studio',p.id)}catch(e){notice(`${t('importError')}: ${e.message}`,true)}};
  const previewDelete=async initial=>{if(!API_MODE){setModal({kind:'confirm',what:'element',initial});return;}try{const impact=await repository.deleteImpact(project.id,initial);setModal({kind:'confirm',what:'element',initial,impact})}catch(e){notice(e.message,true)}};
- // Frontend guidance only; the server MUST enforce project quotas on project creation.
- const planAllowsNewProject=async()=>{
+ const openNew=async(seed)=>{
+  // Frontend guidance only; the server MUST enforce project quotas on project creation.
   if(billingEnabled){
    try{
     const membership=await billingApi.getMembership();
@@ -491,34 +440,28 @@ function App({onLogout,user}){
     if(limit!==null&&count>=limit){
      notice(lang==='ar'?'وصلت إلى عدد المشاريع المتاح في باقتك. اختر باقة أكبر للمتابعة.':'Your plan has reached its project limit. Upgrade to create more projects.',true);
      navigate('pricing');
-     return false;
+     return;
     }
    }catch{
     notice(lang==='ar'?'تعذر التحقق من باقتك حاليًا. جرّب مرة أخرى.':'Unable to check your plan right now. Please try again.',true);
-    return false;
+    return;
    }
   }
-  return true;
- };
- const openNew=async(seed)=>{
-  if(!await planAllowsNewProject())return;
   if(route.page!=='ai-start')sessionStorage.removeItem('sana-ai-pending');
   setModal({kind:'project',seed});
  };
- // Quick start: the Start page created the project and drew its diagram; show it in the Studio
- const quickStartReady=async projectId=>{await refresh();setAiOpen(false);navigate('studio',projectId,'map')};
  const main=()=>{
  if(route.page==='home')return <Landing projects={projects} t={t} lang={lang} onNavigate={navigate} onNew={()=>openNew()} onAI={()=>navigate('ai-start')} onOpen={id=>navigate('studio',id)}/>;
  if(route.page==='projects')return <Projects user={user} projects={projects} t={t} lang={lang} onNew={()=>openNew()} onOpen={id=>navigate('studio',id)} onEdit={initial=>setModal({kind:'project',initial})} onDelete={initial=>setModal({kind:'confirm',what:'project',initial})} onImport={()=>importRef.current?.click()}/>;
  if(route.page==='tools')return <ToolsPage projects={projects} t={t} lang={lang} onNew={seed=>openNew(seed)} onOpen={id=>navigate('studio',id)} onNavigate={navigate}/>;
  if(route.page==='library')return <LibraryPage key={route.domain||'all'} initialDomain={route.domain||'all'} t={t} lang={lang} onNew={seed=>openNew(seed)}/>;
-  if(route.page==='ai-start')return <AIStartPage t={t} lang={lang} projects={projects} canCreateProject={planAllowsNewProject} onReady={quickStartReady} onContinue={(id,idea)=>{sessionStorage.setItem(`sana-ai-seed-${id}`,idea);navigate('studio',id);setAiOpen(true)}} onTemplates={()=>navigate('library')} onNew={seed=>openNew(seed)}/>;
+  if(route.page==='ai-start')return <AIStartPage t={t} lang={lang} projects={projects} onContinue={(id,idea)=>{sessionStorage.setItem(`sana-ai-seed-${id}`,idea);navigate('studio',id);setAiOpen(true)}} onTemplates={()=>navigate('library')} onNew={seed=>openNew(seed)}/>;
  if(route.page==='admin')return <AdminStudio user={user} lang={lang} onOpen={id=>navigate('studio',id)}/>;
  if(route.page==='pricing')return <BillingExperience view="plans" lang={lang} projects={projects} onNavigate={navigate}/>;
  if(route.page==='membership')return <BillingExperience view="membership" lang={lang} projects={projects} onNavigate={navigate}/>;
  if(route.page==='billing-result')return <BillingExperience view="result" resultStatus={route.resultStatus} lang={lang} projects={projects} onNavigate={navigate}/>;
  if(route.page==='settings')return <SettingsPage t={t} lang={lang} onLanguage={setLang} onNew={()=>openNew()} onMembership={()=>navigate('membership')}/>;
- if(route.page==='studio')return project&&String(project.id)===String(route.id)?<StudioWorkspace open={aiOpen} assistant={API_MODE?<AIPanel key={project.id} t={t} lang={lang} project={project} onClose={()=>setAiOpen(false)} onApplied={aiApplied} onMoodboardSaved={async boardId=>{setMoodboardFocus({projectId:project.id,boardId});navigate('studio',project.id,'moodboard')}}/>:<AISidebar t={t} lang={lang} onClose={()=>setAiOpen(false)}/>}><Studio t={t} lang={lang} project={project} moodboardFocus={moodboardFocus} tab={route.tab} onTab={tab=>navigate('studio',project.id,tab)} onBack={()=>navigate('projects')} onAdd={(initialType,position)=>setModal({kind:'element',initialType,position})} onEdit={initial=>setModal({kind:'element',initial})} onDelete={previewDelete} onRelation={initial=>setModal({kind:'relation',initial:initial?.source?initial:null})} onEditProject={initial=>setModal({kind:'project',initial})} onMove={move} onExport={exportProject} onOpenAI={()=>setAiOpen(true)} onDeleteRelation={initial=>setModal({kind:'confirm',what:'relation',initial})} onDiagram={switchDiagram} onNewDiagram={newDiagram}/></StudioWorkspace>:<div className="main-shell inner-page"><Empty icon={FolderOpen} title={t('notFound')} description={t('apiError')} action={<Btn onClick={()=>navigate('projects')}>{t('back')}</Btn>}/></div>;
+ if(route.page==='studio')return project&&String(project.id)===String(route.id)?<StudioWorkspace open={aiOpen} assistant={API_MODE?<AIPanel key={`${project.id}-${route.tab==='branching'?'branch':'graph'}`} branchingMode={route.tab==='branching'&&project.domain==='games'} onNewCharacter={addApprovedStoryCharacter} t={t} lang={lang} project={project} onClose={()=>setAiOpen(false)} onApplied={aiApplied} onMoodboardSaved={async boardId=>{setMoodboardFocus({projectId:project.id,boardId});navigate('studio',project.id,'moodboard')}}/>:<AISidebar t={t} lang={lang} onClose={()=>setAiOpen(false)}/>}><Studio t={t} lang={lang} project={project} moodboardFocus={moodboardFocus} tab={route.tab} onTab={tab=>navigate('studio',project.id,tab)} onBack={()=>navigate('projects')} onAdd={(initialType,position)=>setModal({kind:'element',initialType,position})} onEdit={initial=>setModal({kind:'element',initial})} onDelete={previewDelete} onRelation={initial=>setModal({kind:'relation',initial:initial?.source?initial:null})} onEditProject={initial=>setModal({kind:'project',initial})} onMove={move} onExport={exportProject} onOpenAI={()=>setAiOpen(true)} onDeleteRelation={initial=>setModal({kind:'confirm',what:'relation',initial})} onDiagram={switchDiagram} onNewDiagram={newDiagram} branchRefreshKey={branchRefreshKey}/></StudioWorkspace>:<div className="main-shell inner-page"><Empty icon={FolderOpen} title={t('notFound')} description={t('apiError')} action={<Btn onClick={()=>navigate('projects')}>{t('back')}</Btn>}/></div>;
  return <div className="main-shell inner-page"><Empty title={t('notFound')} action={<Btn onClick={()=>navigate('home')}>{t('home')}</Btn>}/></div>;
  };
  return <div className={`app ${route.page==='studio'?'sana-studio-route':'sana-public-route'}`} dir={lang==='ar'?'rtl':'ltr'}><AmbientStars/><header className="site-header"><div className="main-shell nav-wrap"><Logo onClick={()=>navigate('home')}/><nav className={`nav-links ${mobileMenu?'nav-open':''}`} aria-label="Main navigation">{[['home','home'],['projects','projects'],['tools','tools'],['library','library'],['pricing','pricing']].map(([page,key])=><button key={page} className={route.page===page?'active':''} onClick={()=>navigate(page)}>{page==='pricing'?(lang==='ar'?'الباقات':'Plans'):t(key)}</button>)}</nav><div className="nav-side">{user?.role==='ADMIN'&&<button className={`language-toggle sana-admin-nav ${route.page==='admin'?'active':''}`} onClick={()=>navigate('admin')}><LayoutDashboard size={16}/>{t('admin')}</button>}<button className="language-toggle" onClick={()=>setLang(lang==='ar'?'en':'ar')} aria-label={t('language')}><Globe2 size={17}/><span>{lang==='ar'?'EN':'عربي'}</span></button>{API_MODE&&<button type="button" className="sana-signout" onClick={onLogout}>{lang==='ar'?'تسجيل الخروج':'Sign out'}</button>}<IconButton className="nav-settings" label={t('settings')} onClick={()=>navigate('settings')}><Settings2 size={19}/></IconButton><button className="nav-cta" onClick={()=>openNew()}><Plus size={17}/><span>{t('newProject')}</span></button><IconButton className="mobile-toggle" label={t('menu')} onClick={()=>setMobileMenu(m=>!m)}>{mobileMenu?<X size={21}/>:<Menu size={21}/>}</IconButton></div></div></header><div className="app-body">{loading&&projects.length===0?<div className="loading-view"><img src="/sana-logo.webp" alt="SANA"/><div className="loading-line"/></div>:main()}</div>{route.page!=='studio'&&<Footer t={t} lang={lang} onNavigate={navigate}/>}<Toast toast={toast} onClose={()=>setToast(null)}/>{modal?.kind==='project'&&<ProjectModal t={t} lang={lang} busy={busy} initial={modal.initial||modal.seed} onClose={()=>setModal(null)} onSave={saveProject}/>}{modal?.kind==='element'&&<ElementModal t={t} lang={lang} busy={busy} initial={modal.initial} initialType={modal.initialType} position={modal.position} availableTypes={elementTypes(project)} project={project} onClose={()=>setModal(null)} onSave={saveElement} onDelete={previewDelete} onGameBalance={()=>{setModal(null);navigate('studio',project.id,'balance')}}/>}{modal?.kind==='relation'&&<RelationModal initial={modal.initial} t={t} lang={lang} busy={busy} project={project} elements={project?.elements||[]} onClose={()=>setModal(null)} onSave={addRelation}/>}{modal?.kind==='confirm'&&<ConfirmModal t={t} lang={lang} busy={busy} onCancel={()=>setModal(null)} onConfirm={deleteThing} impact={modal.impact} description={modal.what==='project'?`${t('confirmDelete')} — ${modal.initial.name}`:`${t('confirmDelete')} — ${modal.initial.name||modal.initial.label||modal.initial.type||''}`}/>}<input ref={importRef} type="file" hidden accept=".json,application/json" onChange={e=>{importFile(e.target.files?.[0]);e.target.value=''}} /></div>

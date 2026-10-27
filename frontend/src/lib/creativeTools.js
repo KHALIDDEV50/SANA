@@ -4,7 +4,7 @@
  */
 import {API_MODE,api,diagramIdFor} from './data';
 // Use the real MoodboardController whenever Spring Boot API mode is active.
-// Local uploads are clearly marked localOnly (backend currently supports verified Openverse images).
+// Local uploads remain device-only; the new unified library persists verified provider images.
 export const MOODBOARD_API=API_MODE;
 const STORE='sana-special-tools-v3';
 const LOCAL_IMAGES='sana-local-mood-images-v4';
@@ -49,8 +49,8 @@ export const creativeTools={
  async boards(projectId){if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/get/project/${projectId}`);return scope(projectId)[1].boards.map(({id,title})=>({id,title,projectId}));},
  async addBoard(projectId,title){if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/add/${projectId}`,body('POST',{title}));const [db,s]=scope(projectId);const board={id:id(),title,projectId,items:[]};s.boards.push(board);save(db);return board},
  async board(projectId,boardId){if(MOODBOARD_API){const b=await api(`/api/v1/creativity/moodboard/get/${boardId}`);return {...b,items:[...(b.items||[]),...localItems(boardId)]}}return scope(projectId)[1].boards.find(b=>String(b.id)===String(boardId))||null},
- async searchImages(keyword){if(!MOODBOARD_API)return {images:[]};return api(`/api/v1/creativity/moodboard/images/search?keyword=${encodeURIComponent(keyword)}&page=1&pageSize=12`)},
- // Explicitly opt-in to a device-only reference if Openverse verification is unavailable.
+ async searchImages(keyword){if(!MOODBOARD_API)return {images:[]};return api(`/api/v1/creativity/moodboard/images/search?keyword=${encodeURIComponent(keyword)}&page=1&pageSize=20`)},
+ // Explicitly opt-in to a device-only reference for uploads and pasted URLs.
  async addLocalReference(projectId,boardId,image,pos){
   if(!image?.imageUrl || !/^https:\/\//i.test(image.imageUrl))throw new Error('No usable image URL');
   const item={id:-id(),type:'MOODBOARD_IMAGE',image:{...image,id:`local-${image.id||id()}`},positionX:pos.x,positionY:pos.y,localOnly:true};
@@ -59,19 +59,11 @@ export const creativeTools={
   if(!board)throw new Error('Moodboard not found');board.items.push(item);save(db);return item;
  },
  async addImage(projectId,boardId,image,pos){
-  if(MOODBOARD_API && image?.id && !String(image.id).startsWith('local-') && !String(image.id).startsWith('demo-')){
-   const path=`/api/v1/creativity/moodboard/add/${boardId}/images`;
-   try{return await api(path,body('POST',{openverseId:image.id,positionX:pos.x,positionY:pos.y}))}
-   catch(error){
-    // If the server cannot re-fetch Openverse metadata, gracefully keep the visible result as a project reference instead of failing the UX.
-    const message=String(error?.message||'');
-    if(/Cannot retrieve image details from Openverse|Openverse returned HTTP 429|rate limit/i.test(message)){
-     const localImage={...image,id:`local-${image.id||id()}`};
-     const item={id:-id(),type:'MOODBOARD_IMAGE',image:localImage,positionX:pos.x,positionY:pos.y,localOnly:true};
-     return persistPhoto(boardId,item);
-    }
-    throw error;
-   }
+  if(MOODBOARD_API && ['PIXABAY','CLEVELAND','MET','WIKIMEDIA'].includes(image?.provider)){
+   // Never silently store a search result as a local-only photo if server validation fails.
+   return api(`/api/v1/creativity/moodboard/add/${boardId}/images`,body('POST',{
+    provider:image.provider,imageId:image.id,positionX:pos.x,positionY:pos.y
+   }));
   }
   if(MOODBOARD_API){const item={id:-id(),type:'MOODBOARD_IMAGE',image,positionX:pos.x,positionY:pos.y,localOnly:true};return persistPhoto(boardId,item)}
   const [db,s]=scope(projectId);const board=s.boards.find(b=>b.id===boardId);board.items.push({id:id(),type:'MOODBOARD_IMAGE',image,positionX:pos.x,positionY:pos.y});save(db);return board
@@ -79,6 +71,26 @@ export const creativeTools={
  async addLabel(projectId,boardId,text,pos){const data={text,positionX:pos.x,positionY:pos.y,color:'#39322c',backgroundColor:'#fff0ce',fontSize:17};if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/add/${boardId}/labels`,body('POST',data));const [db,s]=scope(projectId);const board=s.boards.find(b=>b.id===boardId);board.items.push({id:id(),type:'MOODBOARD_LABEL',label:{text,color:data.color,backgroundColor:data.backgroundColor,fontSize:17},positionX:pos.x,positionY:pos.y});save(db);return board},
  async moveBoardItem(projectId,boardId,itemId,x,y){if(MOODBOARD_API && Number(itemId)<0){replacePhoto(boardId,itemId,i=>({...i,positionX:x,positionY:y}));return;}if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/update/${boardId}/items/${itemId}/position`,body('PUT',{positionX:x,positionY:y}));const [db,s]=scope(projectId);const item=s.boards.find(b=>b.id===boardId)?.items.find(i=>i.id===itemId);if(item){item.positionX=x;item.positionY=y;save(db)}},
  async deleteBoardItem(projectId,boardId,itemId){if(MOODBOARD_API && Number(itemId)<0){dropPhoto(boardId,itemId);return;}if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/delete/${boardId}/items/${itemId}`,{method:'DELETE'});const [db,s]=scope(projectId);const board=s.boards.find(b=>b.id===boardId);board.items=board.items.filter(i=>i.id!==itemId);save(db)},
+ // Existing Spring Boot APIs keep speaker links separate from scene text.
+ // Reading the graph exposes the saved speakerCharacterId for each projectNodeId.
+ async branchSpeakers(project){
+  if(!API_MODE)return {};
+  const outputId=await diagramIdFor(project,'BRANCHING_STORY');
+  const response=await api(`/api/v1/diagram/graph/get/${outputId}`);
+  return Object.fromEntries((response?.graph?.nodes||[])
+   .filter(node=>node.id!=null&&node.properties?.speakerCharacterId!=null)
+   .map(node=>[String(node.id),String(node.properties.speakerCharacterId)]));
+ },
+ async linkSpeaker(project,nodeId,characterId){
+  const outputId=await diagramIdFor(project,'BRANCHING_STORY');
+  if(!API_MODE)throw new Error('Speaker linking requires the backend');
+  return api(`/api/v1/branching/link/${outputId}/nodes/${nodeId}/speaker/${characterId}`,{method:'PUT'});
+ },
+ async unlinkSpeaker(project,nodeId){
+  const outputId=await diagramIdFor(project,'BRANCHING_STORY');
+  if(!API_MODE)throw new Error('Speaker linking requires the backend');
+  return api(`/api/v1/branching/unlink/${outputId}/nodes/${nodeId}/speaker`,{method:'DELETE'});
+ },
  async branching(project){const outputId=await diagramIdFor(project,'BRANCHING_STORY');if(API_MODE)return api(`/api/v1/branching/get/${outputId}/map`);const s=scope(project.id)[1];return {nodes:s.scenes.map(n=>({...n})),choices:s.choices.map(c=>({...c}))}},
  async addScene(project,{title,content,type,positionX,positionY}){const outputId=await diagramIdFor(project,'BRANCHING_STORY');if(API_MODE)return api(`/api/v1/branching/add/${outputId}/nodes`,body('POST',{title,content,type,positionX,positionY}));const [db,s]=scope(project.id);s.scenes.push({branchingNodeId:id(),title,content,type,positionX,positionY});save(db)},
  async updateScene(project,node){const outputId=await diagramIdFor(project,'BRANCHING_STORY');const nodeId=node.branchingNodeId;const data={title:node.title,content:node.content,type:node.type,positionX:node.positionX,positionY:node.positionY};if(API_MODE)return api(`/api/v1/branching/update/${outputId}/nodes/${nodeId}`,body('PUT',data));const [db,s]=scope(project.id);s.scenes=s.scenes.map(n=>n.branchingNodeId===nodeId?{...n,...data}:n);save(db)},
@@ -115,4 +127,22 @@ export function moodboardReferenceUrl(value) {
   return url.protocol==='https:'&&!url.username&&!url.password&&host.includes('.')
    && !/^[\d.]+$/.test(host)&&!host.endsWith('.localhost')&&!host.endsWith('.local')&&!host.endsWith('.internal') ? url.href:null;
  } catch {return null}
+}
+
+
+// The SANA API uses Authorization headers; an ordinary <img> request cannot send them.
+// Fetch saved Pixabay files as a blob using the same browser credentials, then revoke the URL.
+export async function moodboardAuthorizedImageBlobUrl(assetPath, signal){
+ if(!/^\/api\/v1\/creativity\/moodboard\/images\/pixabay-assets\/[0-9]+$/.test(assetPath))
+  throw new Error('Unsupported protected moodboard asset');
+ const base=(import.meta.env.VITE_SANA_API_URL||'').replace(/\/$/,'');
+ const token=sessionStorage.getItem('sana-auth');
+ const response=await fetch(`${base}${assetPath}`,{
+  signal,credentials:'include',headers:token?{Authorization:`Basic ${token}`}:{},
+ });
+ if(!response.ok)throw new Error(`Could not load saved image (HTTP ${response.status})`);
+ const blob=await response.blob();
+ if(!blob.type.startsWith('image/')||blob.size>8*1024*1024)
+  throw new Error('Invalid saved image');
+ return URL.createObjectURL(blob);
 }

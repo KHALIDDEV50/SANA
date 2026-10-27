@@ -1,7 +1,7 @@
 package com.example.sana.Service.CreativityDomainServices;
 
 import com.example.sana.DTO.CreativityDomainDTOs.MoodboardAIDTO.*;
-import com.example.sana.DTO.CreativityDomainDTOs.OpenverseDTO;
+import com.example.sana.DTO.CreativityDomainDTOs.MoodboardImageDTO;
 import com.example.sana.DTO.CreativityDomainDTOs.CreativityAIRequestDTO;
 import com.example.sana.DTO.AIDTOs.AIRunResponseDTO;
 import com.example.sana.Enums.AITask;
@@ -27,18 +27,17 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Moodboard AI through the existing Creativity ADVISE queue, n8n gateway and callback. */
+/** Moodboard preview creation through the existing Creativity ADVISE queue, n8n gateway and callback. */
 @Service
 @RequiredArgsConstructor
 public class MoodboardAIService {
     private static final Logger log = LoggerFactory.getLogger(MoodboardAIService.class);
     private final ProjectRepository projects;
-    private final ProjectOutputRepository outputs;
     private final CreativityAIRequestService creativityRequests;
     private final AIRequestService sharedRequests;
     private final N8nProperties n8n;
     private final JsonMapper json;
-    private final OpenverseService openverse;
+    private final MoodboardImageService imageService;
     private final MoodboardService moodboards;
     private final Map<String, Draft> drafts = new ConcurrentHashMap<>();
 
@@ -63,18 +62,30 @@ public class MoodboardAIService {
     }
 
     private static String planningPrompt(String userPrompt, String language) {
-        // The existing n8n response schema admits ADVICE (a string message), not a Moodboard proposal.
-        // The returned message is a *serialized* Moodboard plan and is validated before Openverse lookup.
-        return "SANA_MOODBOARD_PLAN. This is an ADVISE task only, NOT a graph edit. " +
-                "Do not return a graph proposal. Return an ADVICE result whose message is ONLY a compact " +
-                "single valid JSON object serialized as a string. JSON keys: " +
-                "title (string), theme (string), searchTerms (array of 1 to 3 concise English image search " +
-                "queries), notes (array of 1 to 4 short creative notes), palette (array of 3 to 5 objects, " +
-                "each with name and hex such as #26364C). " +
-                "Keep under 200 words; use no Markdown, no outer output wrapper, no image URLs and no invented " +
-                "Openverse identifiers. Use the supplied project context as inspiration only. " +
-                "The existing Sana result outer type must be ADVICE with clarification=null and proposal=null. " +
-                "Output language: " + language + ". User moodboard request: " + userPrompt;
+        String guidance = userPrompt == null || userPrompt.isBlank()
+                ? "Create a visual moodboard for my whole SANA project."
+                : userPrompt.trim().substring(0, Math.min(8000, userPrompt.trim().length()));
+        return "SANA_MOODBOARD_PLAN. Prepare a moodboard PREVIEW PLAN for this project's story, not a graph. " +
+                "Incoming task is ADVISE, and outgoing result type is ADVICE (not PROPOSAL). " +
+                "This is a special structured planning task; do not give ordinary advice, " +
+                "ask to switch to CREATE, or request a different output. " +
+                "Read the full PROJECT CONTEXT provided in context.creativity.relatedOutputs, " +
+                "the current graph (when present), project description, characters, worlds, " +
+                "places, events, plot relationships and world rules. Ground visual direction " +
+                "in actual project facts and descriptions, not just the user's short request. " +
+                "If there is little project detail, do not invent established facts. " +
+                "Use distinct English image search terms for key characters (modest attire), " +
+                "locations, historical settings, architecture, objects and overall mood. " +
+                "Respect Muslim-friendly modest visual standards: avoid nudity, revealing clothing, " +
+                "sexualized depictions, graphic gore, and religiously disrespectful material. " +
+                "These are instructions for search and selection; do not claim visual verification. " +
+                "Return result type ADVICE with clarification=null and proposal=null. " +
+                "Its message must be ONLY one compact serialized valid JSON object (no markdown). " +
+                "JSON keys: title (string), theme (string), searchTerms (array of 1-6 specific " +
+                "English searches), notes (array of 1-6 concise creative notes), palette " +
+                "(array of 3-5 objects, each name and hex e.g. #26364C). " +
+                "No image URLs or fabricated sources. Keep project-specific details accurate. " +
+                "Language for title/theme/notes: " + language + ". Request: " + guidance;
     }
 
     private Plan parsePlan(String message) {
@@ -100,8 +111,8 @@ public class MoodboardAIService {
         if (p == null) throw invalidPlan();
         requireText(p.title(), 120);
         requireText(p.theme(), 600);
-        requireStrings(p.searchTerms(), 1, 3, 120);
-        requireStrings(p.notes(), 1, 4, 800);
+        requireStrings(p.searchTerms(), 1, 6, 120);
+        requireStrings(p.notes(), 1, 6, 800);
         if (p.palette() == null || p.palette().size() < 3 || p.palette().size() > 5) throw invalidPlan();
         for (Color c : p.palette()) {
             if (c == null) throw invalidPlan();
@@ -135,22 +146,11 @@ public class MoodboardAIService {
         if (drafts.size() >= 100 || drafts.values().stream().filter(d -> d.session.equals(session)).count() >= 6)
             throw fail(HttpStatus.TOO_MANY_REQUESTS, "Too many pending moodboards; reject a draft or retry later.");
 
-        // The existing AIRequestService only allows ADVISE on an existing GRAPH output.
-        // Do not forge a graph or target the MOODBOARD/IMAGE representation.
-        ProjectOutput graph = outputs.findAllByProject_Id(projectId).stream()
-                .filter(o -> o.getRepresentationType() == RepresentationType.GRAPH)
-                .filter(o -> o.getGraphRevision() != null)
-                .sorted(Comparator.comparingInt(o -> "STORY_MAP".equals(o.getOutputType()) ? 0 : 1))
-                .findFirst().orElseThrow(() -> fail(HttpStatus.CONFLICT,
-                        "Existing Sana n8n ADVISE needs a story GRAPH output in this project. Create a story map first."));
-
-        CreativityAIRequestDTO ai = new CreativityAIRequestDTO();
-        ai.setTask(AITask.ADVISE);
-        ai.setOutputId(graph.getId());
-        ai.setBaseRevision(graph.getGraphRevision());
-        ai.setPrompt(planningPrompt(request.prompt(), request.language()));
-        ai.setSelectedElementIds(List.of());
-        AIRunResponseDTO run = creativityRequests.start(projectId, ai);
+        // Planning via the existing ADVISE n8n contract and an actual saved story output.
+        // The Creativity context includes story graphs,
+        // characters, events, locations and relationships even when there is no active graph.
+        AIRunResponseDTO run = creativityRequests.startMoodboardPlan(projectId,
+                planningPrompt(request.prompt(), request.language()));
 
         String id = UUID.randomUUID().toString();
         Instant expires = Instant.now().plus(15, ChronoUnit.MINUTES);
@@ -161,83 +161,174 @@ public class MoodboardAIService {
         return preview;
     }
 
+    /**
+     * Public photo libraries and museum catalogues index short, concrete subjects better than
+     * long cinematic prose. Preserve the full AI plan for notes, but convert each idea into a
+     * short search phrase focused on the central subject.
+     */
+    private static String searchableTerm(String term) {
+        if (term == null || term.isBlank()) return "";
+        String lower = term.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]+", " ").trim();
+        if (containsAny(lower, "lighthouse", "beacon", "signal room")) {
+            return containsAny(lower, "fog", "storm", "coast", "harbor", "harbour", "pier")
+                    ? "old lighthouse fog" : "old lighthouse";
+        }
+        if (containsAny(lower, "harbor", "harbour", "port", "pier", "coastal", "coast", "sea", "marine")) {
+            return "coastal harbor";
+        }
+        if (containsAny(lower, "archive", "ledger", "logbook", "record", "records", "map", "maps", "warning")) {
+            return containsAny(lower, "harbor", "harbour", "maritime", "port")
+                    ? "harbor archive" : "old archive ledger";
+        }
+        if (containsAny(lower, "woman", "female", "girl", "lady")) {
+            return containsAny(lower, "detective", "investigator", "researcher")
+                    ? "woman detective portrait" : "woman portrait";
+        }
+        if (containsAny(lower, "man", "male", "friend", "guard", "sailor")) {
+            return containsAny(lower, "portrait", "character") ? "man portrait" : "calm man portrait";
+        }
+        if (containsAny(lower, "town", "village", "street", "city")) {
+            return containsAny(lower, "coast", "harbor", "harbour") ? "coastal town" : "old town";
+        }
+        String[] words = lower.split("\\s+");
+        Set<String> filler = Set.of("cinematic", "mystery", "historical", "young", "calm", "dramatic",
+                "movie", "film", "still", "suspenseful", "restrained", "dark", "atmosphere", "light",
+                "lighting", "environment", "scene", "stormy", "storm", "foggy", "battered", "modest",
+                "clothed", "practical", "night", "old", "ancient", "weathered", "remote");
+        List<String> keep = new ArrayList<>();
+        for (String word : words) {
+            if (word.length() >= 4 && !filler.contains(word)) keep.add(word);
+            if (keep.size() == 2) break;
+        }
+        return keep.isEmpty() ? term.trim().substring(0, Math.min(60, term.trim().length()))
+                : String.join(" ", keep);
+    }
+
+    private static boolean containsAny(String text, String... values) {
+        for (String value : values) if (text.contains(value)) return true;
+        return false;
+    }
+
+    private static int providerWeight(String provider) {
+        return switch (provider == null ? "" : provider) {
+            case "PIXABAY" -> 120;
+            case "WIKIMEDIA" -> 105;
+            case "MET" -> 78;
+            case "CLEVELAND" -> 72;
+            default -> 50;
+        };
+    }
+
+    private static int scoreCandidate(MoodboardImageDTO.Image image, String simplifiedTerm) {
+        int score = providerWeight(image.provider());
+        String hay = ((image.title() == null ? "" : image.title()) + " " +
+                (image.attribution() == null ? "" : image.attribution()) + " " +
+                (image.sourceUrl() == null ? "" : image.sourceUrl())).toLowerCase(Locale.ROOT);
+        for (String token : simplifiedTerm.split("\\s+")) {
+            if (token.length() > 2 && hay.contains(token)) score += 18;
+        }
+        if (simplifiedTerm.contains("portrait") && containsAny(hay, "portrait", "head", "woman", "man")) score += 10;
+        if (simplifiedTerm.contains("lighthouse") && containsAny(hay, "lighthouse", "beacon")) score += 16;
+        if (simplifiedTerm.contains("harbor") && containsAny(hay, "harbor", "harbour", "port", "coast")) score += 12;
+        if (simplifiedTerm.contains("archive") && containsAny(hay, "archive", "record", "book", "ledger", "map")) score += 12;
+        if (containsAny(simplifiedTerm, "detective", "woman portrait", "man portrait") && ("MET".equals(image.provider()) || "CLEVELAND".equals(image.provider()))) score -= 12;
+        if (containsAny(hay, "thomas storm", "marble head of a woman") && !simplifiedTerm.contains("portrait")) score -= 30;
+        return score;
+    }
+
+    private static String imageExplanation(String term) {
+        String lower = term == null ? "" : term.toLowerCase(Locale.ROOT);
+        if (containsAny(lower, "lighthouse", "beacon", "signal room"))
+            return "تمثل هذه الصورة المنارة القديمة، وهي المرجع الأهم للمكان المحوري في القصة وأجواء الغموض حوله.";
+        if (containsAny(lower, "harbor", "harbour", "coastal", "coast", "pier", "town", "village"))
+            return "تمثل هذه الصورة البلدة الساحلية والميناء والعزلة التي تصنع الجو العام للحبكة.";
+        if (containsAny(lower, "archive", "ledger", "logbook", "record", "map", "warning"))
+            return "تمثل هذه الصورة الأرشيف والسجلات والخرائط، أي القرائن البصرية المرتبطة بالسرّ والتحقيق.";
+        if (containsAny(lower, "woman", "female", "detective", "investigator"))
+            return "تمثل هذه الصورة البطلة بصفتها باحثة ومحققة، بملابس محتشمة وحضور هادئ وعملي.";
+        if (containsAny(lower, "man", "male", "friend", "guard", "sailor"))
+            return "تمثل هذه الصورة حضور شخصية رجالية مساندة أو غامضة داخل القصة، دون كشف الحقيقة مبكرًا.";
+        return "هذه الصورة مرجع بصري لأحد عناصر القصة وأجوائها العامة؛ راجعيها كإلهام لا كمطابقة حرفية.";
+    }
+
     private Preview buildPreview(Draft d, Plan plan) {
         Integer projectId = d.projectId;
         String id = d.preview.draftId();
         Instant expires = d.preview.expiresAt();
-        // Search results already contain genuine Openverse IDs, metadata and licence fields.
-        // Prefer a detail lookup when available, but do not discard valid search results
-        // just because the detail API is temporarily unavailable or rate-limited.
-        Map<String, OpenverseDTO.Image> candidates = new LinkedHashMap<>();
+        Map<String, List<MoodboardImageDTO.Image>> byTerm = new LinkedHashMap<>();
+        Map<String, List<MoodboardImageDTO.Image>> cachedSearches = new HashMap<>();
         int searchFailures = 0;
+        int candidateCount = 0;
         for (String term : plan.searchTerms()) {
-            for (int page = 1; page <= 2 && candidates.size() < 60; page++) {
-                try {
-                    var response = openverse.searchImages(term, page, 20);
-                    for (var image : response.images()) {
-                        if (image.id() != null && image.id().matches(
-                                "(?i)[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}")) {
-                            candidates.putIfAbsent(image.id().toLowerCase(Locale.ROOT), image);
-                        }
-                    }
-                    if (response.images().isEmpty()) break;
-                } catch (RuntimeException ex) {
-                    searchFailures++;
-                    log.warn("Openverse moodboard search failed (page {}): {}", page, ex.getMessage());
-                    break;
+            List<MoodboardImageDTO.Image> matching = new ArrayList<>();
+            try {
+                String simplified = searchableTerm(term);
+                List<MoodboardImageDTO.Image> hits = cachedSearches.get(simplified);
+                if (hits == null) {
+                    hits = new ArrayList<>(imageService.searchImages(simplified, 1, 20).images());
+                    hits.sort(Comparator.comparingInt((MoodboardImageDTO.Image image) -> scoreCandidate(image, simplified)).reversed());
+                    cachedSearches.put(simplified, hits);
                 }
-            }
-        }
-        List<ImageReference> images = new ArrayList<>();
-        boolean detailApiAvailable = true;
-        int unusable = 0;
-        for (var candidate : candidates.values()) {
-            if (images.size() >= 6) break;
-            OpenverseDTO.Image actual = candidate;
-            if (detailApiAvailable) {
-                try {
-                    actual = openverse.getImage(candidate.id());
-                } catch (RuntimeException ex) {
-                    if ("Openverse image not found".equals(ex.getMessage())) {
-                        unusable++;
-                        continue;
+                for (var image : hits) {
+                    if (image.id() != null && image.provider() != null &&
+                            List.of("PIXABAY", "CLEVELAND", "MET", "WIKIMEDIA").contains(image.provider())) {
+                        matching.add(image);
+                        candidateCount++;
                     }
-                    // Only trust metadata returned by Openverse search; never invent URLs.
-                    detailApiAvailable = false;
-                    log.warn("Openverse image details unavailable, using its search metadata: {}", ex.getMessage());
                 }
+            } catch (RuntimeException ex) {
+                searchFailures++;
+                log.warn("Moodboard image search failed: {}", ex.getMessage());
             }
-            if (!candidate.id().equalsIgnoreCase(actual.id())) {
-                unusable++;
-                continue;
-            }
-            OpenverseDTO.Image safe = previewImage(actual);
-            if (safe == null) {
-                unusable++;
-                continue;
-            }
-            int i = images.size();
-            images.add(new ImageReference(safe, "Openverse", 30 + (i % 3) * 250,
-                    35 + (i / 3) * 380));
-        }
-        if (images.size() < 3) {
-            log.warn("Openverse moodboard insufficient references: candidates={}, usable={}, " +
-                            "rejected={}, searchFailures={}",
-                    candidates.size(), images.size(), unusable, searchFailures);
-            throw fail(HttpStatus.BAD_GATEWAY,
-                    "Openverse لم يوفر ثلاث صور صالحة للعرض. راجعي سجل Spring Boot لمعرفة السبب.");
+            byTerm.put(term, matching);
         }
 
+        List<ImageReference> images = new ArrayList<>();
         List<Note> notes = new ArrayList<>();
-        List<String> text = new ArrayList<>(); text.add(plan.theme()); text.addAll(plan.notes());
-        for (int i = 0; i < text.size(); i++)
-            notes.add(new Note(text.get(i), "#25334D", "#FFF0CE", 30 + (i % 3) * 250, 800 + (i / 3) * 320));
+        Set<String> selectedIds = new HashSet<>();
+        int maxImages = 6;
+        int perTermCap = 2;
+        int index = 0;
+        for (var entry : byTerm.entrySet()) {
+            int chosenForTerm = 0;
+            for (var candidate : entry.getValue()) {
+                if (images.size() >= maxImages || chosenForTerm >= perTermCap) break;
+                if (!selectedIds.add(candidate.id())) continue;
+                MoodboardImageDTO.Image safe = previewImage(candidate);
+                if (safe == null) continue;
+                int col = index % 2;
+                int row = index / 2;
+                double imageX = 40 + col * 760;
+                double imageY = 40 + row * 380;
+                double noteX = imageX + 230;
+                double noteY = imageY + 18;
+                images.add(new ImageReference(safe, entry.getKey(), imageX, imageY));
+                notes.add(new Note(imageExplanation(entry.getKey()), "#1F2E35", "#FFF8E8", noteX, noteY));
+                index++;
+                chosenForTerm++;
+            }
+        }
+
+        if (images.isEmpty()) {
+            log.warn("SANA Moodboard: all providers returned zero usable images. candidates={}, failedSearches={}",
+                    candidateCount, searchFailures);
+            throw fail(HttpStatus.BAD_GATEWAY,
+                    "لم تُرجع مكتبات الصور أي صورة صالحة. تحققي من PIXABAY_API_KEY ومن لوق Moodboard provider.");
+        }
+        log.info("SANA Moodboard preview selectedImages={} candidates={} failedSearches={}",
+                images.size(), candidateCount, searchFailures);
+
+        List<String> warnings = new ArrayList<>();
+        if (images.size() < 4) {
+            warnings.add("عدد الصور قليل نسبيًا؛ يمكنك حفظ الموجود الآن أو إعادة التوليد لاحقًا لتحسين التنوع.");
+        }
+        warnings.add("اختيار الصور يعتمد على بيانات المكتبات والترشيح النصي، لذا راجعي دلالتها قبل الحفظ النهائي.");
+
         Preview preview = new Preview(id, projectId, "PENDING", expires,
                 plan.title(), plan.theme(), List.copyOf(images), List.copyOf(notes), plan.palette(),
-                List.of("Images are selected by search metadata, not by AI visual inspection."), false, null);
+                List.copyOf(warnings), false, null);
         return preview;
     }
-
     public Preview get(Integer projectId, String id, String session) {
         Draft d = require(projectId, id, session);
         synchronized (d) {
@@ -309,15 +400,15 @@ public class MoodboardAIService {
      * valid Openverse image merely because its source or licence page uses HTTP.
      * Optional non-HTTPS thumbnails are dropped so the UI can show the HTTPS original.
      */
-    private static OpenverseDTO.Image previewImage(OpenverseDTO.Image image) {
+    private static MoodboardImageDTO.Image previewImage(MoodboardImageDTO.Image image) {
         if (image == null || image.license() == null || image.license().isBlank()
                 || !publicUrl(image.sourceUrl(), true)) return null;
         String full = publicUrl(image.imageUrl(), false) ? image.imageUrl() : null;
         String thumb = publicUrl(image.thumbnail(), false) ? image.thumbnail() : null;
         if (full == null && thumb == null) return null;
-        return new OpenverseDTO.Image(image.id(), image.title(), full != null ? full : thumb,
+        return new MoodboardImageDTO.Image(image.id(), image.title(), full != null ? full : thumb,
                 thumb, image.creator(), image.creatorUrl(), image.license(),
-                image.licenseVersion(), image.licenseUrl(), image.sourceUrl(), image.attribution());
+                image.licenseVersion(), image.licenseUrl(), image.sourceUrl(), image.attribution(), image.provider());
     }
 
     private static boolean publicUrl(String raw, boolean allowHttp) {

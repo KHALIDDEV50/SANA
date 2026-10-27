@@ -58,6 +58,18 @@ const toUiType=type=>Object.keys(STORY_TYPES).find(k=>STORY_TYPES[k]===type)||St
 export const backendDomain=domain=>BACKEND_DOMAIN[String(domain||'').toLowerCase()]||({'CREATIVITY':'CREATIVITY','TECH':'TECH','BUSINESS':'BUSINESS','EDUCATION':'EDUCATION'}[String(domain||'').toUpperCase()]||'CREATIVITY');
 const uiDomainKey=id=>`sana-ui-domain-${id}`;
 const activeDiagramKey=id=>`sana-active-diagram-${id}`;
+const branchingDiagramKey=id=>`sana-branching-diagram-${id}`;
+// A project may contain several branching stories. Remember the exact output
+// approved by the AI instead of silently displaying the first older tree.
+export function rememberBranchingOutput(projectId,outputId){
+ const id=Number(outputId);
+ if(Number.isSafeInteger(id)&&id>0)storage.set(branchingDiagramKey(projectId),id);
+}
+export function selectedBranchingDiagram(project){
+ const options=(project?.diagrams||[]).filter(d=>d.outputType==='BRANCHING_STORY');
+ const saved=storage.get(branchingDiagramKey(project?.id));
+ return options.find(d=>String(d.id)===saved)||options.sort((a,b)=>Number(b.id)-Number(a.id))[0]||null;
+}
 const storage={get:k=>{try{return localStorage.getItem(k)}catch{return null}},set:(k,v)=>{try{localStorage.setItem(k,String(v))}catch{}}};
 // writing and games are both CREATIVITY; remember which one the user picked, else guess from a branching diagram
 function toUiDomain(p){
@@ -155,10 +167,14 @@ async function getApiProject(id){
  }
  const remembered=storage.get(activeDiagramKey(id));
  const oldWithNodes=oldOutputs.find(o=>o.outputType==='CREATIVITY'&&o.representationType==='GRAPH'&&((Array.isArray(o.nodes)&&o.nodes.length>0)||(legacySearchCache.get(o.id)||[]).length>0));
- let active=diagrams.find(d=>String(d.id)===remembered)||
-   (oldWithNodes&&diagrams.find(d=>d.id===oldWithNodes.id))||
-   diagrams.find(d=>d.outputType===PRIMARY_DIAGRAM[domain])||
-   diagrams.find(d=>d.outputType!=='BRANCHING_STORY');
+ // The branching editor has its own selected-output key. Never use an older
+ // BRANCHING_STORY preference as the project's character/story canvas.
+ // Otherwise STORY_MAP characters appear to vanish after opening an AI tree.
+ const canvasDiagrams=diagrams.filter(d=>d.outputType!=='BRANCHING_STORY');
+ let active=canvasDiagrams.find(d=>String(d.id)===remembered)||
+   (oldWithNodes&&canvasDiagrams.find(d=>d.id===oldWithNodes.id))||
+   canvasDiagrams.find(d=>d.outputType===PRIMARY_DIAGRAM[domain])||
+   canvasDiagrams[0]||diagrams[0];
  if(!active){
    // Never write to the database on opening a project. Creating diagrams is an
    // explicit action via the New Diagram control.
@@ -200,11 +216,18 @@ async function getApiProject(id){
 // ID of the project's diagram of a type, created when missing (branching tab, character balance)
 export async function diagramIdFor(project,diagramType,create=false){
  if(!API_MODE)return 'demo';
- const known=(project.diagrams||[]).find(d=>d.outputType===diagramType);if(known)return known.id;
- const existing=(await listDiagrams(project.id)).find(d=>d.outputType===diagramType);
- if(!existing&&!create){const error=new Error('No diagram exists for this tool. Create one explicitly.');error.code='DIAGRAM_REQUIRED';throw error;}
- const diagram=existing||await createDiagram(project.id,project.name,diagramType);
- project.diagrams=[...(project.diagrams||[]),diagram];
+ const known=diagramType==='BRANCHING_STORY'
+  ?selectedBranchingDiagram(project)
+  :(project.diagrams||[]).find(d=>d.outputType===diagramType);
+ if(known)return known.id;
+ const available=(await listDiagrams(project.id)).filter(d=>d.outputType===diagramType);
+ const chosen=diagramType==='BRANCHING_STORY'
+  ?available.find(d=>String(d.id)===storage.get(branchingDiagramKey(project.id)))||available.sort((a,b)=>Number(b.id)-Number(a.id))[0]
+  :available[0];
+ if(!chosen&&!create){const error=new Error('No diagram exists for this tool. Create one explicitly.');error.code='DIAGRAM_REQUIRED';throw error;}
+ const diagram=chosen||await createDiagram(project.id,project.name,diagramType);
+ if(!(project.diagrams||[]).some(d=>d.id===diagram.id))project.diagrams=[...(project.diagrams||[]),diagram];
+ if(diagramType==='BRANCHING_STORY')rememberBranchingOutput(project.id,diagram.id);
  return diagram.id;
 }
 

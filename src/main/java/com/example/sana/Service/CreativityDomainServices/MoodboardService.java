@@ -2,7 +2,7 @@ package com.example.sana.Service.CreativityDomainServices;
 
 import com.example.sana.API.ApiException;
 import com.example.sana.DTO.CreativityDomainDTOs.MoodboardDTO;
-import com.example.sana.DTO.CreativityDomainDTOs.OpenverseDTO;
+import com.example.sana.DTO.CreativityDomainDTOs.MoodboardImageDTO;
 import com.example.sana.DTO.CreativityDomainDTOs.MoodboardAIDTO;
 import com.example.sana.Enums.RepresentationType;
 import com.example.sana.Model.ProjectNode;
@@ -31,7 +31,7 @@ public class MoodboardService {
     private final ProjectRepository projectRepository;
     private final ProjectOutputRepository projectOutputRepository;
     private final MoodboardRepository moodboardRepository;
-    private final OpenverseService openverseService;
+    private final MoodboardImageService imageService;
     private final JsonMapper jsonMapper;
 
     // Create a board as an ordinary ProjectOutput; reuse the existing database schema.
@@ -59,7 +59,7 @@ public class MoodboardService {
     public MoodboardDTO.BoardSummary saveApprovedDraft(Integer projectId, String draftId, String owner,
                                                        MoodboardAIDTO.Preview preview) {
         if (!projectId.equals(preview.projectId()) || !draftId.equals(preview.draftId())
-                || !"PENDING".equals(preview.status()) || preview.images().size() < 3 || preview.images().size() > 6)
+                || !"PENDING".equals(preview.status()) || preview.images().isEmpty() || preview.images().size() > 9)
             throw new ApiException("Invalid approved moodboard draft");
         var summary = createBoard(projectId, new MoodboardDTO.CreateBoard(preview.title()));
         var output = projectOutputRepository.findById(summary.id()).orElseThrow();
@@ -68,21 +68,22 @@ public class MoodboardService {
         projectOutputRepository.save(output);
         for (var reference : preview.images()) {
             validatePosition(reference.positionX(), reference.positionY());
-            // Exact metadata shown at preview time, fetched from Openverse by the server, never from approval JSON.
-            createItem(summary.id(), IMAGE, json(reference.image()), reference.positionX(), reference.positionY());
+            // Revalidate each selection through the authoritative provider; copy Pixabay into durable storage.
+            MoodboardImageDTO.Image verified = imageService.prepareToSave(reference.image().provider(), reference.image().id());
+            createItem(summary.id(), IMAGE, json(verified), reference.positionX(), reference.positionY());
         }
         for (var note : preview.notes()) {
             validatePosition(note.positionX(), note.positionY());
             createItem(summary.id(), LABEL, json(labelData(note.text(), note.color(), note.backgroundColor(), 17)),
                     note.positionX(), note.positionY());
         }
-        double paletteY = preview.notes().stream().mapToDouble(n -> n.positionY() + 100 + Math.ceil(n.text().length() / 22.0) * 27).max().orElse(800) + 40;
+        double paletteY = preview.notes().stream().mapToDouble(n -> n.positionY() + 150 + Math.ceil(n.text().length() / 18.0) * 28).max().orElse(980) + 55;
         for (int i = 0; i < preview.palette().size(); i++) {
             var color = preview.palette().get(i);
             String text = color.name() + "\n" + color.hex();
             // Palette remains an ordinary editable colored label; no new node type or schema.
-            createItem(summary.id(), LABEL, json(labelData(text, contrast(color.hex()), color.hex(), 17)),
-                    30.0 + (i % 3) * 250, paletteY + (i / 3) * 180);
+            createItem(summary.id(), LABEL, json(labelData(text, contrast(color.hex()), color.hex(), 18)),
+                    30.0 + (i % 3) * 300, paletteY + (i / 3) * 180);
         }
         return summary;
     }
@@ -90,7 +91,7 @@ public class MoodboardService {
     private String contrast(String hex) {
         int rgb = Integer.parseInt(hex.substring(1), 16);
         double brightness = ((rgb >> 16) * 299 + ((rgb >> 8) & 255) * 587 + (rgb & 255) * 114) / 1000.0;
-        return brightness > 155 ? "#153840" : "#FFFFFF";
+        return brightness > 145 ? "#1B2832" : "#FFFFFF";
     }
 
     @Transactional(readOnly = true)
@@ -126,13 +127,12 @@ public class MoodboardService {
         return new MoodboardDTO.BoardSummary(board.id(), board.projectId(), title);
     }
 
-    // Fetch external image metadata first, then persist it as an ordinary canvas node.
-    // Openverse is never trusted to send database IDs or executable JavaScript.
+    // Save only authoritative provider metadata; legacy Openverse boards remain readable.
     @Transactional
     public MoodboardDTO.Item addImage(Integer outputId, MoodboardDTO.AddImage request) {
         requireBoard(outputId);
         validatePosition(request.positionX(), request.positionY());
-        OpenverseDTO.Image image = openverseService.getImage(request.openverseId());
+        MoodboardImageDTO.Image image = imageService.prepareToSave(request.provider(), request.imageId());
         return createItem(outputId, IMAGE, json(image), request.positionX(), request.positionY());
     }
 
@@ -216,7 +216,7 @@ public class MoodboardService {
         String type = (String) row[1];
         try {
             if (IMAGE.equals(type)) {
-                OpenverseDTO.Image image = jsonMapper.readValue((String) row[2], OpenverseDTO.Image.class);
+                MoodboardImageDTO.Image image = jsonMapper.readValue((String) row[2], MoodboardImageDTO.Image.class);
                 return new MoodboardDTO.Item((Integer) row[0], type, (Double) row[3], (Double) row[4], image, null);
             }
             if (LABEL.equals(type)) {

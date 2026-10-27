@@ -104,8 +104,8 @@ public class CreativityAIContextService {
                 }
                 if (item.image() != null) {
                     var image = item.image();
-                    ref.put("provider", "Openverse");
-                    ref.put("openverseId", shorten(image.id(), 36));
+                    ref.put("provider", image.provider() == null ? "OPENVERSE" : image.provider());
+                    ref.put("imageId", shorten(image.id(), 160));
                     ref.put("imageTitle", shorten(image.title(), 300));
                     ref.put("creator", shorten(image.creator(), 200));
                     ref.put("imageUrl", shorten(image.imageUrl(), 2048));

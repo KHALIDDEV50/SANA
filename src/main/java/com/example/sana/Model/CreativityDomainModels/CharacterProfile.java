@@ -39,25 +39,25 @@ public class CharacterProfile {
     private Integer age;
     @Column(columnDefinition = "text")
     private String appearance;
-    @Column(columnDefinition = "varchar(50)")
+    @Column(columnDefinition = "text")
     private String traits;
-    @Column(columnDefinition = "varchar(50)")
+    @Column(columnDefinition = "text")
     private String strengths;
-    @Column(columnDefinition = "varchar(50)")
+    @Column(columnDefinition = "text")
     private String weaknesses;
-    @Column(columnDefinition = "varchar(50)")
+    @Column(columnDefinition = "text")
     private String skills;
     @Column(columnDefinition = "text")
     private String history;
-    @Column(columnDefinition = "varchar(50)")
+    @Column(columnDefinition = "text")
     private String goals;
-    @Column(columnDefinition = "varchar(50)")
+    @Column(columnDefinition = "text")
     private String fears;
     @Column(columnDefinition = "text")
     private String innerConflict;
-    @Column(columnDefinition = "varchar(50)")
+    @Column(columnDefinition = "text")
     private String secrets;
-    @Column(columnDefinition = "varchar(50)")
+    @Column(columnDefinition = "text")
     private String characterValues;
     @Column(columnDefinition = "text")
     private String characterArc;

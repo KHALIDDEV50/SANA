@@ -73,6 +73,17 @@ public class AIRequestService {
         return prepare(projectId, request, null, Map.of());
     }
 
+    /** A project-scoped moodboard CREATE task, distinct from diagram CREATE. */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public AIRunResponseDTO startMoodboardPlan(Integer projectId, String prompt) {
+        AIRequestDTO request = new AIRequestDTO();
+        request.setTask(AITask.CREATE);
+        request.setDiagramType("MOODBOARD_PLAN");
+        request.setPrompt(prompt);
+        request.setSelectedElementIds(List.of());
+        return prepare(projectId, request, "CREATIVITY", Map.of());
+    }
+
     // Start a structured Business tool analysis (advice only until the Business diagrams are added)
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public AIRunResponseDTO startBusiness(Integer projectId, AIRequestDTO request, Map<String, Object> businessContext) {
@@ -118,13 +129,22 @@ public class AIRequestService {
             throw new ApiException("Request domain does not match the project");
         }
 
+        boolean moodboardPlan = request.getTask() == AITask.CREATE
+                && "MOODBOARD_PLAN".equals(request.getDiagramType())
+                && request.getOutputId() == null && request.getBaseRevision() == null
+                && "CREATIVITY".equals(domain);
         GraphDefinitionDTO graph = new GraphDefinitionDTO(List.of(), List.of(), new LinkedHashMap<>());
         String diagramType;
         Integer revision = null;
         DiagramRules rules;
         List<String> selected = request.getSelectedElementIds() == null ? List.of() : List.copyOf(request.getSelectedElementIds());
 
-        if (request.getTask() == AITask.CREATE) {
+        if (moodboardPlan) {
+            // CREATE the moodboard preview plan, not a diagram or graph proposal.
+            // The shared n8n contract accepts CREATE with null outputId/baseRevision.
+            diagramType = "MOODBOARD_PLAN";
+            rules = null;
+        } else if (request.getTask() == AITask.CREATE) {
 
             diagramType = request.getDiagramType();
 
@@ -186,7 +206,7 @@ public class AIRequestService {
             context.put("graphRulesVersion", 1);
             context.put("graphRules", rules.getRulesSummary());
         }
-        context.putAll(diagramGraphService.extraContext(project, diagramType));
+        if (!moodboardPlan) context.putAll(diagramGraphService.extraContext(project, diagramType));
         context.putAll(extraContext);
 
         String requestId = UUID.randomUUID().toString();
