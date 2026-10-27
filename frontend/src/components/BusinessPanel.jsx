@@ -65,19 +65,10 @@ export default function BusinessPanel({project,lang,t,onClose,onApplied}) {
   if(locked.current)return;locked.current=true;setBusy(true);setError('');setNotice('');
   try{await action()}catch(e){if(alive.current)setError(e.message)}finally{locked.current=false;if(alive.current){setBusy(false);refreshHistory().catch(e=>{if(alive.current)setNotice(e.message)})}}
  }
- // Quick start: the project was just created from "Start with SANA AI"; send the idea right away (once)
- useEffect(()=>{
-  const key=`sana-ai-autostart-${project.id}`,raw=sessionStorage.getItem(key);if(!raw)return;
-  sessionStorage.removeItem(key);
-  try{const auto=JSON.parse(raw);setMode('CREATE');setDiagramType(auto.diagramType);send(null,auto)}catch{}
- },[project.id]);
- const currentMode=mode,currentDiagramType=diagramType;
- function send(e,auto){e?.preventDefault();perform(async()=>{
-  // A quick start always creates its suggested diagram; state updates from the effect are not visible yet
-  const mode=auto?'CREATE':currentMode,diagramType=auto?.diagramType??currentDiagramType;
+ function send(e){e.preventDefault();perform(async()=>{
   // Resolve all local validation before creating a diagram or recording a run.
   const reportInput=mode==='REPORT'?parseBusinessInput(input):null;
-  const answer=(auto?.prompt??prompt).trim();
+  const answer=prompt.trim();
   if((mode!=='REPORT'||clarification)&&!answer)throw new Error(text('اكتب طلبك أولًا.','Enter a request first.'));
   if(proposal?.reviewStatus==='PENDING')throw new Error(text('راجع المقترح الحالي بالقبول أو الرفض أولًا.','Accept or reject the pending proposal first.'));
   setProposal(null);
