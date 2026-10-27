@@ -152,7 +152,15 @@ public class BranchingStoryGraphAdapter implements DiagramGraphAdapter {
 
         List<Map<String, Object>> characters = new ArrayList<>();
         for (CharacterProfile character : characterProfileRepository.findByProjectNode_ProjectOutput_Project_IdOrderByIdAsc(project.getId())) {
-            characters.add(Map.of("id", character.getId(), "name", character.getName()));
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("id", character.getId());
+            entry.put("name", character.getName());
+            if (character.getRole() != null) entry.put("role", character.getRole());
+            if (character.getShortDescription() != null) entry.put("description", character.getShortDescription().substring(0, Math.min(350, character.getShortDescription().length())));
+            if (character.getAliases() != null) entry.put("aliases", character.getAliases());
+            if (character.getTraits() != null) entry.put("traits", character.getTraits());
+            if (character.getHistory() != null) entry.put("history", character.getHistory().substring(0, Math.min(350, character.getHistory().length())));
+            characters.add(entry);
         }
 
         List<Map<String, Object>> events = new ArrayList<>();
