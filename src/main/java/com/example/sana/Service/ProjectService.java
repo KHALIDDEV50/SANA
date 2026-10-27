@@ -5,11 +5,15 @@ import com.example.sana.Model.Project;
 import com.example.sana.Model.User;
 import com.example.sana.Repository.ProjectRepository;
 import com.example.sana.Repository.UserRepository;
+
+// PAYMENT ADDITION: checks the project limit of the user's plan.
+import com.example.sana.Service.Billing.BillingStore;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.HashSet;
 
+import java.util.HashSet;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -19,6 +23,10 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+
+    // ===== PAYMENT ADDITION START =====
+    private final BillingStore billingStore;
+    // ===== PAYMENT ADDITION END =====
 
     // Get all projects
     public List<Project> getAllProjects() {
@@ -50,6 +58,10 @@ public class ProjectService {
     }
 
     // Add a new project for a specific user
+
+    // PAYMENT ADDITION: keeps the quota check and project creation
+    // in one transaction. The user lock is held until creation completes.
+    @Transactional
     public void addProject(Integer userId, Project project) {
 
         // Check if the owner exists
@@ -59,7 +71,19 @@ public class ProjectService {
             throw new ApiException("User not found");
         }
 
-        project.setId(null); project.setVersion(0); project.setOutputs(new HashSet<>()); project.setRecords(new HashSet<>()); project.setUnderstanding(null);
+        // ===== PAYMENT ADDITION START =====
+        // Check the effective plan before creating another project.
+        // BillingStore locks the user to prevent concurrent requests
+        // from exceeding the project's subscription limit.
+        billingStore.checkProjectQuota(userId);
+        // ===== PAYMENT ADDITION END =====
+
+        project.setId(null);
+        project.setVersion(0);
+        project.setOutputs(new HashSet<>());
+        project.setRecords(new HashSet<>());
+        project.setUnderstanding(null);
+
         project.setOwner(owner);
         project.setCreatedAt(LocalDateTime.now());
         project.setUpdatedAt(LocalDateTime.now());
@@ -72,12 +96,13 @@ public class ProjectService {
     public void updateProject(Integer projectId, Project project) {
 
         // Check if the project exists
-        Project oldProject = projectRepository.findByIdForUpdate(projectId).orElse(null);
+        Project oldProject = projectRepository
+                .findByIdForUpdate(projectId)
+                .orElse(null);
 
         if (oldProject == null) {
             throw new ApiException("Project not found");
         }
-
 
         oldProject.setName(project.getName());
         oldProject.setDescription(project.getDescription());

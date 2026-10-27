@@ -1,6 +1,6 @@
 import React,{useCallback,useEffect,useState} from 'react';
 import {Sparkles,Sun,Orbit,Check,ArrowUpLeft,ArrowUpRight,ArrowLeft,ArrowRight,ShieldCheck,LockKeyhole,FolderKanban,CalendarDays,RefreshCw,AlertCircle} from 'lucide-react';
-import {PLANS,billingApi,billingEnabled,findPlan,membershipLimit} from '../lib/billing';
+import {PLANS,billingApi,billingEnabled,findPlan,membershipLimit} from '../lib/Oldbilling.js';
 
 const copy=(lang,ar,en)=>lang==='ar'?ar:en;
 const ICONS={SPARK:Sparkles,GLOW:Sun,HORIZON:Orbit};
