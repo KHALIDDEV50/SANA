@@ -42,3 +42,6 @@ docs/
 
 ### Server secrets (deployment) ###
 /.env
+
+### Downloaded moodboard images (local runs) ###
+sana-moodboard-images/

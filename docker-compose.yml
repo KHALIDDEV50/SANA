@@ -6,6 +6,11 @@ services:
     build: .
     restart: unless-stopped
     env_file: .env
+    environment:
+      SANA_IMAGES_DIR: /data/moodboard-images
+    # Downloaded moodboard images live in a volume, so rebuilding the app on deploy keeps them
+    volumes:
+      - moodboard_images:/data/moodboard-images
 
   caddy:
     image: caddy:2
@@ -25,3 +30,4 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  moodboard_images:

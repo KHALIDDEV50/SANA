@@ -1,4 +1,6 @@
 /* Screen-scoped studio styles. The landing scene and its original styles stay intact. */
+/* Defaults for the variables App.jsx sets per element (style={{'--sana-character-accent': ...}}) */
+:root{--sana-character-accent:#9875B5;--sana-character-tint:#F4ECFA;--swatch:transparent}
 .spark-auth{display:grid!important;grid-template-columns:minmax(0,1.1fr) minmax(370px,.9fr);padding:0!important;min-height:100dvh;background:#f6f1e8!important;align-items:stretch!important}
 .spark-auth-universe{position:relative;overflow:hidden;background:radial-gradient(ellipse at 25% 20%,#236f72 0,transparent 55%),linear-gradient(145deg,#103f47,#062b34);color:#fff8e8;display:flex;flex-direction:column;justify-content:space-between;padding:56px;min-height:680px}
 .spark-auth-universe>img{width:160px;object-fit:contain;position:relative;z-index:1}.spark-auth-story{position:relative;z-index:1;max-width:520px;padding-top:240px}.spark-auth-story>span{font-size:11px;color:#e3c794;letter-spacing:2px}.spark-auth-story h1{font-size:clamp(36px,4vw,66px);line-height:1.4;margin:20px 0}.spark-auth-story p{color:#c6dcd6;line-height:2;font-size:17px}
@@ -1538,6 +1540,31 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .sana-billing-result-actions button{border:1px solid #bed8cd;border-radius:11px;background:#fffef9;padding:11px 15px;font-weight:750;color:#155c64;font-size:12px;display:inline-flex;align-items:center;gap:8px;cursor:pointer}
 .sana-billing-result-actions button:first-child{background:#105c65;color:#fff;border-color:#105c65}
 .sana-billing-result-actions button:disabled{opacity:.6;cursor:default}
+
+/* "Start with SANA AI": the AI's suggestion card */
+.ai-start-suggestion{margin-top:18px;border:1px solid #e1dacf;border-inline-start:5px solid #c9a15b;border-radius:20px;background:#fffcf6;padding:20px;box-shadow:0 16px 45px #163d4310;display:grid;gap:14px}
+.ai-start-suggestion>strong{display:flex;align-items:center;gap:8px;color:#1f5c63;font-size:15px}
+.ai-start-suggestion dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:0}
+.ai-start-suggestion dl div{background:#f6f1e8;border-radius:12px;padding:10px 12px}
+.ai-start-suggestion dt{font-size:12px;color:#6b7f80}
+.ai-start-suggestion dd{margin:2px 0 0;font-weight:800;color:#1f3d42}
+.ai-start-suggestion label{display:grid;gap:6px;font-size:13px;color:#4c6466}
+.ai-start-suggestion input,.ai-start-suggestion select{border:1px solid #d9d0c2;border-radius:10px;padding:9px 11px;background:#fff;font:inherit}
+.ai-start-suggestion p{margin:0;color:#4c6466;font-size:14px;line-height:1.6}
+.ai-start-suggestion-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.ai-start-suggestion-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.ai-start-error{margin-top:12px;color:#b42318}
+.ai-start-progress{display:flex;align-items:center;gap:10px;color:#1f5c63;font-weight:700;font-size:14px;line-height:1.6}
+.ai-start-progress-dot{flex:none;width:12px;height:12px;border-radius:50%;background:#c9a15b;animation:ai-start-pulse 1.1s ease-in-out infinite}
+@keyframes ai-start-pulse{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}
+.ai-start-clarify{display:grid;gap:10px;border-top:1px dashed #e1dacf;padding-top:12px}
+.ai-start-clarify>strong{color:#1f3d42}
+.ai-start-clarify-answers{display:flex;flex-wrap:wrap;gap:8px}
+.ai-start-clarify-answers button{border:1px solid #d9d0c2;border-radius:999px;background:#fff;padding:7px 13px;cursor:pointer;font:inherit;color:#1f5c63}
+.ai-start-clarify-answers button:hover{border-color:#c9a15b;background:#fbf4e6}
+.ai-start-clarify form{display:flex;gap:8px}
+.ai-start-clarify form input{flex:1;min-width:0}
+
 /* SANA flexible moodboard canvas: roomy workspace, zoomable plane, pan and layout controls. */
 .sana-mood-workspace {position:relative; min-width:0;}
 .sana-mood-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:12px 16px}
