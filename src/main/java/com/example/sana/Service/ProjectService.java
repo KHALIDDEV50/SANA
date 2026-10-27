@@ -3,7 +3,11 @@ package com.example.sana.Service;
 import com.example.sana.API.ApiException;
 import com.example.sana.Model.Project;
 import com.example.sana.Model.User;
+import com.example.sana.Repository.AIInteractionRepository;
+import com.example.sana.Repository.ChangeProposalItemRepository;
+import com.example.sana.Repository.ChangeProposalRepository;
 import com.example.sana.Repository.ProjectRepository;
+import com.example.sana.Repository.ToolRunRepository;
 import com.example.sana.Repository.UserRepository;
 
 // PAYMENT ADDITION: checks the project limit of the user's plan.
@@ -23,6 +27,10 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+    private final AIInteractionRepository aiInteractionRepository;
+    private final ChangeProposalRepository changeProposalRepository;
+    private final ChangeProposalItemRepository changeProposalItemRepository;
+    private final ToolRunRepository toolRunRepository;
 
     // ===== PAYMENT ADDITION START =====
     private final BillingStore billingStore;
@@ -114,6 +122,7 @@ public class ProjectService {
     }
 
     // Delete an existing project
+    @Transactional
     public void deleteProject(Integer projectId) {
 
         // Check if the project exists
@@ -122,6 +131,12 @@ public class ProjectService {
         if (project == null) {
             throw new ApiException("Project not found");
         }
+
+        // The project's AI history is not cascaded from Project, so remove it first (proposal changes before proposals)
+        changeProposalItemRepository.deleteAllByProjectId(projectId);
+        changeProposalRepository.deleteAllByProjectId(projectId);
+        aiInteractionRepository.deleteAllByProjectId(projectId);
+        toolRunRepository.deleteAllByProjectId(projectId);
 
         projectRepository.delete(project);
     }
