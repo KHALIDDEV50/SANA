@@ -314,6 +314,51 @@ function AIPanel({t,lang,project,onClose,onApplied,onMoodboardSaved}){
   }catch(e){if(alive.current)setMoodboardError(e.message);}
   finally{if(alive.current)setBusy(false);}
  }
+ // Chat messages for a finished run; the same shape say() produces
+ const runMessages=run=>{
+  if(run.status==='FAILED'||run.status==='TIMED_OUT')return [{role:'error',text:publicError(run.error?.message||moodText('تعذر إكمال الطلب، حاول مرة أخرى.','Could not complete the request. Please try again.'),lang)}];
+  if(run.status!=='COMPLETED'||!run.result)return [{role:'error',text:publicError(t('aiStillRunning'),lang)}];
+  const result=run.result;
+  if(result.type==='CLARIFICATION')return [{role:'ai',text:`${result.message}\n\n${result.clarification?.question||''}`,answers:result.clarification?.suggestedAnswers||[],kind:'CLARIFICATION'}];
+  return [{role:'ai',text:result.message,kind:result.type}];
+ };
+ // Rebuild the chat from the saved AI requests, so a page reload does not lose it.
+ // A pending proposal comes back with Accept/Reject, and a request that is still running is followed again.
+ useEffect(()=>{
+  if(!API_MODE)return;
+  let cancelled=false;
+  (async()=>{
+   try{
+    const runs=(await aiApi.chat(project.id)).filter(run=>run.prompt&&!run.prompt.startsWith('SANA_MOODBOARD_PLAN')&&!run.businessToolType).reverse();
+    if(cancelled||!alive.current||!runs.length)return;
+    const restored=[];
+    for(const run of runs){
+     // Quick start adds a note for the AI when it retries a rejected diagram; it is not part of what the user wrote
+     restored.push({role:'user',text:run.prompt.split('\n\nYour previous diagram for this request was rejected:')[0]});
+     if(['PENDING','RUNNING'].includes(run.status))continue;
+     restored.push(...runMessages(run));
+     if(run.proposalReviewStatus==='ACCEPTED')restored.push({role:'ai',text:t('aiAccepted')});
+     if(run.proposalReviewStatus==='REJECTED')restored.push({role:'ai',text:t('aiRejected')});
+    }
+    // Keep anything the user typed while the history was loading
+    setMessages(current=>[...restored,...current]);
+    const latest=runs[runs.length-1];
+    if(['PENDING','RUNNING'].includes(latest.status)){
+     setBusy(true);
+     try{const run=await waitFor(latest);if(!cancelled&&alive.current)await showRun(run)}finally{if(alive.current)setBusy(false)}
+    }else{
+     const pending=[...runs].reverse().find(run=>run.proposalId&&run.proposalReviewStatus==='PENDING');
+     if(pending){const preview=await aiApi.proposal(project.id,pending.proposalId);if(!cancelled&&alive.current)setProposal(current=>current||preview)}
+    }
+   }catch{/* The chat still works without its history */}
+  })();
+  return()=>{cancelled=true};
+ },[project.id]);
+ // Show a finished run in the chat, and its proposal for review
+ async function showRun(run){
+  runMessages(run).forEach(m=>setMessages(list=>[...list,m]));
+  if(run.status==='COMPLETED'&&run.result?.type==='PROPOSAL'&&run.proposalId)setProposal(await aiApi.proposal(project.id,run.proposalId));
+ }
  // Poll the request every 2 seconds until n8n has answered (the backend gives up after 3 minutes)
  async function waitFor(run){let current=run;for(let i=0;i<120&&alive.current&&['PENDING','RUNNING'].includes(current.status);i++){await new Promise(r=>setTimeout(r,2000));current=await aiApi.status(current.statusUrl)}return current}
  async function send(e){
@@ -344,12 +389,7 @@ function AIPanel({t,lang,project,onClose,onApplied,onMoodboardSaved}){
    const body=task==='CREATE'?{task,prompt:text,diagramType}:{task,prompt:text,outputId:project.activeOutputId};
    if(creativity)body.conversationHistory=history;
    const run=await waitFor(await aiApi.start(project.id,body,project.domain));if(!alive.current)return;
-   if(run.status==='FAILED'||run.status==='TIMED_OUT'){say('error',run.error?.message||moodText('تعذر إكمال الطلب، حاول مرة أخرى.','Could not complete the request. Please try again.'));return}
-   if(run.status!=='COMPLETED'){say('error',t('aiStillRunning'));return}
-   const result=run.result;
-   if(result.type==='CLARIFICATION')say('ai',`${result.message}\n\n${result.clarification?.question||''}`,{answers:result.clarification?.suggestedAnswers||[],kind:'CLARIFICATION'});
-   else say('ai',result.message,{kind:result.type});
-   if(result.type==='PROPOSAL'&&run.proposalId)setProposal(await aiApi.proposal(project.id,run.proposalId));
+   await showRun(run);
   }catch(err){say('error',err.message)}finally{if(alive.current)setBusy(false)}
  }
  async function decide(accept){

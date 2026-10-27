@@ -262,6 +262,8 @@ export const businessApi={
 };
 export const aiApi={
  history:projectId=>api(`/api/projects/${projectId}/ai/requests`),
+ // The same requests with their prompts and answers, to rebuild the AI panel's chat
+ chat:projectId=>api(`/api/projects/${projectId}/ai/requests?messages=true`),
  start:(projectId,body,domain)=>api(
   ['writing','games'].includes(domain)?`/api/projects/${projectId}/creativity/ai/requests`:`/api/projects/${projectId}/ai/requests`,
   json('POST',body)),

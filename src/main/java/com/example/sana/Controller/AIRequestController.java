@@ -36,11 +36,13 @@ public class AIRequestController {
     }
 
     // Restore the latest 50 managed requests, including reports and pending proposals.
+    // messages=true also returns each prompt and answer, so the AI panel can rebuild its chat after a reload.
     @GetMapping("/requests")
     public ResponseEntity<List<AIRunResponseDTO>> listRequests(
-            @AuthenticationPrincipal User user, @PathVariable Integer projectId) {
+            @AuthenticationPrincipal User user, @PathVariable Integer projectId,
+            @RequestParam(defaultValue = "false") boolean messages) {
         ownershipService.checkProject(user, projectId);
-        return ResponseEntity.ok(aiRequestService.listRuns(projectId));
+        return ResponseEntity.ok(messages ? aiRequestService.listChat(projectId) : aiRequestService.listRuns(projectId));
     }
 
     // Poll the state and result of a request
