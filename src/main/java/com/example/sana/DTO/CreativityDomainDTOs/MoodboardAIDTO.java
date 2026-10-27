@@ -7,12 +7,12 @@ import java.util.List;
 /** Separate from graph requests, graph proposals and n8n callback DTOs. */
 public final class MoodboardAIDTO {
     private MoodboardAIDTO() {}
-    public record Generate(@NotBlank @Size(max = 10000) String prompt,
+    public record Generate(@Size(max = 10000) String prompt,
                            @NotBlank @Pattern(regexp = "ar|en") String language) {}
     public record Color(String name, String hex) {}
     public record Plan(String title, String theme, List<String> searchTerms,
                        List<String> notes, List<Color> palette) {}
-    public record ImageReference(OpenverseDTO.Image image, String searchTerm,
+    public record ImageReference(MoodboardImageDTO.Image image, String searchTerm,
                                  double positionX, double positionY) {}
     public record Note(String text, String color, String backgroundColor,
                        double positionX, double positionY) {}

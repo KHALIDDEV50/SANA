@@ -7,6 +7,8 @@ import com.example.sana.API.ApiResponse;
 import com.example.sana.DTO.CreativityDomainDTOs.MoodboardDTO;
 import com.example.sana.Service.CreativityDomainServices.MoodboardService;
 import com.example.sana.Service.CreativityDomainServices.OpenverseService;
+import com.example.sana.Service.CreativityDomainServices.MoodboardImageService;
+import com.example.sana.Service.CreativityDomainServices.PixabayImageStorage;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,17 +20,27 @@ import org.springframework.web.bind.annotation.*;
 public class MoodboardController {
 
     private final MoodboardService moodboardService;
-    private final OpenverseService openverseService;
+    private final OpenverseService openverseService; // Legacy image details only; never searched by new UI/AI.
+    private final MoodboardImageService imageService;
+    private final PixabayImageStorage pixabayStorage;
     private final OwnershipService ownershipService;
 
-    // Search Openverse without a key; images are not saved by searching.
+    // Unified search across four sources; Openverse is not queried.
     @GetMapping("/images/search")
     public ResponseEntity<?> searchImages(@RequestParam String keyword,
                                           @RequestParam(required = false) Integer page,
                                           @RequestParam(required = false) Integer pageSize) {
-        return ResponseEntity.status(200).body(openverseService.searchImages(keyword, page, pageSize));
+        return ResponseEntity.status(200).body(imageService.searchImages(keyword, page, pageSize));
     }
 
+    // Serve Pixabay media copied to persistent storage after saving (Pixabay forbids permanent hotlinks).
+    @GetMapping("/images/pixabay-assets/{id}")
+    public ResponseEntity<byte[]> savedPixabayAsset(@PathVariable String id) {
+        byte[] bytes = pixabayStorage.read(id);
+        return ResponseEntity.status(200).contentType(pixabayStorage.mimeType(bytes)).body(bytes);
+    }
+
+    // Kept solely to avoid breaking old integrations; the UI and AI do not use Openverse.
     // Fetch complete image attribution before selecting an image.
     @GetMapping("/images/{openverseId}")
     public ResponseEntity<?> imageDetails(@PathVariable String openverseId) {
@@ -64,7 +76,7 @@ public class MoodboardController {
         return ResponseEntity.status(200).body(moodboardService.renameBoard(outputId, request));
     }
 
-    // Add a verified Openverse image as a standalone ProjectNode.
+    // Add a verified image from one of the four active providers as a standalone ProjectNode.
     @PostMapping("/add/{outputId}/images")
     public ResponseEntity<?> addImage(@AuthenticationPrincipal User user, @PathVariable Integer outputId, @Valid @RequestBody MoodboardDTO.AddImage request) {
         ownershipService.checkOutput(user, outputId);
