@@ -10,11 +10,12 @@ import java.net.URI;
 @Setter
 @ConfigurationProperties(prefix = "sana.billing")
 public class BillingProperties {
-    private boolean enabled = true;
+    // Values come from application.properties (environment variables). Billing stays off until it is configured.
+    private boolean enabled = false;
     private boolean testMode = true;
     private String secretKey = "";
-    private String publicBaseUrl = "https://13-63-96-176.sslip.io";
-    private String frontendBaseUrl = "https://13-63-96-176.sslip.io";
+    private String publicBaseUrl = "";
+    private String frontendBaseUrl = "";
 
     @PostConstruct
     public void validate() {

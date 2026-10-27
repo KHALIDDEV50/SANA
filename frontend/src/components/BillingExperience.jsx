@@ -1,6 +1,6 @@
 import React,{useCallback,useEffect,useState} from 'react';
 import {Sparkles,Sun,Orbit,Check,ArrowUpLeft,ArrowUpRight,ArrowLeft,ArrowRight,ShieldCheck,LockKeyhole,FolderKanban,CalendarDays,RefreshCw,AlertCircle} from 'lucide-react';
-import {PLANS,billingApi,billingEnabled,findPlan,membershipLimit} from '../lib/Oldbilling.js';
+import {PLANS,billingApi,billingEnabled,findPlan,membershipLimit} from '../lib/billing';
 
 const copy=(lang,ar,en)=>lang==='ar'?ar:en;
 const ICONS={SPARK:Sparkles,GLOW:Sun,HORIZON:Orbit};
@@ -14,10 +14,11 @@ export default function BillingExperience({view='plans',resultStatus='',lang='ar
  const reload=useCallback(async()=>{
   if(!billingEnabled)return;
   setLoading(true);setError('');
-  try{setMembership(await billingApi.getMembership())}
+  // After returning from Moyasar, ask the backend to verify the payment with Moyasar (never trust the return URL)
+  try{setMembership(view==='result'?await billingApi.reconcile().catch(()=>billingApi.getMembership()):await billingApi.getMembership())}
   catch{setMembership(null);setError(copy(lang,'تعذر تحديث تفاصيل الاشتراك حاليًا. جرّب مرة أخرى.','Could not load your subscription. Please try again.'))}
   finally{setLoading(false)}
- },[lang]);
+ },[lang,view]);
  useEffect(()=>{reload()},[reload]);
  const activePlan=findPlan(membership?.planCode);
  const status=String(membership?.status||'').toUpperCase();

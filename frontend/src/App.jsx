@@ -24,7 +24,7 @@ import {DiagramNodeContent,DiagramPropertiesEditor,graphPresentation,organizedGr
 import DomainPanels,{ProjectSummary} from './components/DomainPanels';
 import AdminStudio from './components/AdminStudio';
 import BillingExperience from './components/BillingExperience';
-import {billingApi,billingEnabled,membershipLimit} from './lib/Oldbilling.js';
+import {billingApi,billingEnabled,membershipLimit} from './lib/billing';
 import SpecializedDiagramBoard,{SPECIAL_BOARD_TYPES} from './components/SpecializedDiagramBoard';
 
 const ICONS={characters:Users,worlds:Globe2,locations:MapPin,rules:ShieldCheck,events:Workflow,client:Users,application:LayoutDashboard,service:Server,database:Database,queue:Layers3,component:Boxes,external_system:Globe2,entity:Database,class:Code2,abstract_class:Code2,interface:Code2,enum:ListFilter,actor:Users,use_case:CircleDot,customer_segment:Users,value_proposition:Target,channels:Megaphone,customer_relationships:Heart,revenue_streams:Wallet,key_resources:Boxes,key_activities:CheckCircle2,key_partnerships:Link2,cost_structure:Wallet,central_topic:Lightbulb,topic:CircleDot,subtopic:CircleDot,note:FileText};
