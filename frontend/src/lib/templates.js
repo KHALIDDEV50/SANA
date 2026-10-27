@@ -23,3 +23,8 @@ export const TEMPLATE_CATALOG = [
 ];
 export const findTemplate = id => TEMPLATE_CATALOG.find(t => t.id === id);
 export const starterNodes = (templateId, lang = 'ar') => (findTemplate(templateId)?.nodes || []).map((n,i)=>({type:n.type,name:lang==='en'?n.en:n.ar,description:'',x:105+(i%3)*268,y:118+Math.floor(i/3)*175}));
+
+// Edges refer to indices in the template's starter nodes (not to persistent IDs).
+export const starterConnections = (templateId,lang='ar') => templateId === 'study-map'
+  ? [{source:0,target:1,type:'BRANCH',label:lang==='ar'?'يتفرع إلى':'Branch'},{source:0,target:2,type:'BRANCH',label:lang==='ar'?'يتفرع إلى':'Branch'}]
+  : [];
