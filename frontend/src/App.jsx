@@ -18,6 +18,7 @@ import './styles.css';
 import './theme-v3.css';
 import './theme-v4.css';
 import './creative-studio.css';
+import './home-landing.css';
 import AccountExperience from './components/AccountExperience';
 import StudioWorkspace,{useDialogFocus} from './components/StudioWorkspace';
 import {DiagramNodeContent,DiagramPropertiesEditor,graphPresentation,organizedGraph,edgeEndpoints,techEdgeEndpoints,techNodeBounds} from './components/DiagramPresentation';
@@ -95,20 +96,181 @@ function RelationModal({t,lang,project,elements,onClose,onSave,busy,initial}){
 }
 function ConfirmModal({t,lang,title,description,onCancel,onConfirm,busy,impact}){return <Modal title={title||t('confirmDelete')} onClose={onCancel}><div className="confirm-panel"><span className="danger-symbol"><Trash2 size={24}/></span><p>{description||t('confirmDelete')}</p>{impact&&<div className="spark-delete-impact"><strong>{t('deleteImpact')}</strong><p>{impact.relationsCount??impact.relationCount??impact.relations?.length??0} {t('relations')}</p>{(impact.blockingReasons||[]).map((reason,i)=><p key={i}>{reason}</p>)}</div>}<div className="modal-actions"><Btn variant="ghost" onClick={onCancel}>{t('cancel')}</Btn><Btn variant="danger" onClick={onConfirm} disabled={busy||impact?.canDelete===false} icon={Trash2}>{t('delete')}</Btn></div></div></Modal>}
 function Scene({onStart,t}){return <div className="hero-scene" aria-label="SANA creative universe"><div className="scene-arch scene-arch-outer"/><div className="scene-arch scene-arch-inner"/><div className="scene-rays"/><div className="scene-sun"/><div className="scene-hill hill-back"/><div className="scene-hill hill-front"/><div className="scene-stars"><i>✦</i><i>✧</i><i>✦</i><i>✧</i><i>✦</i></div><img className="hero-brand" src="/sana-logo.webp" alt="SANA"/><div className="orbit-card card-one"><Lightbulb size={17}/><span>{t('stepOne')}</span></div><div className="orbit-card card-two"><Network size={17}/><span>{t('stepThree')}</span></div><div className="orbit-card card-three"><Sparkles size={17}/><span>{t('stepFour')}</span></div><span className="scene-caption">SANA · CREATIVE SPACE</span></div>}
-function Landing({t,lang,projects,onNavigate,onNew,onOpen,onAI,guest=false}){
- 
- return <>
- <section className="landing-hero"><div className="hero-content"><div className="hero-tag"><Sparkles size={15}/>{t('heroEyebrow')}<span className="hero-tag-line"/></div><h1>{t('heroTitleA')}<br/><em>{t('heroTitleB')}</em></h1><p>{t('heroDescription')}</p><div className="hero-route-grid"><button type="button" className="hero-route hero-route-ai" onClick={onAI}><span className="route-icon"><Sparkles size={28}/></span><span className="route-copy"><strong>{t('aiRoute')}</strong><small>{t('aiRouteBody')}</small><span className="route-link">SANA AI <ArrowUpLeft size={18}/></span></span></button><button type="button" className="hero-route hero-route-templates" onClick={()=>onNavigate('library')}><span className="route-icon"><LayoutTemplate size={28}/></span><span className="route-copy"><strong>{t('templateRoute')}</strong><small>{t('templateRouteBody')}</small><span className="route-link">{t('templatesTitle')} <ArrowUpLeft size={18}/></span></span></button></div><div className="hero-mini"><span><Check size={14}/>{lang==='ar'?'أربعة مجالات في مكان واحد':'Four domains in one place'}</span><span><Check size={14}/>{lang==='ar'?'أفكارك محفوظة':'Save as you create'}</span></div></div><Scene t={t} onStart={onNew}/><span className="hero-bottom-stamp">EST. 2026 — SANA STUDIO</span></section>
- <section className="main-shell home-main">
- <SectionTitle eyebrow={guest?(lang==='ar'?'مساحتك الإبداعية':'YOUR CREATIVE SPACE'):t('mySpace')} title={guest?(lang==='ar'?'ابدأ رحلتك مع سنا':'Start creating with SANA'):t('yourProjects')} description={guest?(lang==='ar'?'تصفّح الأدوات والقوالب بحرية، وسجّل الدخول لحفظ أفكارك وإنشاء مشاريعك.':'Explore tools and templates freely. Sign in to create and save your projects.'):t('projectsDesc')} action={<Btn variant="soft" icon={guest?Sparkles:Plus} onClick={onNew}>{guest?(lang==='ar'?'سجّل الدخول للبدء':'Sign in to get started'):t('newProject')}</Btn>}/>{guest?<div className="sana-guest-welcome"><Sparkles size={25}/><div><strong>{lang==='ar'?'كل فكرة عظيمة تبدأ بخطوة':'Every idea starts somewhere'}</strong><p>{lang==='ar'?'تقدر تتعرف على SANA الآن. ولإنشاء مشروعك الأول، سجّل الدخول أو أنشئ حسابًا جديدًا.':'You can explore SANA now. Sign in or create an account when you are ready to build your first project.'}</p></div><Btn icon={ArrowUpLeft} onClick={onNew}>{lang==='ar'?'ابدأ مع سنا':'Start with SANA'}</Btn></div>:projects.length?<div className="projects-grid">{projects.slice(0,3).map(p=><ProjectCard key={p.id} project={p} onClick={()=>onOpen(p.id)} t={t} lang={lang}/>)}</div>:<Empty title={t('noProjects')} description={t('noProjectsBody')} action={<Btn icon={Plus} onClick={onNew}>{t('startProject')}</Btn>}/>}
- <div className="home-duo sana-four-domain-showcase"><div className="duo-intro"><span className="eyebrow"><span className="eyebrow-dot"/>{t('toolkit')}</span><h2>{t('toolkit')}</h2><p>{t('toolkitDesc')}</p><Btn variant="outline-dark" onClick={()=>onNavigate('library')}>{t('exploreTools')}</Btn><div className="duo-ornament">✳</div></div><div className="duo-tools sana-domain-tiles">{[
-  {key:'creativity',icon:BookOpen,description:lang==='ar'?'شخصيات وقصص وألعاب ولوحات إلهام':'Stories, games, characters and moodboards',tone:'creative'},
-  {key:'technology',icon:Code2,description:lang==='ar'?'مخططات الأنظمة وقواعد البيانات':'System and database diagrams',tone:'technology'},
-  {key:'business',icon:BriefcaseBusiness,description:lang==='ar'?'نماذج الأعمال وتحليل الأفكار':'Business models and strategic analysis',tone:'business'},
-  {key:'education',icon:GraduationCap,description:lang==='ar'?'خرائط ذهنية وتنظيم المفاهيم':'Mind maps and learning plans',tone:'education'}
- ].map(group=>{const Icon=group.icon;return <button key={group.key} className={`sana-domain-tile sana-domain-${group.tone}`} onClick={()=>onNavigate('library',group.key)}><span className="tool-tile-icon"><Icon size={23}/></span><div><strong>{t(group.key)}</strong><small>{group.description}</small></div>{lang==='ar'?<ArrowUpLeft size={17}/>:<ArrowUpRight size={17}/>}</button>})}</div></div>
- <section className="journey"><SectionTitle eyebrow={t('showcase')} title={t('showcase')} description={t('showcaseDesc')}/><div className="journey-grid">{[{icon:Lightbulb,title:'stepOne'},{icon:PenLine,title:'stepTwo'},{icon:Network,title:'stepThree'},{icon:Sparkles,title:'stepFour'}].map((s,i)=><div className="journey-step" key={s.title}><span className="journey-number">0{i+1}</span><s.icon size={25} strokeWidth={1.6}/><h3>{t(s.title)}</h3><span className="journey-connector"/></div>)}</div></section>
- <section className="bottom-cta"><span className="cta-star cta-star-one">✦</span><span className="cta-star cta-star-two">✧</span><div><span className="eyebrow">{t('sparkHeadline')}</span><h2>{t('sparkTitle')}</h2><p>{t('sparkBody')}</p></div><Btn onClick={onNew} icon={Plus}>{t('createNow')}</Btn></section></section></>
+// Home: write an idea in the hero and "Start with SANA AI" runs right here (suggest → approve → draw → open the Studio).
+// The orbit around the SANA mark reacts: it listens while the user types and spins up while SANA is thinking.
+// Ported from docs/frontend "SANA User Flow – الرئيسية — Home (Arabic, RTL)".
+const HOME_EXAMPLES=[
+ {ar:'حكاية مدينة ضاعت في الرمل',en:'A tale of a city lost in the sand'},
+ {ar:'تطبيق يرتّب مواعيد عيادة',en:'An app that organizes clinic appointments'},
+ {ar:'عربة قهوة على الكورنيش',en:'A coffee cart on the corniche'},
+ {ar:'رحلة مذاكرة داخل الخلية',en:'A study trip inside the cell'}
+];
+// [rotation°, height, width, duration s, delay s] of each light ray
+const HOME_RAYS=[[8,120,2,6.2,-1.1],[47,96,3,7.8,-4.0],[83,132,2,5.4,-2.6],[121,104,2,8.6,-6.3],[162,118,3,6.9,-0.4],[199,90,2,7.3,-3.7],[236,128,2,5.9,-5.2],[268,100,3,9.1,-2.0],[307,140,2,6.5,-4.8],[341,110,2,8.0,-1.9]];
+const HOME_STARS=[
+ [{left:30,top:46,fontSize:16},-0.6,'✦'],[{right:26,top:30,fontSize:12},-2.1,'✧'],[{right:8,top:132,fontSize:18,color:'#9CD6CC'},-3.4,'✦'],
+ [{left:8,top:150,fontSize:11},-1.5,'✧'],[{left:92,bottom:6,fontSize:13},-2.8,'✦'],[{right:96,top:4,fontSize:10,color:'#9CD6CC'},-0.2,'✦'],[{right:74,bottom:16,fontSize:9},-3.9,'✧']
+];
+function Landing({t,lang,projects,onNavigate,onNew,onOpen,guest=false,onLogin,canCreateProject,onReady}){
+ const {idea,setIdea,suggestion,choice,setChoice,changing,setChanging,options,error,stage,clarification,answer,setAnswer,advice,fixing,
+  working,locked,classify,changeDomain,draw,accept,answerClarification,domains,openProject}=useQuickStart({lang,canCreateProject,onReady});
+ const say=(ar,en)=>lang==='ar'?ar:en;
+ const [typing,setTyping]=useState(false),[focused,setFocused]=useState(false),[phase,setPhase]=useState(0),[off,setOff]=useState(false);
+ // Lite mode for weak devices: 4 GB of memory or less, or 4 CPU cores or fewer
+ const [lite]=useState(()=>{const n=typeof navigator==='object'?navigator:{};return (n.deviceMemory>0&&n.deviceMemory<=4)||(n.hardwareConcurrency>0&&n.hardwareConcurrency<=4)});
+ const stageEl=useRef(null),heroEl=useRef(null),typeTimer=useRef(0);
+ const motion=useRef({rate:1,think:0,focus:0,pulse:0,targetRate:1,targetThink:0,targetFocus:0,raf:0,anims:[],written:{},off:false});
+ const noIdea=!idea.trim();
+ // Orbit mood: idle drifts, typing holds still to listen, a pause ponders, SANA's work spins it up
+ const mode=working?'thinking':['suggested','ready','clarify','advice','failed'].includes(stage)?'settled':typing?'listening':noIdea?'idle':'pondering';
+ // The easing loop only runs while something is still changing; once the orbit settles it sleeps until the next change
+ const tick=useRef(null);
+ tick.current=()=>{
+  const m=motion.current,el=stageEl.current;m.raf=0;
+  if(!el||m.off)return;
+  m.rate+=(m.targetRate-m.rate)*.035;m.think+=(m.targetThink-m.think)*.04;m.focus+=(m.targetFocus-m.focus)*.06;m.pulse*=.95;
+  const settled=Math.abs(m.targetRate-m.rate)<.002&&Math.abs(m.targetThink-m.think)<.002&&Math.abs(m.targetFocus-m.focus)<.002&&m.pulse<.002;
+  if(settled){m.rate=m.targetRate;m.think=m.targetThink;m.focus=m.targetFocus;m.pulse=0}
+  for(const a of m.anims)if(a.playbackRate!==m.rate)a.playbackRate=m.rate;
+  // Write a CSS variable only when its rounded value actually changes
+  const write=(name,v)=>{const text=v.toFixed(3);if(m.written[name]!==text){m.written[name]=text;el.style.setProperty(name,text)}};
+  write('--think',m.think);write('--focus',m.focus);write('--glow',Math.max(m.think,m.focus));write('--pulse',m.pulse);
+  if(!settled)m.raf=requestAnimationFrame(()=>tick.current());
+ };
+ const wake=()=>{const m=motion.current;if(m.raf||!stageEl.current||m.off)return;m.anims=stageEl.current.getAnimations?stageEl.current.getAnimations({subtree:true}):[];m.raf=requestAnimationFrame(()=>tick.current())};
+ const bump=value=>{motion.current.pulse=Math.min(1,value);wake()};
+ useEffect(()=>{const m=motion.current;m.targetRate={idle:1,listening:.12,pondering:.45,thinking:3,settled:.8}[mode];m.targetThink=mode==='thinking'?1:0;m.targetFocus=focused?1:0;wake()},[mode,focused]);
+ useEffect(()=>{if(stage==='suggested')bump(1)},[stage]);
+ // Pause every hero animation while the hero is scrolled out of view
+ useEffect(()=>{
+  const m=motion.current;let observer;
+  if(typeof IntersectionObserver==='function'&&heroEl.current){
+   observer=new IntersectionObserver(entries=>{const isOff=!entries[entries.length-1].isIntersecting;m.off=isOff;setOff(isOff);if(!isOff)wake()});
+   observer.observe(heroEl.current);
+  }
+  return()=>{cancelAnimationFrame(m.raf);m.raf=0;observer?.disconnect();clearTimeout(typeTimer.current)};
+ },[]);
+ // A guest's idea survives signing in
+ useEffect(()=>{try{const saved=sessionStorage.getItem('sana-home-idea');if(saved){sessionStorage.removeItem('sana-home-idea');setIdea(saved)}}catch{}},[]);
+ // Speech bubbles follow the real work: reading and classifying the idea, then drawing it
+ useEffect(()=>{
+  if(stage==='classifying'){setPhase(0);const timer=setTimeout(()=>setPhase(1),2400);return()=>clearTimeout(timer)}
+  if(stage==='creating'||stage==='drawing')setPhase(2);
+ },[stage]);
+ const steps=[say('نقرأ ما بين سطورك','Reading between your lines'),say('نلقى لفكرتك موطنها','Finding where your idea belongs'),say('نرسم أولى ملامحها','Sketching its first lines')];
+ const captions={
+  listening:say('سنا تسمعك…','SANA is listening…'),
+  pondering:say('على راحتك، الفكرة تنضج على مهل','Take your time, the idea is ripening'),
+  thinking:fixing?say('سنا تضبط تفاصيل الرسم…','SANA is refining the details…'):say('نحيك فكرتك نجمةً نجمة…','Weaving your idea, star by star…'),
+  settled:say('وهذي شرارتك ✦','And here is your spark ✦')
+ };
+ // While SANA reads the idea, its first words lift out of the box and are drawn into the orbit
+ const flyWords=stage==='classifying'?idea.trim().split(/\s+/).filter(Boolean).slice(0,6).map((text,i,all)=>({
+  text,sx:Math.round((lang==='ar'?-1:1)*(all.length>1?-200+(400*i)/(all.length-1):0)),sy:440+((i*37)%60),delay:(0.15+i*0.2).toFixed(2)
+ })):[];
+ const onIdea=e=>{
+  bump(motion.current.pulse+.3);clearTimeout(typeTimer.current);
+  typeTimer.current=setTimeout(()=>setTyping(false),1400);setTyping(true);setIdea(e.target.value);
+ };
+ async function submit(e){
+  e.preventDefault();if(noIdea||locked)return;
+  clearTimeout(typeTimer.current);setTyping(false);bump(1);
+  // Guests sign in first; the idea is waiting in the box when they come back
+  if(guest){try{sessionStorage.setItem('sana-home-idea',idea)}catch{}onLogin?.();return}
+  if(!API_MODE){onNew();return}
+  await classify();
+ }
+ const recent=guest?[]:[...projects].sort((a,b)=>new Date(b.updatedAt||0)-new Date(a.updatedAt||0)).slice(0,3);
+ const Forward=lang==='ar'?ArrowLeft:ArrowRight;
+ return <div className={['sh-home',lite?'sh-lite':'',off?'sh-off':''].join(' ').trim()}>
+  <section ref={heroEl} id="top" className="sh-hero">
+   <div className="sh-space" aria-hidden="true"><div className="sh-nebula"/><div className="sh-band"><div className="sh-dust"/></div><div className="sh-stars sh-stars-s"/><div className="sh-stars sh-stars-m"/><div className="sh-stars sh-stars-l"/><div className="sh-shoot"/></div>
+   <span aria-hidden="true" className="sh-decor" style={{left:'9%',top:'18%',color:'#FAE3AE',opacity:.55,fontSize:18}}>✦</span>
+   <span aria-hidden="true" className="sh-decor" style={{right:'12%',top:'12%',color:'#FAE3AE',opacity:.4,fontSize:13}}>✧</span>
+   <span aria-hidden="true" className="sh-decor" style={{right:'7%',bottom:'22%',color:'#41B7B4',opacity:.5,fontSize:16}}>✦</span>
+   <span aria-hidden="true" className="sh-decor" style={{left:'15%',bottom:'14%',color:'#FAE3AE',opacity:.35,fontSize:12}}>✧</span>
+   <div className="sh-hero-content">
+    <div className="sh-stage">
+     <div className="sh-fx" aria-hidden="true">
+      {working&&<><span className="sh-wave"/><span className="sh-wave" style={{animationDelay:'1.05s'}}/></>}
+      {flyWords.map((w,i)=><span key={i} className="sh-word" style={{'--sx':`${w.sx}px`,'--sy':`${w.sy}px`,animationDelay:`${w.delay}s`}}><span><span>{w.text}</span></span></span>)}
+      {working&&<span key={phase} className={`sh-bubble ${phase===1?'sh-bubble-l':'sh-bubble-r'}`}>{steps[phase]}</span>}
+      {stage==='suggested'&&<span className="sh-bloom"/>}
+     </div>
+     <div className="sh-orbit" ref={stageEl} aria-hidden="true">
+      <div className="sh-halo"/><div className="sh-halo-hot"/>
+      <div className="sh-rays">{HOME_RAYS.map(([rotate,height,width,duration,delay],i)=><i key={i} className="sh-ray" style={{rotate:`${rotate}deg`,height,width,marginLeft:-width/2,animationDuration:`${duration}s`,animationDelay:`${delay}s`}}/>)}</div>
+      <div className="sh-aura"/>
+      {['c','b','a','d'].map(k=><div key={k} className={`sh-ring sh-ring-${k}`}><div className="sh-spin"/></div>)}
+      <img className="sh-mark" src="/sana-mark-original.png" alt=""/>
+      {['a','b'].map(k=><span key={k} className={`sh-track sh-track-${k}`}><span className="sh-rx"><span className="sh-ry"><span className="sh-rider"><span>✦</span></span></span></span></span>)}
+      <div className="sh-starset">{HOME_STARS.map(([style,delay,glyph],i)=><span key={i} className="sh-star" style={{...style,animationDelay:`${delay}s`}}>{glyph}</span>)}</div>
+     </div>
+     <div className="sh-caption" aria-live="polite" style={{opacity:captions[mode]?1:0}}>{captions[mode]||' '}</div>
+    </div>
+    <h1 className="sh-title">{say('في كل فكرة سنا','In every idea, a spark')}<br/><span>{say('ينتظر من يوقده','waiting to be lit')}</span></h1>
+    <p className="sh-lead">{say('أطلق العنان لأفكارك وعبّر عمّا في خاطرك، وسنا تحوّله نور يرسم لفكرتك الطريق','Let your ideas out and say what is on your mind; SANA turns it into light that shows your idea the way.')}</p>
+    <form className={`sh-prompt ${working?'sh-busy':''}`} onSubmit={submit}>
+     <label htmlFor="sh-idea">{say('وش الفكرة اللي تشغل بالك؟','What idea is on your mind?')}</label>
+     <textarea id="sh-idea" className="sh-idea" rows={3} maxLength={5000} value={idea} disabled={locked}
+      onChange={onIdea} onFocus={()=>{bump(1);setFocused(true)}} onBlur={()=>setFocused(false)}
+      placeholder={say('مثلًا: حكاية مدينة ضاعت بين كثبان الربع الخالي، ورسّام خرايط يلقاها صدفة ذات فجر…','For example: a city lost among the dunes of the Empty Quarter, found by chance one dawn by a mapmaker…')}/>
+     <div className="sh-prompt-actions">
+      <button type="submit" className="sh-gold" disabled={noIdea||locked}>{stage==='classifying'?say('سنا تقرأ فكرتك…','SANA is reading your idea…'):say('أطلق الشرارة مع سنا','Ignite it with SANA')}<Forward size={17}/></button>
+     </div>
+    </form>
+    {stage==='idle'&&<div className="sh-examples">{HOME_EXAMPLES.map(ex=><button type="button" key={ex.en} onClick={()=>{bump(.8);setIdea(say(ex.ar,ex.en))}}>{say(ex.ar,ex.en)}</button>)}</div>}
+    {working&&<div role="status" className="sh-sr">{steps[phase]}</div>}
+    {suggestion&&choice&&<div role="status" className="sh-reveal sh-card">
+     <div className="sh-card-row">
+      <div className="sh-card-main">
+       <span className="sh-card-kicker">{say('من وحي فكرتك','Inspired by your idea')}</span>
+       {changing&&!locked
+        ?<input className="sh-card-input" aria-label={say('اسم المشروع','Project name')} value={choice.name||''} maxLength={100} onChange={e=>setChoice(c=>({...c,name:e.target.value}))}/>
+        :<span className="sh-card-name">{choice.name}</span>}
+       {changing&&!locked
+        ?<div className="sh-card-selects">
+          <select aria-label={say('المجال','Domain')} value={choice.domain} onChange={e=>changeDomain(e.target.value)}>{domains.map(d=><option key={d} value={d}>{t(d)}</option>)}</select>
+          <select aria-label={say('المخطط','Diagram')} value={choice.diagramType} onChange={e=>setChoice(c=>({...c,diagramType:e.target.value}))}>{(options[choice.domain]||[]).map(type=><option key={type} value={type}>{t(`diagram_${type}`)}</option>)}</select>
+         </div>
+        :<span className="sh-card-meta">{t(choice.domain)} · {t(`diagram_${choice.diagramType}`)}</span>}
+      </div>
+      {stage==='suggested'&&<div className="sh-card-actions">
+       <button type="button" className="sh-ghost" onClick={()=>setChanging(v=>!v)}>{changing?say('تم','Done'):say('غيّرها','Change it')}</button>
+       <button type="button" className="sh-gold" onClick={accept}>{say('تمام، ارسمها','Great, draw it')}</button>
+      </div>}
+     </div>
+     {stage==='suggested'&&suggestion.reason&&<p className="sh-card-reason">{suggestion.reason}</p>}
+     {['creating','drawing','ready'].includes(stage)&&<p className="sh-card-status">{stage==='creating'?say('نجهّز مساحة مشروعك…','Preparing your project space…')
+      :stage==='ready'?say('اكتملت! نفتح لك مساحة العمل…','Done! Opening your workspace…')
+      :fixing?say('سنا تضبط تفاصيل الرسم…','SANA is refining the drawing…')
+      :say('سنا ترسم فكرتك الآن، وتنتقل إليها فور اكتمالها','SANA is drawing your idea; it opens as soon as it is ready')}</p>}
+     {stage==='clarify'&&clarification&&<div className="sh-card-clarify">
+      {clarification.message&&<p>{clarification.message}</p>}
+      <strong>{clarification.question}</strong>
+      {clarification.answers.length>0&&<div className="sh-examples">{clarification.answers.map((text,i)=><button type="button" key={i} onClick={()=>answerClarification(text)}>{text}</button>)}</div>}
+      <form onSubmit={e=>{e.preventDefault();answerClarification(answer)}}><input aria-label={say('إجابتك','Your answer')} value={answer} onChange={e=>setAnswer(e.target.value)} maxLength={1500} placeholder={say('أو اكتب إجابتك','Or type your answer')}/><button type="submit" className="sh-gold" disabled={!answer.trim()}>{say('كمّل','Continue')}</button></form>
+     </div>}
+     {stage==='advice'&&<div className="sh-card-clarify"><p>{advice}</p><div className="sh-card-actions"><button type="button" className="sh-ghost" onClick={openProject}>{say('افتح المشروع','Open project')}</button><button type="button" className="sh-gold" onClick={draw}>{say('حاول الرسم مرة ثانية','Try drawing again')}</button></div></div>}
+     {stage==='failed'&&<div className="sh-card-actions"><button type="button" className="sh-ghost" onClick={openProject}>{say('افتح المشروع','Open project')}</button><button type="button" className="sh-gold" onClick={draw}>{say('حاول مرة ثانية','Try again')}</button></div>}
+    </div>}
+    {error&&<p role="alert" className="sh-error">{error}</p>}
+    <div className="sh-divider"><span/>{say('أو امشِ الدرب بنفسك','Or find your own way')}<span/></div>
+    <div className="sh-secondary">
+     <button type="button" className="sh-outline" onClick={()=>onNew()}><Plus size={17}/>{say('ابدأ مشروعك من أول سطر','Start your project from scratch')}</button>
+     <button type="button" className="sh-link" onClick={()=>onNavigate('library')}>{say('استلهم من القوالب','Get inspired by templates')}</button>
+    </div>
+   </div>
+  </section>
+  {recent.length>0&&<section className="sh-recent">
+   <div className="sh-recent-head"><h2>{say('كمّل من حيث وقفت','Pick up where you left off')}</h2><button type="button" onClick={()=>onNavigate('projects')}>{say('كل مشاريعك ←','All your projects →')}</button></div>
+   <div className="sh-recent-grid">{recent.map(p=><button type="button" key={p.id} onClick={()=>onOpen(p.id)}>
+    <span className="sh-recent-domain">{t(p.domain)}</span>
+    <span className="sh-recent-name">{p.name}</span>
+    <span className="sh-recent-date">{say('آخر لمسة','Last touched')} {dateLabel(p.updatedAt,lang)}</span>
+   </button>)}</div>
+  </section>}
+ </div>;
 }
 function Projects({user,projects,t,lang,onOpen,onNew,onDelete,onEdit,onImport}){const [query,setQuery]=useState(''),[domain,setDomain]=useState('all');let recent=[];try{recent=JSON.parse(localStorage.getItem(`sana-recent-${user?.id||'local'}`)||'[]').map(id=>projects.find(p=>String(p.id)===id)).filter(Boolean)}catch{}const shown=projects.filter(p=>(domain==='all'||p.domain===domain)&&`${p.name} ${p.description}`.toLowerCase().includes(query.toLowerCase()));return <div className="main-shell inner-page page-enter"><div className="page-intro spark-project-intro"><div className="spark-project-intro-copy"><span className="eyebrow"><span className="eyebrow-dot"/>{t('mySpace')}</span><h1>{user?.name?`${t('welcome')}، ${user.name}`:t('allProjects')}<span className="spark-heading-star" aria-hidden="true">✦</span></h1><p>{t('personalWelcome')}</p><div className="spark-intro-actions"><Btn icon={Plus} onClick={onNew}>{t('newProject')}</Btn><span className="spark-intro-counter"><FolderClosed size={16}/>{projects.length} {t('projects')}</span><button className="sana-my-plan-link" onClick={()=>window.location.hash='/membership'}><Sparkles size={15}/>{lang==='ar'?'باقتي':'My plan'}</button></div></div><div className="spark-dashboard-art" aria-hidden="true"><span className="spark-dashboard-art-core">✦</span><i/><i/><i/><b> SANA </b></div></div>{recent.length>0&&<div className="spark-resume"><div><small>{t('recentOnDevice')}</small><strong>{recent[0].name}</strong></div><Btn icon={ArrowUpLeft} onClick={()=>onOpen(recent[0].id)}>{t('resume')}</Btn></div>}<div className="toolbar surface-toolbar"><div className="search-field"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={t('search')} aria-label={t('search')}/></div><div className="filter-pills">{[['all','all'],['writing','writing'],['games','games'],['technology','technology'],['business','business'],['education','education']].map(([v,l])=><button key={v} className={domain===v?'active':''} onClick={()=>setDomain(v)}>{t(l)}</button>)}</div><div className="projects-toolbar-actions">{!API_MODE&&<Btn icon={Upload} variant="outline-dark" onClick={onImport}>{t('import')}</Btn>}<Btn icon={Plus} onClick={onNew}>{t('newProject')}</Btn></div></div>{shown.length?<div className="projects-grid projects-page-grid">{shown.map(p=><div key={p.id} className="project-wrap"><ProjectCard project={p} t={t} lang={lang} onClick={()=>onOpen(p.id)}/><div className="project-actions"><IconButton label={t('edit')} onClick={()=>onEdit(p)}><Edit3 size={15}/></IconButton><IconButton label={t('delete')} className="danger-hover" onClick={()=>onDelete(p)}><Trash2 size={15}/></IconButton></div></div>)}</div>:<Empty title={t('noItems')} description={t('noProjectsBody')} action={<Btn icon={Plus} onClick={onNew}>{t('newProject')}</Btn>}/>}</div>}
 function ToolsPage({t,lang,onNew,onOpen,projects,onNavigate}){
@@ -120,11 +282,11 @@ function LibraryPage({t,lang,onNew,initialDomain='all'}){
  const shown=TEMPLATE_CATALOG.filter(item=>domain==='all'||item.group===domain);
  return <div className="main-shell inner-page page-enter"><div className="page-intro"><span className="eyebrow">SANA · TEMPLATE LIBRARY</span><h1>{t('templatesTitle')}</h1><p>{t('templatesSubtitle')}</p></div><div className="template-filter" role="group" aria-label={t('domain')}>{groups.map(([id,key])=><button key={id} className={domain===id?'active':''} onClick={()=>setDomain(id)}>{t(key)}</button>)}</div><div className="template-grid">{shown.map(item=>{const Icon=item.group==='technology'?Code2:item.group==='business'?BriefcaseBusiness:item.group==='education'?GraduationCap:item.domain==='games'?Gamepad2:BookOpen;return <article className={`template-card template-${item.group}`} key={item.id}><div className="template-preview"><span className="template-corner">SANA / {item.group.toUpperCase()}</span><Icon size={42} strokeWidth={1.5}/><span className="template-ornament">✦</span></div><div className="template-body"><DomainPill domain={item.domain} t={t}/><h3>{lang==='ar'?item.ar:item.en}</h3><p>{lang==='ar'?item.arDesc:item.enDesc}</p><Btn icon={ArrowUpLeft} onClick={()=>onNew({templateId:item.id,domain:item.domain,name:lang==='ar'?item.ar:item.en,description:lang==='ar'?item.arDesc:item.enDesc})}>{t('startProject')}</Btn></div></article>})}</div></div>
 }
-// "Start with SANA AI": the idea goes straight to the AI, which suggests the domain, diagram and project name.
-// After the user accepts, this page creates the project, lets the AI draw the diagram and applies it,
-// and opens the Studio only when the diagram is ready.
-function AIStartPage({t,lang,onTemplates,onNew,projects,onContinue,canCreateProject,onReady}){
- const [idea,setIdea]=useState(''),[selected,setSelected]=useState(''),[suggestion,setSuggestion]=useState(null),[choice,setChoice]=useState(null);
+// "Start with SANA AI", shared by the Home page and the Start page: SANA suggests a domain, diagram and name for an
+// idea; after the user approves, the project is created, the AI draws the diagram, the result is applied and the
+// Studio opens only when the diagram is ready.
+function useQuickStart({lang,canCreateProject,onReady}){
+ const [idea,setIdeaText]=useState(''),[suggestion,setSuggestion]=useState(null),[choice,setChoice]=useState(null);
  const [changing,setChanging]=useState(false),[options,setOptions]=useState({}),[error,setError]=useState('');
  // The stages mirror the real quick-start API: classify, review, create, draw, or clarify.
  const [stage,setStage]=useState('idle'),[clarification,setClarification]=useState(null),[answer,setAnswer]=useState(''),[advice,setAdvice]=useState(''),[fixing,setFixing]=useState(false);
@@ -132,23 +294,11 @@ function AIStartPage({t,lang,onTemplates,onNew,projects,onContinue,canCreateProj
  useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
  const say=(ar,en)=>lang==='ar'?ar:en;
  const working=['classifying','creating','drawing'].includes(stage),locked=working||Boolean(created.current);
- const inMotion=working||stage==='ready';
- const stars=useMemo(()=>Array.from({length:25},(_,i)=>({
-  x:4+((i*37+19)%93),y:3+((i*31+11)%92),size:i%6===0?3:2,
-  delay:-((i*1.7)%8),duration:3.3+(i%5)*.7
- })),[]);
- const stageLabel=stage==='classifying'?say('سنا تستكشف الفكرة','SANA is discovering your idea')
-  :stage==='creating'?say('بدأ تكوين عالمك','Your world is taking shape')
-  :stage==='drawing'?(fixing?say('سنا تضبط تفاصيل التصور','SANA is refining the vision'):say('تترابط ملامح مشروعك الآن','Your project is coming together'))
-  :stage==='ready'?say('عالمك الجديد أصبح جاهزًا','Your new world is ready')
-  :stage==='clarify'?say('تفصيل صغير يصنع فرقًا','One more detail will help')
-  :stage==='suggested'?say('اتضحت ملامح فكرتك','Your idea has taken shape')
-  :say('كل عالم يبدأ بشرارة','Every world begins with a spark');
- async function submit(e){
-  e.preventDefault();if(locked||!idea.trim())return;setError('');
-  if(selected){onContinue(selected,idea);return}
-  if(!API_MODE){sessionStorage.setItem('sana-ai-pending',idea);onNew({description:idea,aiFirst:true});return}
-  setStage('classifying');
+ // Editing the idea discards an earlier suggestion
+ const setIdea=value=>{setIdeaText(value);setSuggestion(null);setStage('idle')};
+ const resetSuggestion=()=>{setSuggestion(null);setStage('idle')};
+ async function classify(){
+  setError('');setStage('classifying');
   try{
    const [result,diagramOptions]=await Promise.all([quickStartApi.classify(idea,lang),quickStartApi.diagramOptions()]);
    if(!alive.current)return;
@@ -214,6 +364,36 @@ function AIStartPage({t,lang,onTemplates,onNew,projects,onContinue,canCreateProj
  }
  const domains=['technology','business','education','writing','games'].filter(d=>(options[d]||[]).length);
  const openProject=()=>{if(created.current?.id)onReady(created.current.id)};
+ return {idea,setIdea,resetSuggestion,suggestion,choice,setChoice,changing,setChanging,options,error,setError,stage,clarification,answer,setAnswer,advice,fixing,
+  working,locked,classify,changeDomain,draw,accept,answerClarification,domains,openProject};
+}
+
+// "Start with SANA AI": the idea goes straight to the AI, which suggests the domain, diagram and project name.
+// After the user accepts, this page creates the project, lets the AI draw the diagram and applies it,
+// and opens the Studio only when the diagram is ready.
+function AIStartPage({t,lang,onTemplates,onNew,projects,onContinue,canCreateProject,onReady}){
+ const [selected,setSelected]=useState('');
+ const {idea,setIdea,resetSuggestion,suggestion,choice,setChoice,changing,setChanging,options,error,setError,stage,clarification,answer,setAnswer,advice,fixing,
+  working,locked,classify,changeDomain,draw,accept,answerClarification,domains,openProject}=useQuickStart({lang,canCreateProject,onReady});
+ const say=(ar,en)=>lang==='ar'?ar:en;
+ const inMotion=working||stage==='ready';
+ const stars=useMemo(()=>Array.from({length:25},(_,i)=>({
+  x:4+((i*37+19)%93),y:3+((i*31+11)%92),size:i%6===0?3:2,
+  delay:-((i*1.7)%8),duration:3.3+(i%5)*.7
+ })),[]);
+ const stageLabel=stage==='classifying'?say('سنا تستكشف الفكرة','SANA is discovering your idea')
+  :stage==='creating'?say('بدأ تكوين عالمك','Your world is taking shape')
+  :stage==='drawing'?(fixing?say('سنا تضبط تفاصيل التصور','SANA is refining the vision'):say('تترابط ملامح مشروعك الآن','Your project is coming together'))
+  :stage==='ready'?say('عالمك الجديد أصبح جاهزًا','Your new world is ready')
+  :stage==='clarify'?say('تفصيل صغير يصنع فرقًا','One more detail will help')
+  :stage==='suggested'?say('اتضحت ملامح فكرتك','Your idea has taken shape')
+  :say('كل عالم يبدأ بشرارة','Every world begins with a spark');
+ async function submit(e){
+  e.preventDefault();if(locked||!idea.trim())return;setError('');
+  if(selected){onContinue(selected,idea);return}
+  if(!API_MODE){sessionStorage.setItem('sana-ai-pending',idea);onNew({description:idea,aiFirst:true});return}
+  await classify();
+ }
  return <section className={`ai-start-page sana-cosmos sana-cosmos-${stage} page-enter`} aria-label={say('رحلة الفكرة مع سنا','SANA idea journey')}>
   <div className="sana-cosmos-backdrop" aria-hidden="true">
    <div className="sana-cosmos-aurora"/>
@@ -240,11 +420,11 @@ function AIStartPage({t,lang,onTemplates,onNew,projects,onContinue,canCreateProj
    {!suggestion&&<form className="sana-cosmos-entry" onSubmit={submit}>
     <label htmlFor="sana-cosmos-idea"><Sparkles size={16}/>{say('اكتب الفكرة التي تريد أن تبدأ بها','Describe the idea you want to bring to life')}</label>
     <textarea id="sana-cosmos-idea" rows={5} maxLength={6000} required disabled={locked} value={idea}
-     onChange={e=>{setIdea(e.target.value);setSuggestion(null);setStage('idle')}}
+     onChange={e=>setIdea(e.target.value)}
      placeholder={say('مثلاً: لعبة غموض في بلدة ساحلية، تتفرع أحداثها حسب قرارات اللاعب...','For example: a mystery game in a coastal town, with choices that shape the story...')}/>
     <div className="sana-cosmos-entry-options">
      <label htmlFor="sana-cosmos-existing">{say('أين تبدأ الفكرة؟','Where should the idea begin?')}</label>
-     <select id="sana-cosmos-existing" disabled={locked} value={selected} onChange={e=>{setSelected(e.target.value);setSuggestion(null);setStage('idle')}}>
+     <select id="sana-cosmos-existing" disabled={locked} value={selected} onChange={e=>{setSelected(e.target.value);resetSuggestion()}}>
       <option value="">{say('مشروع جديد','A new project')}</option>{projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
      </select>
     </div>
@@ -674,8 +854,8 @@ function App({onLogout,user,onLogin}){
  // Quick start: the Start page created the project and drew its diagram; show it in the Studio
  const quickStartReady=async projectId=>{await refresh();setAiOpen(false);navigate('studio',projectId,'map')};
  const main=()=>{
- if(guest&&!['home','tools','library','pricing','settings'].includes(route.page))return <Landing guest projects={[]} t={t} lang={lang} onNavigate={navigate} onNew={()=>openNew()} onAI={()=>onLogin?.()} onOpen={()=>onLogin?.()}/>;
- if(route.page==='home')return <Landing guest={guest} projects={projects} t={t} lang={lang} onNavigate={navigate} onNew={()=>openNew()} onAI={()=>navigate('ai-start')} onOpen={id=>navigate('studio',id)}/>;
+ if(guest&&!['home','tools','library','pricing','settings'].includes(route.page))return <Landing guest projects={[]} t={t} lang={lang} onNavigate={navigate} onNew={()=>openNew()} onLogin={onLogin} onOpen={()=>onLogin?.()} canCreateProject={planAllowsNewProject} onReady={quickStartReady}/>;
+ if(route.page==='home')return <Landing guest={guest} projects={projects} t={t} lang={lang} onNavigate={navigate} onNew={()=>openNew()} onLogin={onLogin} onOpen={id=>navigate('studio',id)} canCreateProject={planAllowsNewProject} onReady={quickStartReady}/>;
  if(route.page==='projects')return <Projects user={user} projects={projects} t={t} lang={lang} onNew={()=>openNew()} onOpen={id=>navigate('studio',id)} onEdit={initial=>setModal({kind:'project',initial})} onDelete={initial=>setModal({kind:'confirm',what:'project',initial})} onImport={()=>importRef.current?.click()}/>;
  if(route.page==='tools')return <ToolsPage projects={projects} t={t} lang={lang} onNew={seed=>openNew(seed)} onOpen={id=>navigate('studio',id)} onNavigate={navigate}/>;
  if(route.page==='library')return <LibraryPage key={route.domain||'all'} initialDomain={route.domain||'all'} t={t} lang={lang} onNew={seed=>openNew(seed)}/>;
