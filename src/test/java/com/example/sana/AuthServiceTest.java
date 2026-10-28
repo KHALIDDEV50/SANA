@@ -1,6 +1,7 @@
 package com.example.sana;
 
 import com.example.sana.API.ApiException;
+import com.example.sana.DTO.Notification.UserRegisteredEvent;
 import com.example.sana.Model.User;
 import com.example.sana.Repository.UserRepository;
 import com.example.sana.Service.AuthService;
@@ -11,8 +12,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,6 +27,8 @@ public class AuthServiceTest {
     UserRepository userRepository;
     @Mock
     PasswordEncoder passwordEncoder;
+    @Mock
+    ApplicationEventPublisher eventPublisher;
 
     User user;
 
@@ -41,6 +46,7 @@ public class AuthServiceTest {
     public void registerTest() {
         when(userRepository.findUserByEmail(user.getEmail())).thenReturn(null);
         when(passwordEncoder.encode("12345678")).thenReturn("{bcrypt}hashed");
+        when(userRepository.save(user)).thenReturn(user);
 
         authService.register(user);
         Assertions.assertNull(user.getId());
@@ -50,6 +56,8 @@ public class AuthServiceTest {
         verify(userRepository, times(1)).findUserByEmail(user.getEmail());
         verify(passwordEncoder, times(1)).encode("12345678");
         verify(userRepository, times(1)).save(user);
+        // The welcome email is sent through an event after the account is saved
+        verify(eventPublisher, times(1)).publishEvent(any(UserRegisteredEvent.class));
     }
 
     @Test
@@ -61,5 +69,6 @@ public class AuthServiceTest {
 
         verify(userRepository, times(1)).findUserByEmail(user.getEmail());
         verify(userRepository, never()).save(user);
+        verify(eventPublisher, never()).publishEvent(any(UserRegisteredEvent.class));
     }
 }
