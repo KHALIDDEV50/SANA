@@ -8,17 +8,17 @@ const sar=(amount,lang)=>new Intl.NumberFormat(lang==='ar'?'ar-SA':'en-SA',{maxi
 const planName=(plan,lang)=>lang==='ar'?plan.nameAr:plan.nameEn;
 const dateLabel=(date,lang)=>{if(!date)return null;const d=new Date(date);return Number.isFinite(d.getTime())?d.toLocaleDateString(lang==='ar'?'ar-SA':'en-SA',{year:'numeric',month:'long',day:'numeric'}):null};
 
-export default function BillingExperience({view='plans',resultStatus='',lang='ar',projects=[],onNavigate}){
+export default function BillingExperience({view='plans',resultStatus='',lang='ar',projects=[],onNavigate,guest=false}){
  const ar=lang==='ar',Back=ar?ArrowRight:ArrowLeft,Forward=ar?ArrowUpLeft:ArrowUpRight;
- const [membership,setMembership]=useState(null),[loading,setLoading]=useState(billingEnabled),[error,setError]=useState(''),[checkout,setCheckout]=useState(''),[confirmPlan,setConfirmPlan]=useState(null);
+ const [membership,setMembership]=useState(null),[loading,setLoading]=useState(billingEnabled&&!guest),[error,setError]=useState(''),[checkout,setCheckout]=useState(''),[confirmPlan,setConfirmPlan]=useState(null);
  const reload=useCallback(async()=>{
-  if(!billingEnabled)return;
+  if(!billingEnabled||guest)return;
   setLoading(true);setError('');
   // After returning from Moyasar, ask the backend to verify the payment with Moyasar (never trust the return URL)
   try{setMembership(view==='result'?await billingApi.reconcile().catch(()=>billingApi.getMembership()):await billingApi.getMembership())}
   catch{setMembership(null);setError(copy(lang,'تعذر تحديث تفاصيل الاشتراك حاليًا. جرّب مرة أخرى.','Could not load your subscription. Please try again.'))}
   finally{setLoading(false)}
- },[lang,view]);
+ },[lang,view,guest]);
  useEffect(()=>{reload()},[reload]);
  const activePlan=findPlan(membership?.planCode);
  const status=String(membership?.status||'').toUpperCase();
@@ -28,6 +28,7 @@ export default function BillingExperience({view='plans',resultStatus='',lang='ar
  const limit=membership?membershipLimit(membership):null;
  const atLimit=membership&&limit!==null&&used>=limit;
  async function choose(plan){
+  if(guest){onNavigate('projects');return;}
   if(plan.code==='SPARK'){onNavigate('projects');return}
   if(!billingEnabled){setError(copy(lang,'تجهيز الاشتراكات المدفوعة جارٍ. ستتوفر الترقية بمجرد تفعيل الدفع.','Paid subscriptions will be available once checkout is enabled.'));return}
   setConfirmPlan(plan);
