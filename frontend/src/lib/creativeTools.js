@@ -47,6 +47,14 @@ export const creativeTools={
  async renameBoard(projectId,boardId,title){if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/update/${boardId}/title`,body('PUT',{title}));const [db,s]=scope(projectId);const board=s.boards.find(b=>String(b.id)===String(boardId));if(!board)throw Error('Moodboard not found');board.title=title;save(db);return board;},
  async editLabel(projectId,boardId,itemId,data){if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/update/${boardId}/labels/${itemId}`,body('PUT',data));const [db,s]=scope(projectId);const item=s.boards.find(b=>String(b.id)===String(boardId))?.items.find(i=>String(i.id)===String(itemId));if(!item?.label)throw Error('Note not found');item.label={...item.label,...data};save(db);return item;},
  async boards(projectId){if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/get/project/${projectId}`);return scope(projectId)[1].boards.map(({id,title})=>({id,title,projectId}));},
+ async deleteBoard(projectId,boardId){
+  if(MOODBOARD_API){
+   await api(`/api/v1/project-output/delete/${encodeURIComponent(boardId)}`,{method:'DELETE'});
+   const photos=localPhotos();delete photos[boardId];localStorage.setItem(LOCAL_IMAGES,JSON.stringify(photos));
+   return true;
+  }
+  const [db,state]=scope(projectId);state.boards=state.boards.filter(b=>String(b.id)!==String(boardId));save(db);return true;
+ },
  async addBoard(projectId,title){if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/add/${projectId}`,body('POST',{title}));const [db,s]=scope(projectId);const board={id:id(),title,projectId,items:[]};s.boards.push(board);save(db);return board},
  async board(projectId,boardId){if(MOODBOARD_API){const b=await api(`/api/v1/creativity/moodboard/get/${boardId}`);return {...b,items:[...(b.items||[]),...localItems(boardId)]}}return scope(projectId)[1].boards.find(b=>String(b.id)===String(boardId))||null},
  async searchImages(keyword){if(!MOODBOARD_API)return {images:[]};return api(`/api/v1/creativity/moodboard/images/search?keyword=${encodeURIComponent(keyword)}&page=1&pageSize=20`)},
@@ -68,7 +76,7 @@ export const creativeTools={
   if(MOODBOARD_API){const item={id:-id(),type:'MOODBOARD_IMAGE',image,positionX:pos.x,positionY:pos.y,localOnly:true};return persistPhoto(boardId,item)}
   const [db,s]=scope(projectId);const board=s.boards.find(b=>b.id===boardId);board.items.push({id:id(),type:'MOODBOARD_IMAGE',image,positionX:pos.x,positionY:pos.y});save(db);return board
  },
- async addLabel(projectId,boardId,text,pos){const data={text,positionX:pos.x,positionY:pos.y,color:'#39322c',backgroundColor:'#fff0ce',fontSize:17};if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/add/${boardId}/labels`,body('POST',data));const [db,s]=scope(projectId);const board=s.boards.find(b=>b.id===boardId);board.items.push({id:id(),type:'MOODBOARD_LABEL',label:{text,color:data.color,backgroundColor:data.backgroundColor,fontSize:17},positionX:pos.x,positionY:pos.y});save(db);return board},
+ async addLabel(projectId,boardId,text,pos,colors={}){const data={text,positionX:pos.x,positionY:pos.y,color:colors.color||'#39322c',backgroundColor:colors.backgroundColor||'#fff0ce',fontSize:17};if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/add/${boardId}/labels`,body('POST',data));const [db,s]=scope(projectId);const board=s.boards.find(b=>b.id===boardId);board.items.push({id:id(),type:'MOODBOARD_LABEL',label:{text,color:data.color,backgroundColor:data.backgroundColor,fontSize:17},positionX:pos.x,positionY:pos.y});save(db);return board},
  async moveBoardItem(projectId,boardId,itemId,x,y){if(MOODBOARD_API && Number(itemId)<0){replacePhoto(boardId,itemId,i=>({...i,positionX:x,positionY:y}));return;}if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/update/${boardId}/items/${itemId}/position`,body('PUT',{positionX:x,positionY:y}));const [db,s]=scope(projectId);const item=s.boards.find(b=>b.id===boardId)?.items.find(i=>i.id===itemId);if(item){item.positionX=x;item.positionY=y;save(db)}},
  async deleteBoardItem(projectId,boardId,itemId){if(MOODBOARD_API && Number(itemId)<0){dropPhoto(boardId,itemId);return;}if(MOODBOARD_API)return api(`/api/v1/creativity/moodboard/delete/${boardId}/items/${itemId}`,{method:'DELETE'});const [db,s]=scope(projectId);const board=s.boards.find(b=>b.id===boardId);board.items=board.items.filter(i=>i.id!==itemId);save(db)},
  // Existing Spring Boot APIs keep speaker links separate from scene text.
